@@ -29,6 +29,7 @@ export default function Home() {
 
   async function getSession() {
     const supabase = createClient();
+
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -39,7 +40,9 @@ export default function Home() {
   async function getAuthHeaders() {
     const session = await getSession();
 
-    if (!session?.access_token) return null;
+    if (!session?.access_token) {
+      return null;
+    }
 
     return {
       "Content-Type": "application/json",
@@ -59,52 +62,62 @@ export default function Home() {
     }
 
     setUserEmail(session.user.email || "");
+
     await loadProjects();
     await loadUsage();
   }
 
   async function loadUsage() {
-    const headers = await getAuthHeaders();
-    if (!headers) return;
+    try {
+      const headers = await getAuthHeaders();
 
-    const res = await fetch("/api/usage", {
-      method: "GET",
-      headers,
-    });
+      if (!headers) return;
 
-    const data = await res.json();
+      const res = await fetch("/api/usage", {
+        method: "GET",
+        headers,
+      });
 
-    if (!res.ok) {
-      console.error("Usage failed:", data.error);
-      return;
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.error("Usage failed:", data.error);
+        return;
+      }
+
+      setPlan(data.plan || "free");
+      setRemaining(data.remaining ?? 5);
+    } catch (error) {
+      console.error("Failed to load usage:", error);
     }
-
-    setPlan(data.plan || "free");
-    setRemaining(data.remaining ?? 5);
   }
 
   async function loadProjects() {
-    const headers = await getAuthHeaders();
+    try {
+      const headers = await getAuthHeaders();
 
-    if (!headers) {
-      setProjects([]);
-      return;
+      if (!headers) {
+        setProjects([]);
+        return;
+      }
+
+      const res = await fetch("/api/projects", {
+        method: "GET",
+        headers,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.error("Projects failed:", data.error);
+        setProjects([]);
+        return;
+      }
+
+      setProjects(data.projects || []);
+    } catch (error) {
+      console.error("Failed to load projects:", error);
     }
-
-    const res = await fetch("/api/projects", {
-      method: "GET",
-      headers,
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      console.error("Projects failed:", data.error);
-      setProjects([]);
-      return;
-    }
-
-    setProjects(data.projects || []);
   }
 
   function splitSections(text: string) {
@@ -140,7 +153,10 @@ export default function Home() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers,
-        body: JSON.stringify({ idea, mode }),
+        body: JSON.stringify({
+          idea,
+          mode,
+        }),
       });
 
       const data = await res.json();
@@ -152,6 +168,7 @@ export default function Home() {
 
       setResult(data.result);
       setSections(splitSections(data.result));
+
       await loadUsage();
     } catch (error) {
       alert(`Generate error: ${String(error)}`);
@@ -198,6 +215,7 @@ export default function Home() {
 
       setSections(newSections);
       setResult(joinSections(newSections));
+
       await loadUsage();
     } catch (error) {
       alert(`Regenerate error: ${String(error)}`);
@@ -223,7 +241,11 @@ export default function Home() {
       const res = await fetch("/api/projects", {
         method: "POST",
         headers,
-        body: JSON.stringify({ idea, mode, result }),
+        body: JSON.stringify({
+          idea,
+          mode,
+          result,
+        }),
       });
 
       const data = await res.json();
@@ -276,6 +298,42 @@ export default function Home() {
     }
   }
 
+  async function openBillingPortal() {
+    const headers = await getAuthHeaders();
+
+    if (!headers) {
+      alert("Login required.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/stripe/portal", {
+        method: "POST",
+        headers,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Failed to open billing portal.");
+        return;
+      }
+
+      if (!data.url) {
+        alert("Stripe did not return a billing portal URL.");
+        return;
+      }
+
+      window.location.href = data.url;
+    } catch (error) {
+      alert(`Portal error: ${String(error)}`);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function deleteProject(id: string) {
     if (!confirm("Delete this project?")) return;
 
@@ -309,6 +367,7 @@ export default function Home() {
 
   async function updateTitle(id: string, title: string) {
     const headers = await getAuthHeaders();
+
     if (!headers) return;
 
     try {
@@ -392,12 +451,19 @@ export default function Home() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {plan !== "pro" && (
+            {plan !== "pro" ? (
               <button
                 onClick={upgrade}
                 className="rounded-xl bg-green-600 px-4 py-2 text-sm font-medium text-white"
               >
                 Upgrade to Pro
+              </button>
+            ) : (
+              <button
+                onClick={openBillingPortal}
+                className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium"
+              >
+                Manage Subscription
               </button>
             )}
 

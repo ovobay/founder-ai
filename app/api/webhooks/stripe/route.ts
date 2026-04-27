@@ -1,6 +1,6 @@
 // Stripe webhook route.
-// Upgrades user to Pro when subscription checkout succeeds.
-// Downgrades user to Free when subscription is cancelled.
+// Upgrades users to Pro when subscription checkout succeeds.
+// Downgrades users to Free when subscription is cancelled.
 
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
@@ -12,7 +12,7 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-async function upsertUsagePlan({
+async function updateUserPlan({
   userId,
   plan,
   customerId,
@@ -25,22 +25,13 @@ async function upsertUsagePlan({
   subscriptionId?: string | null;
   subscriptionStatus?: string | null;
 }) {
-  const { data: existing } = await supabaseAdmin
-    .from("usage_limits")
-    .select("*")
-    .eq("user_id", userId)
-    .maybeSingle();
-
   const { error } = await supabaseAdmin.from("usage_limits").upsert(
     {
       user_id: userId,
-      generations: existing?.generations || 0,
       plan,
-      stripe_customer_id: customerId ?? existing?.stripe_customer_id ?? null,
-      stripe_subscription_id:
-        subscriptionId ?? existing?.stripe_subscription_id ?? null,
-      subscription_status:
-        subscriptionStatus ?? existing?.subscription_status ?? "inactive",
+      stripe_customer_id: customerId || null,
+      stripe_subscription_id: subscriptionId || null,
+      subscription_status: subscriptionStatus || "inactive",
     },
     {
       onConflict: "user_id",
@@ -84,19 +75,21 @@ export async function POST(req: Request) {
       const session = event.data.object as Stripe.Checkout.Session;
 
       const userId = session.metadata?.user_id;
+
       const customerId =
         typeof session.customer === "string" ? session.customer : null;
+
       const subscriptionId =
         typeof session.subscription === "string" ? session.subscription : null;
 
       if (!userId) {
         return Response.json(
-          { error: "Missing user_id in checkout session metadata." },
+          { error: "Missing user_id in Stripe checkout metadata." },
           { status: 400 }
         );
       }
 
-      await upsertUsagePlan({
+      await updateUserPlan({
         userId,
         plan: "pro",
         customerId,
@@ -106,7 +99,8 @@ export async function POST(req: Request) {
 
       return Response.json({
         received: true,
-        action: "upgraded_to_pro",
+        upgraded: true,
+        user_id: userId,
       });
     }
 
@@ -115,32 +109,38 @@ export async function POST(req: Request) {
 
       const userId = subscription.metadata?.user_id;
 
+      const customerId =
+        typeof subscription.customer === "string"
+          ? subscription.customer
+          : null;
+
       if (!userId) {
         return Response.json(
-          { error: "Missing user_id in subscription metadata." },
+          { error: "Missing user_id in Stripe subscription metadata." },
           { status: 400 }
         );
       }
 
-      await upsertUsagePlan({
+      await updateUserPlan({
         userId,
         plan: "free",
-        customerId:
-          typeof subscription.customer === "string"
-            ? subscription.customer
-            : null,
+        customerId,
         subscriptionId: subscription.id,
         subscriptionStatus: "cancelled",
       });
 
       return Response.json({
         received: true,
-        action: "downgraded_to_free",
+        downgraded: true,
+        user_id: userId,
       });
     }
 
     return Response.json({ received: true });
   } catch (error) {
-    return Response.json({ error: String(error) }, { status: 500 });
+    return Response.json(
+      { error: `Webhook handler failed: ${String(error)}` },
+      { status: 500 }
+    );
   }
 }

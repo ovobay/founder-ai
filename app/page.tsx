@@ -22,6 +22,7 @@ export default function Home() {
   const [userEmail, setUserEmail] = useState("");
   const [plan, setPlan] = useState("free");
   const [remaining, setRemaining] = useState<number | string>(5);
+  const [subscriptionStatus, setSubscriptionStatus] = useState("inactive");
 
   useEffect(() => {
     loadUserAndProjects();
@@ -58,6 +59,7 @@ export default function Home() {
       setProjects([]);
       setPlan("free");
       setRemaining(5);
+      setSubscriptionStatus("inactive");
       return;
     }
 
@@ -87,6 +89,7 @@ export default function Home() {
 
       setPlan(data.plan || "free");
       setRemaining(data.remaining ?? 5);
+      setSubscriptionStatus(data.subscription_status || "inactive");
     } catch (error) {
       console.error("Failed to load usage:", error);
     }
@@ -408,9 +411,13 @@ export default function Home() {
     setSections([]);
     setPlan("free");
     setRemaining(5);
+    setSubscriptionStatus("inactive");
 
     alert("Logged out.");
   }
+
+  const isPro = plan === "pro";
+  const isCancelling = subscriptionStatus === "cancelling";
 
   return (
     <main className="min-h-screen bg-white px-6 py-10 text-black">
@@ -431,10 +438,17 @@ export default function Home() {
                   Plan:{" "}
                   <span
                     className={
-                      plan === "pro" ? "text-green-700" : "text-gray-900"
+                      isPro ? "text-green-700" : "text-gray-900"
                     }
                   >
-                    {plan === "pro" ? "Pro" : "Free"}
+                    {isPro ? "Pro" : "Free"}
+                  </span>
+                </p>
+
+                <p className="mt-1 text-gray-600">
+                  Subscription status:{" "}
+                  <span className={isCancelling ? "text-orange-600" : ""}>
+                    {subscriptionStatus}
                   </span>
                 </p>
 
@@ -442,6 +456,13 @@ export default function Home() {
                   Remaining generations:{" "}
                   {remaining === "unlimited" ? "Unlimited" : remaining}
                 </p>
+
+                {isCancelling && (
+                  <p className="mt-2 text-orange-700">
+                    Your subscription is cancelling. You keep Pro access until
+                    the billing period ends.
+                  </p>
+                )}
               </div>
             ) : (
               <p className="mt-2 text-sm text-red-600">
@@ -451,14 +472,16 @@ export default function Home() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {plan !== "pro" ? (
+            {!isPro && (
               <button
                 onClick={upgrade}
                 className="rounded-xl bg-green-600 px-4 py-2 text-sm font-medium text-white"
               >
                 Upgrade to Pro
               </button>
-            ) : (
+            )}
+
+            {isPro && (
               <button
                 onClick={openBillingPortal}
                 className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium"

@@ -1,5 +1,6 @@
 // Stripe webhook route.
 // Keeps Supabase in sync with Stripe subscription lifecycle.
+// Important: if cancel_at_period_end is true, we mark subscription_status as "cancelling".
 
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
@@ -62,6 +63,22 @@ async function updateUsageBySubscriptionId({
   }
 }
 
+function getSubscriptionStatus(subscription: Stripe.Subscription) {
+  if (subscription.cancel_at_period_end) {
+    return "cancelling";
+  }
+
+  return subscription.status;
+}
+
+function getPlanFromSubscription(subscription: Stripe.Subscription) {
+  if (subscription.status === "active" || subscription.status === "trialing") {
+    return "pro";
+  }
+
+  return "free";
+}
+
 export async function POST(req: Request) {
   const signature = req.headers.get("stripe-signature");
 
@@ -94,8 +111,10 @@ export async function POST(req: Request) {
       const session = event.data.object as Stripe.Checkout.Session;
 
       const userId = session.metadata?.user_id;
+
       const customerId =
         typeof session.customer === "string" ? session.customer : null;
+
       const subscriptionId =
         typeof session.subscription === "string" ? session.subscription : null;
 
@@ -125,20 +144,16 @@ export async function POST(req: Request) {
       const subscription = event.data.object as Stripe.Subscription;
 
       const userId = subscription.metadata?.user_id;
+
       const customerId =
         typeof subscription.customer === "string"
           ? subscription.customer
           : null;
+
       const subscriptionId = subscription.id;
 
-      const subscriptionStatus = subscription.cancel_at_period_end
-        ? "cancelling"
-        : subscription.status;
-
-      const plan =
-        subscription.status === "active" || subscription.status === "trialing"
-          ? "pro"
-          : "free";
+      const subscriptionStatus = getSubscriptionStatus(subscription);
+      const plan = getPlanFromSubscription(subscription);
 
       if (userId) {
         await updateUsageByUserId({
@@ -161,6 +176,8 @@ export async function POST(req: Request) {
         event: event.type,
         action: "subscription_updated",
         subscription_status: subscriptionStatus,
+        stripe_status: subscription.status,
+        cancel_at_period_end: subscription.cancel_at_period_end,
       });
     }
 
@@ -168,10 +185,12 @@ export async function POST(req: Request) {
       const subscription = event.data.object as Stripe.Subscription;
 
       const userId = subscription.metadata?.user_id;
+
       const customerId =
         typeof subscription.customer === "string"
           ? subscription.customer
           : null;
+
       const subscriptionId = subscription.id;
 
       if (userId) {

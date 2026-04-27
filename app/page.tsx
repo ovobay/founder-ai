@@ -27,20 +27,33 @@ export default function Home() {
     loadUserAndProjects();
   }, []);
 
-  async function getUser() {
+  async function getSession() {
     const supabase = createClient();
 
     const {
-      data: { user },
-    } = await supabase.auth.getUser();
+      data: { session },
+    } = await supabase.auth.getSession();
 
-    return user;
+    return session;
+  }
+
+  async function getAuthHeaders() {
+    const session = await getSession();
+
+    if (!session?.access_token) {
+      return null;
+    }
+
+    return {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.access_token}`,
+    };
   }
 
   async function loadUserAndProjects() {
-    const user = await getUser();
+    const session = await getSession();
 
-    if (!user) {
+    if (!session?.user) {
       setUserEmail("");
       setProjects([]);
       setPlan("free");
@@ -48,21 +61,62 @@ export default function Home() {
       return;
     }
 
-    setUserEmail(user.email || "");
+    setUserEmail(session.user.email || "");
 
-    await loadProjects(user.id);
-    await loadUsage(user.id);
+    await loadProjects();
+    await loadUsage();
   }
 
-  async function loadUsage(userId: string) {
+  async function loadUsage() {
     try {
-      const res = await fetch(`/api/usage?user_id=${userId}`);
+      const headers = await getAuthHeaders();
+
+      if (!headers) return;
+
+      const res = await fetch("/api/usage", {
+        method: "GET",
+        headers,
+      });
+
       const data = await res.json();
+
+      if (!res.ok) {
+        console.error("Usage failed:", data.error);
+        return;
+      }
 
       setPlan(data.plan || "free");
       setRemaining(data.remaining ?? 5);
     } catch (error) {
       console.error("Failed to load usage:", error);
+    }
+  }
+
+  async function loadProjects() {
+    try {
+      const headers = await getAuthHeaders();
+
+      if (!headers) {
+        setProjects([]);
+        return;
+      }
+
+      const res = await fetch("/api/projects", {
+        method: "GET",
+        headers,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.error("Projects failed:", data.error);
+        setProjects([]);
+        return;
+      }
+
+      setProjects(data.projects || []);
+    } catch (error) {
+      console.error("Failed to load projects:", error);
     }
   }
 
@@ -82,14 +136,14 @@ export default function Home() {
   }
 
   async function generate() {
-    const user = await getUser();
+    if (!idea.trim() || loading) return;
 
-    if (!user) {
+    const headers = await getAuthHeaders();
+
+    if (!headers) {
       alert("Login required.");
       return;
     }
-
-    if (!idea.trim() || loading) return;
 
     setLoading(true);
     setResult("");
@@ -98,13 +152,10 @@ export default function Home() {
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify({
           idea,
           mode,
-          user_id: user.id,
         }),
       });
 
@@ -125,7 +176,7 @@ export default function Home() {
       setResult(data.result);
       setSections(splitSections(data.result));
 
-      await loadUsage(user.id);
+      await loadUsage();
     } catch (error) {
       alert(`Generate error: ${String(error)}`);
     } finally {
@@ -133,30 +184,81 @@ export default function Home() {
     }
   }
 
-  async function saveProject() {
-    const user = await getUser();
+  async function regenerateSection(index: number, title: string) {
+    if (!idea.trim() || loading) return;
 
-    if (!user) {
+    const headers = await getAuthHeaders();
+
+    if (!headers) {
       alert("Login required.");
       return;
     }
 
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          idea: `Regenerate ONLY this section: ${title}\n\nOriginal idea: ${idea}`,
+          mode,
+        }),
+      });
+
+      const text = await res.text();
+
+      if (!text) {
+        alert("Regenerate failed: API returned empty response.");
+        return;
+      }
+
+      const data = JSON.parse(text);
+
+      if (!res.ok) {
+        alert(data.error || "Regenerate failed.");
+        return;
+      }
+
+      const newSections = [...sections];
+
+      newSections[index] = {
+        title,
+        content: data.result,
+      };
+
+      setSections(newSections);
+      setResult(joinSections(newSections));
+
+      await loadUsage();
+    } catch (error) {
+      alert(`Regenerate error: ${String(error)}`);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function saveProject() {
     if (!idea.trim() || !result.trim()) {
       alert("Generate a result before saving.");
+      return;
+    }
+
+    const headers = await getAuthHeaders();
+
+    if (!headers) {
+      alert("Login required.");
       return;
     }
 
     try {
       const res = await fetch("/api/projects", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify({
           idea,
           mode,
           result,
-          user_id: user.id,
         }),
       });
 
@@ -175,16 +277,16 @@ export default function Home() {
       }
 
       alert("Project saved.");
-      await loadProjects(user.id);
+      await loadProjects();
     } catch (error) {
       alert(`Save error: ${String(error)}`);
     }
   }
 
   async function upgrade() {
-    const user = await getUser();
+    const session = await getSession();
 
-    if (!user) {
+    if (!session?.user) {
       alert("Login required.");
       return;
     }
@@ -198,7 +300,7 @@ export default function Home() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          user_id: user.id,
+          user_id: session.user.id,
         }),
       });
 
@@ -229,34 +331,20 @@ export default function Home() {
     }
   }
 
-  async function loadProjects(userId: string) {
-    try {
-      const res = await fetch(`/api/projects?user_id=${userId}`);
-      const text = await res.text();
-
-      if (!text) {
-        setProjects([]);
-        return;
-      }
-
-      const data = JSON.parse(text);
-      setProjects(data.projects || []);
-    } catch (error) {
-      console.error("Failed to load projects:", error);
-    }
-  }
-
   async function deleteProject(id: string) {
     if (!confirm("Delete this project?")) return;
 
-    const user = await getUser();
+    const headers = await getAuthHeaders();
+
+    if (!headers) {
+      alert("Login required.");
+      return;
+    }
 
     try {
       const res = await fetch("/api/projects", {
         method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify({ id }),
       });
 
@@ -267,10 +355,7 @@ export default function Home() {
         return;
       }
 
-      if (user) {
-        await loadProjects(user.id);
-      }
-
+      await loadProjects();
       alert("Project deleted.");
     } catch (error) {
       alert(`Delete error: ${String(error)}`);
@@ -278,84 +363,27 @@ export default function Home() {
   }
 
   async function updateTitle(id: string, title: string) {
-    const user = await getUser();
+    const headers = await getAuthHeaders();
+
+    if (!headers) return;
 
     try {
       const res = await fetch("/api/projects", {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify({ id, title }),
-      });
-
-      if (!res.ok) {
-        alert("Title update failed.");
-        return;
-      }
-
-      if (user) {
-        await loadProjects(user.id);
-      }
-    } catch (error) {
-      alert(`Title update error: ${String(error)}`);
-    }
-  }
-
-  async function regenerateSection(index: number, title: string) {
-    const user = await getUser();
-
-    if (!user) {
-      alert("Login required.");
-      return;
-    }
-
-    if (!idea.trim() || loading) return;
-
-    setLoading(true);
-
-    try {
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          idea: `Regenerate ONLY this section: ${title}\n\nOriginal idea: ${idea}`,
-          mode,
-          user_id: user.id,
-        }),
       });
 
       const text = await res.text();
 
-      if (!text) {
-        alert("Regenerate failed: API returned empty response.");
-        return;
-      }
-
-      const data = JSON.parse(text);
-
       if (!res.ok) {
-        alert(data.error || "Regenerate failed.");
+        alert(`Title update failed: ${text}`);
         return;
       }
 
-      const newSections = [...sections];
-
-      newSections[index] = {
-        title,
-        content: data.result,
-      };
-
-      setSections(newSections);
-      setResult(joinSections(newSections));
-
-      await loadUsage(user.id);
+      await loadProjects();
     } catch (error) {
-      alert(`Regenerate error: ${String(error)}`);
-    } finally {
-      setLoading(false);
+      alert(`Title update error: ${String(error)}`);
     }
   }
 
@@ -398,7 +426,11 @@ export default function Home() {
 
                 <p className="mt-1 font-medium">
                   Plan:{" "}
-                  <span className={plan === "pro" ? "text-green-700" : "text-gray-900"}>
+                  <span
+                    className={
+                      plan === "pro" ? "text-green-700" : "text-gray-900"
+                    }
+                  >
                     {plan === "pro" ? "Pro" : "Free"}
                   </span>
                 </p>

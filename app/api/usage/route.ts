@@ -1,28 +1,47 @@
-// Loads the current user's plan and generation usage from Supabase
+// Secure usage API.
+// The backend verifies the Supabase access token and loads usage for the real user.
 
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
+const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+// Get the real logged-in user from Authorization: Bearer <token>
+async function getAuthenticatedUser(req: Request) {
+  const authHeader = req.headers.get("authorization");
+
+  if (!authHeader?.startsWith("Bearer ")) {
+    return null;
+  }
+
+  const token = authHeader.replace("Bearer ", "");
+
+  const {
+    data: { user },
+    error,
+  } = await supabaseAdmin.auth.getUser(token);
+
+  if (error || !user) {
+    return null;
+  }
+
+  return user;
+}
+
 export async function GET(req: Request) {
   try {
-    const { searchParams } = new URL(req.url);
-    const user_id = searchParams.get("user_id");
+    const user = await getAuthenticatedUser(req);
 
-    if (!user_id) {
-      return Response.json(
-        { error: "Missing user_id." },
-        { status: 400 }
-      );
+    if (!user) {
+      return Response.json({ error: "Unauthorized." }, { status: 401 });
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("usage_limits")
       .select("*")
-      .eq("user_id", user_id)
+      .eq("user_id", user.id)
       .maybeSingle();
 
     if (error) {

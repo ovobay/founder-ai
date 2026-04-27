@@ -1,24 +1,91 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Editor from "@monaco-editor/react";
 import { createClient } from "@/lib/supabase/client";
+
+type FileItem = {
+  path: string;
+  content: string;
+};
+
+function parseFiles(text?: string): FileItem[] {
+  if (!text || typeof text !== "string") {
+    return [];
+  }
+
+  const files: FileItem[] = [];
+  const parts = text.split("FILE:");
+
+  for (let part of parts) {
+    part = part.trim();
+    if (!part) continue;
+
+    const firstLineEnd = part.indexOf("\n");
+
+    if (firstLineEnd === -1) {
+      continue;
+    }
+
+    const filePath = part.substring(0, firstLineEnd).trim();
+    const content = part.substring(firstLineEnd).trim();
+
+    if (!filePath || !content) {
+      continue;
+    }
+
+    files.push({ path: filePath, content });
+  }
+
+  return files;
+}
+
+function rebuildProject(files: FileItem[]) {
+  return files.map((file) => `FILE: ${file.path}\n${file.content}`).join("\n\n");
+}
+
+function getLanguage(path: string) {
+  if (path.endsWith(".tsx") || path.endsWith(".ts")) return "typescript";
+  if (path.endsWith(".jsx") || path.endsWith(".js")) return "javascript";
+  if (path.endsWith(".json")) return "json";
+  if (path.endsWith(".css")) return "css";
+  if (path.endsWith(".md")) return "markdown";
+  if (path.endsWith(".sql")) return "sql";
+  return "plaintext";
+}
 
 export default function Home() {
   const [idea, setIdea] = useState("");
-  const [result, setResult] = useState("");
+  const [files, setFiles] = useState<FileItem[]>([]);
+  const [selected, setSelected] = useState(0);
+  const [previewUrl, setPreviewUrl] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const [userEmail, setUserEmail] = useState("");
   const [plan, setPlan] = useState("free");
   const [remaining, setRemaining] = useState<number | string>(5);
+  const [subscriptionStatus, setSubscriptionStatus] = useState("inactive");
+
+  useEffect(() => {
+    loadAccount();
+  }, []);
 
   async function getSession() {
     const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
     return session;
   }
 
   async function getAuthHeaders() {
     const session = await getSession();
-    if (!session?.access_token) return null;
+
+    if (!session?.access_token) {
+      return null;
+    }
 
     return {
       "Content-Type": "application/json",
@@ -26,147 +93,574 @@ export default function Home() {
     };
   }
 
-  useEffect(() => {
-    loadUsage();
-  }, []);
+  async function loadAccount() {
+    const session = await getSession();
+
+    if (!session?.user) {
+      setUserEmail("");
+      setPlan("free");
+      setRemaining(5);
+      setSubscriptionStatus("inactive");
+      return;
+    }
+
+    setUserEmail(session.user.email || "");
+    await loadUsage();
+  }
 
   async function loadUsage() {
-    const headers = await getAuthHeaders();
-    if (!headers) return;
+    try {
+      const headers = await getAuthHeaders();
 
-    const res = await fetch("/api/usage", { headers });
-    const data = await res.json();
+      if (!headers) return;
 
-    setPlan(data.plan);
-    setRemaining(data.remaining);
+      const res = await fetch("/api/usage", {
+        method: "GET",
+        headers,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.error("Usage load failed:", data);
+        return;
+      }
+
+      setPlan(data.plan || "free");
+      setRemaining(data.remaining ?? 5);
+      setSubscriptionStatus(data.subscription_status || "inactive");
+    } catch (error) {
+      console.error("Usage load error:", error);
+    }
   }
 
   async function generate() {
-    if (!idea.trim()) return;
+    if (!idea.trim() || loading) return;
 
     const headers = await getAuthHeaders();
-    if (!headers) return alert("Login required");
 
-    setLoading(true);
-    setResult("");
-
-    const res = await fetch("/api/generate", {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ idea, mode: "app" }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      if (data.upgrade) {
-        alert("Free limit reached. Upgrade.");
-        return;
-      }
-      return alert(data.error);
+    if (!headers) {
+      alert("Login required.");
+      return;
     }
 
-    setResult(data.result);
-    await loadUsage();
-    setLoading(false);
+    setLoading(true);
+    setFiles([]);
+    setPreviewUrl("");
+
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          idea,
+          mode: "app",
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (data.upgrade) {
+          alert("You’ve hit the free limit. Upgrade to continue.");
+          await loadUsage();
+          return;
+        }
+
+        alert(data.error || "Generation failed.");
+        return;
+      }
+
+      if (!data.result) {
+        alert("Generation failed: API did not return a result.");
+        console.error("Generate response:", data);
+        return;
+      }
+
+      const parsed = parseFiles(data.result);
+
+      if (parsed.length === 0) {
+        alert("Generation failed: AI did not return valid FILE: output.");
+        console.error("Raw AI result:", data.result);
+        return;
+      }
+
+      setFiles(parsed);
+      setSelected(0);
+      await loadUsage();
+    } catch (error) {
+      alert(`Generate error: ${String(error)}`);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function updateFileContent(value: string | undefined) {
+    if (value === undefined) return;
+
+    const updated = [...files];
+    updated[selected].content = value;
+    setFiles(updated);
+    setPreviewUrl("");
+  }
+
+  async function regenerateFile() {
+    const file = files[selected];
+
+    if (!file || loading) return;
+
+    const headers = await getAuthHeaders();
+
+    if (!headers) {
+      alert("Login required.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const projectContext = rebuildProject(files);
+
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          idea: `
+You are editing an existing generated project.
+
+PROJECT:
+${projectContext}
+
+Regenerate ONLY this file:
+${file.path}
+
+Return ONLY this format:
+
+FILE: ${file.path}
+<updated code>
+`,
+          mode: "app",
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (data.upgrade) {
+          alert("You’ve hit the free limit. Upgrade to continue.");
+          await loadUsage();
+          return;
+        }
+
+        alert(data.error || "Regeneration failed.");
+        return;
+      }
+
+      const parsed = parseFiles(data.result);
+
+      if (parsed.length === 0) {
+        alert("Regeneration failed: AI did not return valid FILE output.");
+        return;
+      }
+
+      const updatedFiles = [...files];
+      updatedFiles[selected] = parsed[0];
+
+      setFiles(updatedFiles);
+      setPreviewUrl("");
+      await loadUsage();
+    } catch (error) {
+      alert(`Regenerate error: ${String(error)}`);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function downloadProject() {
-    if (!result) return alert("Generate first");
+    if (files.length === 0) {
+      alert("Generate a project first.");
+      return;
+    }
 
-    const res = await fetch("/api/download", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idea, result }),
-    });
+    try {
+      const res = await fetch("/api/download", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          result: rebuildProject(files),
+        }),
+      });
 
-    const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.error || "Download failed.");
+        return;
+      }
 
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "founder-ai-project.zip";
-    a.click();
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "founder-ai-project.zip";
+      a.click();
+
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      alert(`Download error: ${String(error)}`);
+    }
+  }
+
+  async function runPreview() {
+    if (files.length === 0) {
+      alert("Generate a project first.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/preview", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ files }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Preview failed.");
+        return;
+      }
+
+      if (!data.url) {
+        alert("Preview failed: no preview URL returned.");
+        return;
+      }
+
+      setPreviewUrl(data.url);
+    } catch (error) {
+      alert(`Preview error: ${String(error)}`);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function upgrade() {
     const headers = await getAuthHeaders();
-    if (!headers) return;
 
-    const res = await fetch("/api/stripe", {
-      method: "POST",
-      headers,
-    });
+    if (!headers) {
+      alert("Login required.");
+      return;
+    }
 
-    const data = await res.json();
-    window.location.href = data.url;
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/stripe", {
+        method: "POST",
+        headers,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Upgrade failed.");
+        return;
+      }
+
+      if (!data.url) {
+        alert("Stripe did not return a URL.");
+        return;
+      }
+
+      window.location.href = data.url;
+    } catch (error) {
+      alert(`Upgrade error: ${String(error)}`);
+    } finally {
+      setLoading(false);
+    }
   }
 
-  const remainingNum =
-    typeof remaining === "number" ? remaining : null;
+  async function openBillingPortal() {
+    const headers = await getAuthHeaders();
+
+    if (!headers) {
+      alert("Login required.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/stripe/portal", {
+        method: "POST",
+        headers,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Failed to open billing portal.");
+        return;
+      }
+
+      if (!data.url) {
+        alert("Stripe did not return a billing portal URL.");
+        return;
+      }
+
+      window.location.href = data.url;
+    } catch (error) {
+      alert(`Portal error: ${String(error)}`);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function logout() {
+    const supabase = createClient();
+
+    await supabase.auth.signOut();
+
+    setUserEmail("");
+    setPlan("free");
+    setRemaining(5);
+    setSubscriptionStatus("inactive");
+    setFiles([]);
+    setPreviewUrl("");
+    setIdea("");
+
+    alert("Logged out.");
+  }
+
+  const selectedFile = files[selected];
+
+  const isPro = plan === "pro";
+  const isCancelling = subscriptionStatus === "cancelling";
+
+  const remainingNum = typeof remaining === "number" ? remaining : null;
+
+  const isFreeOut = plan === "free" && remainingNum !== null && remainingNum <= 0;
+  const isFreeLow =
+    plan === "free" && remainingNum !== null && remainingNum > 0 && remainingNum <= 3;
 
   return (
-    <main className="min-h-screen p-8">
-      <h1 className="text-3xl font-bold">Founder AI</h1>
+    <main className="min-h-screen bg-white text-black">
+      <div className="border-b bg-white p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold">Founder AI Builder</h1>
 
-      <p className="mt-2 text-sm">
-        Plan: {plan} | Remaining: {remaining}
-      </p>
+            <p className="mt-2 text-sm text-gray-600">
+              Generate, edit, preview, and download full-stack project files.
+            </p>
 
-      {/* 🔥 Upgrade pressure */}
-      {plan === "free" && remainingNum === 2 && (
-        <p className="text-orange-600 mt-2">2 generations left</p>
-      )}
+            {userEmail ? (
+              <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm">
+                <p className="text-gray-600">Logged in as {userEmail}</p>
 
-      {plan === "free" && remainingNum === 1 && (
-        <p className="text-red-600 mt-2">Last one</p>
-      )}
+                <p className="mt-1">
+                  Plan:{" "}
+                  <span className={isPro ? "font-semibold text-green-700" : "font-semibold"}>
+                    {isPro ? "Pro" : "Free"}
+                  </span>
+                </p>
 
-      {plan === "free" && remainingNum === 0 && (
-        <p className="text-red-700 mt-2">
-          Out of generations. Upgrade now.
-        </p>
-      )}
+                <p className="mt-1">
+                  Subscription status:{" "}
+                  <span className={isCancelling ? "text-orange-700" : ""}>
+                    {subscriptionStatus}
+                  </span>
+                </p>
 
-      <textarea
-        className="mt-6 w-full border p-4 rounded"
-        placeholder="Describe what you want to build..."
-        value={idea}
-        onChange={(e) => setIdea(e.target.value)}
-      />
+                <p className="mt-1">
+                  Remaining generations:{" "}
+                  <span className={isFreeOut ? "font-semibold text-red-700" : ""}>
+                    {remaining === "unlimited" ? "Unlimited" : remaining}
+                  </span>
+                </p>
 
-      <div className="mt-4 flex gap-3">
-        <button
-          onClick={generate}
-          disabled={plan === "free" && remainingNum === 0}
-          className="bg-black text-white px-4 py-2 rounded disabled:opacity-50"
-        >
-          {loading ? "Generating..." : "Generate"}
-        </button>
+                {isFreeLow && !isFreeOut && (
+                  <p className="mt-2 text-orange-700">
+                    ⚠ You’re running low on free generations. Upgrade before the meter starts judging you.
+                  </p>
+                )}
 
-        {result && (
+                {isFreeOut && (
+                  <p className="mt-2 font-medium text-red-700">
+                    You’ve hit the free limit. Upgrade to keep building.
+                  </p>
+                )}
+
+                {isCancelling && (
+                  <p className="mt-2 text-orange-700">
+                    Your subscription is cancelling. You keep Pro access until the billing period ends.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-red-600">
+                Not logged in. Go to /login before using the builder.
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {!isPro && (
+              <button
+                onClick={upgrade}
+                disabled={loading}
+                className="rounded-xl bg-green-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+              >
+                Upgrade to Pro
+              </button>
+            )}
+
+            {isPro && (
+              <button
+                onClick={openBillingPortal}
+                disabled={loading}
+                className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium disabled:opacity-50"
+              >
+                Manage Subscription
+              </button>
+            )}
+
+            {userEmail && (
+              <button
+                onClick={logout}
+                disabled={loading}
+                className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium disabled:opacity-50"
+              >
+                Log out
+              </button>
+            )}
+          </div>
+        </div>
+
+        <textarea
+          className="mt-4 min-h-28 w-full rounded-xl border border-gray-300 p-3 outline-none focus:border-black"
+          placeholder="Describe what you want to build. Example: Build a Shopify app that tracks abandoned carts and sends WhatsApp recovery campaigns."
+          value={idea}
+          onChange={(e) => setIdea(e.target.value)}
+        />
+
+        <div className="mt-3 flex flex-wrap gap-2">
           <button
-            onClick={downloadProject}
-            className="border px-4 py-2 rounded"
+            onClick={generate}
+            disabled={loading || isFreeOut}
+            className="rounded-xl bg-black px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Download Project
+            {loading ? "Working..." : "Generate Project"}
           </button>
-        )}
 
-        {plan === "free" && (
-          <button
-            onClick={upgrade}
-            className="bg-green-600 text-white px-4 py-2 rounded"
-          >
-            Upgrade
-          </button>
-        )}
+          {isFreeOut && (
+            <button
+              onClick={upgrade}
+              disabled={loading}
+              className="rounded-xl bg-green-600 px-4 py-2 text-white disabled:opacity-50"
+            >
+              Upgrade to Continue
+            </button>
+          )}
+
+          {files.length > 0 && (
+            <>
+              <button
+                onClick={regenerateFile}
+                disabled={loading || isFreeOut}
+                className="rounded-xl border border-gray-300 px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Regenerate File
+              </button>
+
+              <button
+                onClick={runPreview}
+                disabled={loading}
+                className="rounded-xl bg-green-600 px-4 py-2 text-white disabled:opacity-50"
+              >
+                Run App
+              </button>
+
+              <button
+                onClick={downloadProject}
+                disabled={loading}
+                className="rounded-xl border border-gray-300 px-4 py-2 disabled:opacity-50"
+              >
+                Download ZIP
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
-      {result && (
-        <pre className="mt-6 whitespace-pre-wrap border p-4 rounded">
-          {result}
-        </pre>
+      {files.length > 0 ? (
+        <div className="flex h-[calc(100vh-260px)] min-h-[520px]">
+          <aside className="w-1/5 overflow-auto border-r bg-gray-50 text-sm">
+            <div className="border-b px-3 py-2 font-semibold">Files</div>
+
+            {files.map((file, index) => (
+              <button
+                key={`${file.path}-${index}`}
+                onClick={() => setSelected(index)}
+                className={`block w-full border-b px-3 py-2 text-left ${
+                  selected === index ? "bg-white font-medium" : "bg-gray-50"
+                }`}
+              >
+                {file.path}
+              </button>
+            ))}
+          </aside>
+
+          <section className="w-2/5">
+            <div className="border-b px-3 py-2 text-sm font-semibold">
+              {selectedFile?.path || "No file selected"}
+            </div>
+
+            <div className="h-[calc(100%-37px)]">
+              <Editor
+                height="100%"
+                language={getLanguage(selectedFile?.path || "")}
+                value={selectedFile?.content || ""}
+                onChange={updateFileContent}
+                theme="vs-dark"
+                options={{
+                  minimap: { enabled: false },
+                  fontSize: 13,
+                  wordWrap: "on",
+                  automaticLayout: true,
+                }}
+              />
+            </div>
+          </section>
+
+          <section className="w-2/5 border-l">
+            <div className="border-b px-3 py-2 text-sm font-semibold">Preview</div>
+
+            <div className="h-[calc(100%-37px)]">
+              {previewUrl ? (
+                <iframe
+                  src={previewUrl}
+                  className="h-full w-full"
+                  title="Generated app preview"
+                />
+              ) : (
+                <div className="p-4 text-sm text-gray-500">
+                  Click <strong>Run App</strong> to preview the generated project.
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+      ) : (
+        <div className="p-6 text-sm text-gray-500">
+          No files generated yet. Describe an app, website, Shopify store, or Shopify app and click Generate Project.
+        </div>
       )}
     </main>
   );

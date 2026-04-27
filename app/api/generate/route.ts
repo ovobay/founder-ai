@@ -23,70 +23,35 @@ async function getUser(req: Request) {
   return user;
 }
 
-function getSystemPrompt(mode: string) {
-  switch (mode) {
-    case "web":
-      return `
-You are a senior web developer.
-
-Output:
-- Full website structure
-- Pages
-- Components
-- Tailwind + Next.js code
-- File structure
-- Deployment steps
-
-Return REAL code blocks.
-`;
-
-    case "app":
-      return `
+function systemPrompt() {
+  return `
 You are a senior full-stack engineer.
 
-Output:
-- Full SaaS architecture
-- Database schema
-- API routes
-- Auth
-- Stripe integration
-- Frontend pages
-- Folder structure
-- Full code snippets
+Your job:
+Generate a COMPLETE SaaS project in MULTI-FILE FORMAT.
 
-Be practical and production-ready.
+STRICT FORMAT:
+
+FILE: app/page.tsx
+<code>
+
+FILE: app/api/hello/route.ts
+<code>
+
+FILE: lib/db.ts
+<code>
+
+RULES:
+- Use Next.js App Router
+- Use TypeScript
+- Use Tailwind
+- Include API routes
+- Include simple DB layer
+- Include auth placeholder
+- Include Stripe placeholder
+- No explanations
+- ONLY FILE OUTPUT
 `;
-
-    case "shopify":
-      return `
-You are a Shopify expert.
-
-Output:
-- Store niche
-- Product strategy
-- Theme structure
-- Sections
-- Apps needed
-- SEO structure
-- Launch checklist
-`;
-
-    case "marketing":
-      return `
-You are a growth marketer.
-
-Output:
-- ICP
-- Offer
-- Channels
-- Campaign plan
-- Ad copy
-- Email sequence
-`;
-
-    default:
-      return `You are a startup operator. Give a structured plan.`;
-  }
 }
 
 export async function POST(req: Request) {
@@ -96,7 +61,7 @@ export async function POST(req: Request) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { idea, mode } = await req.json();
+    const { idea } = await req.json();
 
     const { data: usage } = await supabaseAdmin
       .from("usage_limits")
@@ -117,7 +82,7 @@ export async function POST(req: Request) {
     const completion = await openai.chat.completions.create({
       model: "gpt-4.1-mini",
       messages: [
-        { role: "system", content: getSystemPrompt(mode) },
+        { role: "system", content: systemPrompt() },
         { role: "user", content: idea },
       ],
     });

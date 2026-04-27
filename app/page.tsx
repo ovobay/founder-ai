@@ -29,7 +29,6 @@ export default function Home() {
 
   async function getSession() {
     const supabase = createClient();
-
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -40,9 +39,7 @@ export default function Home() {
   async function getAuthHeaders() {
     const session = await getSession();
 
-    if (!session?.access_token) {
-      return null;
-    }
+    if (!session?.access_token) return null;
 
     return {
       "Content-Type": "application/json",
@@ -62,62 +59,52 @@ export default function Home() {
     }
 
     setUserEmail(session.user.email || "");
-
     await loadProjects();
     await loadUsage();
   }
 
   async function loadUsage() {
-    try {
-      const headers = await getAuthHeaders();
+    const headers = await getAuthHeaders();
+    if (!headers) return;
 
-      if (!headers) return;
+    const res = await fetch("/api/usage", {
+      method: "GET",
+      headers,
+    });
 
-      const res = await fetch("/api/usage", {
-        method: "GET",
-        headers,
-      });
+    const data = await res.json();
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        console.error("Usage failed:", data.error);
-        return;
-      }
-
-      setPlan(data.plan || "free");
-      setRemaining(data.remaining ?? 5);
-    } catch (error) {
-      console.error("Failed to load usage:", error);
+    if (!res.ok) {
+      console.error("Usage failed:", data.error);
+      return;
     }
+
+    setPlan(data.plan || "free");
+    setRemaining(data.remaining ?? 5);
   }
 
   async function loadProjects() {
-    try {
-      const headers = await getAuthHeaders();
+    const headers = await getAuthHeaders();
 
-      if (!headers) {
-        setProjects([]);
-        return;
-      }
-
-      const res = await fetch("/api/projects", {
-        method: "GET",
-        headers,
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        console.error("Projects failed:", data.error);
-        setProjects([]);
-        return;
-      }
-
-      setProjects(data.projects || []);
-    } catch (error) {
-      console.error("Failed to load projects:", error);
+    if (!headers) {
+      setProjects([]);
+      return;
     }
+
+    const res = await fetch("/api/projects", {
+      method: "GET",
+      headers,
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      console.error("Projects failed:", data.error);
+      setProjects([]);
+      return;
+    }
+
+    setProjects(data.projects || []);
   }
 
   function splitSections(text: string) {
@@ -153,20 +140,10 @@ export default function Home() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers,
-        body: JSON.stringify({
-          idea,
-          mode,
-        }),
+        body: JSON.stringify({ idea, mode }),
       });
 
-      const text = await res.text();
-
-      if (!text) {
-        alert("Generate failed: API returned an empty response.");
-        return;
-      }
-
-      const data = JSON.parse(text);
+      const data = await res.json();
 
       if (!res.ok) {
         alert(data.error || "Generation failed.");
@@ -175,7 +152,6 @@ export default function Home() {
 
       setResult(data.result);
       setSections(splitSections(data.result));
-
       await loadUsage();
     } catch (error) {
       alert(`Generate error: ${String(error)}`);
@@ -206,14 +182,7 @@ export default function Home() {
         }),
       });
 
-      const text = await res.text();
-
-      if (!text) {
-        alert("Regenerate failed: API returned empty response.");
-        return;
-      }
-
-      const data = JSON.parse(text);
+      const data = await res.json();
 
       if (!res.ok) {
         alert(data.error || "Regenerate failed.");
@@ -229,7 +198,6 @@ export default function Home() {
 
       setSections(newSections);
       setResult(joinSections(newSections));
-
       await loadUsage();
     } catch (error) {
       alert(`Regenerate error: ${String(error)}`);
@@ -255,21 +223,10 @@ export default function Home() {
       const res = await fetch("/api/projects", {
         method: "POST",
         headers,
-        body: JSON.stringify({
-          idea,
-          mode,
-          result,
-        }),
+        body: JSON.stringify({ idea, mode, result }),
       });
 
-      const text = await res.text();
-
-      if (!text) {
-        alert("Save failed: API returned an empty response.");
-        return;
-      }
-
-      const data = JSON.parse(text);
+      const data = await res.json();
 
       if (!res.ok) {
         alert(data.error || "Save failed.");
@@ -284,9 +241,9 @@ export default function Home() {
   }
 
   async function upgrade() {
-    const session = await getSession();
+    const headers = await getAuthHeaders();
 
-    if (!session?.user) {
+    if (!headers) {
       alert("Login required.");
       return;
     }
@@ -296,22 +253,10 @@ export default function Home() {
     try {
       const res = await fetch("/api/stripe", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          user_id: session.user.id,
-        }),
+        headers,
       });
 
-      const text = await res.text();
-
-      if (!text) {
-        alert("Upgrade failed: API returned an empty response.");
-        return;
-      }
-
-      const data = JSON.parse(text);
+      const data = await res.json();
 
       if (!res.ok) {
         alert(data.error || "Upgrade failed.");
@@ -348,10 +293,10 @@ export default function Home() {
         body: JSON.stringify({ id }),
       });
 
-      const text = await res.text();
+      const data = await res.json();
 
       if (!res.ok) {
-        alert(`Delete failed: ${text}`);
+        alert(data.error || "Delete failed.");
         return;
       }
 
@@ -364,7 +309,6 @@ export default function Home() {
 
   async function updateTitle(id: string, title: string) {
     const headers = await getAuthHeaders();
-
     if (!headers) return;
 
     try {
@@ -374,10 +318,10 @@ export default function Home() {
         body: JSON.stringify({ id, title }),
       });
 
-      const text = await res.text();
+      const data = await res.json();
 
       if (!res.ok) {
-        alert(`Title update failed: ${text}`);
+        alert(data.error || "Title update failed.");
         return;
       }
 

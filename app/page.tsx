@@ -165,6 +165,12 @@ export default function Home() {
       const data = await res.json();
 
       if (!res.ok) {
+        if (data.upgrade) {
+          alert("You’ve hit the free limit. Upgrade to continue.");
+          await loadUsage();
+          return;
+        }
+
         alert(data.error || "Generation failed.");
         return;
       }
@@ -205,6 +211,12 @@ export default function Home() {
       const data = await res.json();
 
       if (!res.ok) {
+        if (data.upgrade) {
+          alert("You’ve hit the free limit. Upgrade to continue.");
+          await loadUsage();
+          return;
+        }
+
         alert(data.error || "Regenerate failed.");
         return;
       }
@@ -418,6 +430,10 @@ export default function Home() {
 
   const isPro = plan === "pro";
   const isCancelling = subscriptionStatus === "cancelling";
+  const isFreeAlmostOut =
+    plan === "free" && typeof remaining === "number" && remaining <= 2;
+  const isFreeOut =
+    plan === "free" && typeof remaining === "number" && remaining <= 0;
 
   return (
     <main className="min-h-screen bg-white px-6 py-10 text-black">
@@ -456,6 +472,19 @@ export default function Home() {
                   Remaining generations:{" "}
                   {remaining === "unlimited" ? "Unlimited" : remaining}
                 </p>
+
+                {isFreeAlmostOut && !isFreeOut && (
+                  <p className="mt-2 text-orange-700">
+                    ⚠ You’re almost out of free generations. Upgrade to keep
+                    generating.
+                  </p>
+                )}
+
+                {isFreeOut && (
+                  <p className="mt-2 text-red-700">
+                    You’ve used all free generations. Upgrade to continue.
+                  </p>
+                )}
 
                 {isCancelling && (
                   <p className="mt-2 text-orange-700">
@@ -523,10 +552,20 @@ export default function Home() {
         <div className="mt-4 flex flex-wrap gap-3">
           <button
             onClick={generate}
-            className="rounded-xl bg-black px-5 py-3 font-medium text-white"
+            disabled={loading || isFreeOut}
+            className="rounded-xl bg-black px-5 py-3 font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? "Working..." : "Generate"}
           </button>
+
+          {isFreeOut && (
+            <button
+              onClick={upgrade}
+              className="rounded-xl bg-green-600 px-5 py-3 font-medium text-white"
+            >
+              Upgrade to Continue
+            </button>
+          )}
 
           {result && (
             <button
@@ -561,7 +600,8 @@ export default function Home() {
 
                 <button
                   onClick={() => regenerateSection(index, section.title)}
-                  className="mt-3 text-sm font-medium text-blue-600"
+                  disabled={loading || isFreeOut}
+                  className="mt-3 text-sm font-medium text-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Regenerate section
                 </button>

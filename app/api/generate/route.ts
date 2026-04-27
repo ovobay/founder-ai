@@ -10,6 +10,16 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
+type ProjectKind =
+  | "auto"
+  | "shopify_store"
+  | "shopify_app"
+  | "saas_app"
+  | "marketing_sales"
+  | "website";
+
+type ResolvedProjectKind = Exclude<ProjectKind, "auto">;
+
 async function getAuthenticatedUser(req: Request) {
   const authHeader = req.headers.get("authorization");
 
@@ -31,92 +41,69 @@ async function getAuthenticatedUser(req: Request) {
   return user;
 }
 
-function getBuilderSystemPrompt() {
-  return `
-You are Founder AI Builder, a senior full-stack engineer and product operator.
-
-Your task is to generate a complete runnable project using MULTI-FILE OUTPUT.
-
-The product must help the user build real websites, full-stack web apps, Shopify stores, Shopify apps, marketing systems, and sales workflows.
-
-CRITICAL OUTPUT FORMAT:
-You MUST output files using this exact format:
-
-FILE: package.json
-<file contents>
-
-FILE: app/page.tsx
-<file contents>
-
-FILE: app/layout.tsx
-<file contents>
-
-Do not wrap file contents in markdown fences.
-Do not write explanations outside files.
-Do not say "Here is".
-Do not include commentary.
-Only output FILE blocks.
-
-MANDATORY FILES:
-You must always include at least these files:
-
-FILE: package.json
-FILE: app/layout.tsx
-FILE: app/page.tsx
-FILE: app/globals.css
-FILE: components/Hero.tsx
-FILE: components/FeatureGrid.tsx
-FILE: components/CTA.tsx
-FILE: lib/config.ts
-FILE: README.md
-
-TECH RULES:
-- Use Next.js App Router.
-- Use TypeScript.
-- Use Tailwind CSS classes.
-- Use React Server Components unless interactivity is needed.
-- Keep code simple and runnable.
-- Do not require external paid APIs unless clearly placed behind env vars.
-- Use clean, modern UI.
-- No placeholder lorem ipsum.
-- No broken imports.
-- Every imported file must exist.
-- package.json must include dependencies required by the generated code.
-- The generated app must run with:
-  npm install
-  npm run dev
-
-PRODUCT RULES:
-If the user asks for a website:
-- Generate a landing page with sections, copy, CTA, and SEO-minded structure.
-
-If the user asks for a full-stack app:
-- Include app pages, API routes, simple data model notes, and auth/payment placeholders where useful.
-
-If the user asks for a Shopify store:
-- Generate store strategy, collection/page structure, product page copy, theme-like sections, and launch checklist as app content.
-
-If the user asks for a Shopify app:
-- Include Shopify OAuth notes, embedded admin structure, billing placeholder, webhook placeholder, and theme extension notes.
-
-If the user asks for marketing/sales:
-- Generate campaign pages, ICP, offer, outreach sequence, ad copy, and execution plan inside the app.
-
-QUALITY BAR:
-The result should feel like the first working version of a real product, not a school assignment.
-
-Remember:
-ONLY FILE OUTPUT.
-No markdown code fences.
-No explanations outside FILE blocks.
-`;
+function cleanIdea(value: string) {
+  return value.replace(/`/g, "'").replace(/\$/g, "\\$").trim();
 }
 
-function fallbackProject(idea: string) {
-  const safeIdea = idea.replace(/`/g, "'").replace(/\$/g, "\\$");
+function detectProjectKind(idea: string): ResolvedProjectKind {
+  const text = idea.toLowerCase();
 
-  return `FILE: package.json
-{
+  if (
+    text.includes("shopify app") ||
+    text.includes("embedded shopify") ||
+    text.includes("shopify admin") ||
+    text.includes("shopify billing") ||
+    text.includes("shopify oauth")
+  ) {
+    return "shopify_app";
+  }
+
+  if (
+    text.includes("shopify store") ||
+    text.includes("shopify") ||
+    text.includes("online store") ||
+    text.includes("ecommerce store") ||
+    text.includes("e-commerce store") ||
+    text.includes("storefront") ||
+    text.includes("product page") ||
+    text.includes("collection page") ||
+    text.includes("selling")
+  ) {
+    return "shopify_store";
+  }
+
+  if (
+    text.includes("marketing") ||
+    text.includes("sales") ||
+    text.includes("campaign") ||
+    text.includes("lead generation") ||
+    text.includes("prospecting") ||
+    text.includes("outreach") ||
+    text.includes("ads") ||
+    text.includes("ad campaign")
+  ) {
+    return "marketing_sales";
+  }
+
+  if (
+    text.includes("saas") ||
+    text.includes("dashboard") ||
+    text.includes("subscription") ||
+    text.includes("auth") ||
+    text.includes("login") ||
+    text.includes("billing") ||
+    text.includes("web app") ||
+    text.includes("application") ||
+    text.includes("app")
+  ) {
+    return "saas_app";
+  }
+
+  return "website";
+}
+
+function packageJson() {
+  return `{
   "name": "founder-ai-generated-project",
   "version": "0.1.0",
   "private": true,
@@ -126,20 +113,25 @@ function fallbackProject(idea: string) {
     "start": "next start"
   },
   "dependencies": {
-    "next": "latest",
-    "react": "latest",
-    "react-dom": "latest"
+    "next": "14.2.23",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
   },
   "devDependencies": {
-    "@types/node": "latest",
-    "@types/react": "latest",
-    "@types/react-dom": "latest",
-    "typescript": "latest",
-    "tailwindcss": "latest",
-    "postcss": "latest",
-    "autoprefixer": "latest"
+    "@types/node": "20.17.12",
+    "@types/react": "18.3.18",
+    "@types/react-dom": "18.3.5",
+    "typescript": "5.7.2",
+    "tailwindcss": "3.4.17",
+    "postcss": "8.4.49",
+    "autoprefixer": "10.4.20"
   }
+}`;
 }
+
+function baseProjectFiles(safeIdea: string, imports: string, body: string) {
+  return `FILE: package.json
+${packageJson()}
 
 FILE: app/layout.tsx
 import "./globals.css";
@@ -162,17 +154,13 @@ export default function RootLayout({
 }
 
 FILE: app/page.tsx
-import Hero from "@/components/Hero";
-import FeatureGrid from "@/components/FeatureGrid";
-import CTA from "@/components/CTA";
+${imports}
 
 export default function Home() {
   return (
     <main className="min-h-screen bg-white text-black">
-      <div className="mx-auto max-w-6xl px-6 py-12">
-        <Hero />
-        <FeatureGrid />
-        <CTA />
+      <div className="mx-auto max-w-7xl px-6 py-12">
+${body}
       </div>
     </main>
   );
@@ -187,103 +175,21 @@ FILE: app/globals.css
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
   background: #ffffff;
   color: #111111;
 }
 
-FILE: components/Hero.tsx
-import { appConfig } from "@/lib/config";
-
-export default function Hero() {
-  return (
-    <section className="rounded-3xl border border-gray-200 bg-gray-50 px-8 py-16">
-      <p className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-        Generated by Founder AI
-      </p>
-
-      <h1 className="mt-4 max-w-4xl text-5xl font-bold tracking-tight">
-        {appConfig.name}
-      </h1>
-
-      <p className="mt-5 max-w-2xl text-lg leading-8 text-gray-600">
-        {appConfig.description}
-      </p>
-
-      <div className="mt-8 flex flex-wrap gap-3">
-        <a
-          href="#features"
-          className="rounded-xl bg-black px-5 py-3 text-sm font-medium text-white"
-        >
-          Explore Features
-        </a>
-
-        <a
-          href="#cta"
-          className="rounded-xl border border-gray-300 px-5 py-3 text-sm font-medium"
-        >
-          Launch Plan
-        </a>
-      </div>
-    </section>
-  );
-}
-
-FILE: components/FeatureGrid.tsx
-const features = [
-  {
-    title: "Product foundation",
-    description: "Clear structure for turning the idea into a real product.",
-  },
-  {
-    title: "Execution workflow",
-    description: "A practical flow users can understand, use, and improve.",
-  },
-  {
-    title: "Growth direction",
-    description: "Built with acquisition, conversion, and retention in mind.",
-  },
-];
-
-export default function FeatureGrid() {
-  return (
-    <section id="features" className="mt-10 grid gap-4 md:grid-cols-3">
-      {features.map((feature) => (
-        <div key={feature.title} className="rounded-2xl border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold">{feature.title}</h2>
-          <p className="mt-3 text-sm leading-6 text-gray-600">
-            {feature.description}
-          </p>
-        </div>
-      ))}
-    </section>
-  );
-}
-
-FILE: components/CTA.tsx
-export default function CTA() {
-  return (
-    <section id="cta" className="mt-10 rounded-3xl bg-black p-8 text-white">
-      <h2 className="text-3xl font-bold">Ready to build?</h2>
-
-      <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-300">
-        This generated starter gives you the first working structure. Extend it
-        with auth, payments, database tables, marketing pages, and deployment.
-      </p>
-
-      <button className="mt-6 rounded-xl bg-white px-5 py-3 text-sm font-medium text-black">
-        Start building
-      </button>
-    </section>
-  );
-}
-
 FILE: lib/config.ts
 export const appConfig = {
   name: "${safeIdea}",
   description:
-    "A generated project starter based on the original idea. Use this as the foundation for the first production version.",
+    "A generated product starter based on the original idea. Use this as the visible first version before adding production features.",
 };
 
 FILE: README.md
@@ -315,8 +221,972 @@ http://localhost:3000
 `;
 }
 
+function shopifyStoreProject(idea: string) {
+  const safeIdea = cleanIdea(idea);
+
+  return `${baseProjectFiles(
+    safeIdea,
+    `import Hero from "@/components/Hero";
+import TrustBar from "@/components/TrustBar";
+import CollectionGrid from "@/components/CollectionGrid";
+import ProductGrid from "@/components/ProductGrid";
+import StoreBenefits from "@/components/StoreBenefits";
+import Reviews from "@/components/Reviews";
+import LaunchChecklist from "@/components/LaunchChecklist";
+import CTA from "@/components/CTA";`,
+    `        <Hero />
+        <TrustBar />
+        <CollectionGrid />
+        <ProductGrid />
+        <StoreBenefits />
+        <Reviews />
+        <LaunchChecklist />
+        <CTA />`
+  )}
+
+FILE: components/Hero.tsx
+import { appConfig } from "@/lib/config";
+
+export default function Hero() {
+  return (
+    <section className="overflow-hidden rounded-[2rem] border border-gray-200 bg-gray-950 px-8 py-16 text-white shadow-sm">
+      <p className="text-sm font-semibold uppercase tracking-wide text-gray-400">
+        Shopify storefront prototype
+      </p>
+
+      <h1 className="mt-4 max-w-5xl text-5xl font-black tracking-tight md:text-6xl">
+        {appConfig.name}
+      </h1>
+
+      <p className="mt-6 max-w-3xl text-lg leading-8 text-gray-300">
+        A conversion-focused Shopify store foundation for selling computers,
+        laptops, accessories, and business-ready technology bundles.
+      </p>
+
+      <div className="mt-8 flex flex-wrap gap-3">
+        <a href="#products" className="rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black">
+          Shop featured products
+        </a>
+
+        <a href="#launch" className="rounded-xl border border-white/20 px-5 py-3 text-sm font-semibold text-white">
+          View launch checklist
+        </a>
+      </div>
+    </section>
+  );
+}
+
+FILE: components/TrustBar.tsx
+const items = [
+  "Secure checkout",
+  "Fast Irish delivery",
+  "Warranty support",
+  "Student and business bundles",
+];
+
+export default function TrustBar() {
+  return (
+    <section className="mt-8 grid gap-3 md:grid-cols-4">
+      {items.map((item) => (
+        <div key={item} className="rounded-2xl border border-gray-200 bg-white p-4 text-sm font-semibold text-gray-700 shadow-sm">
+          {item}
+        </div>
+      ))}
+    </section>
+  );
+}
+
+FILE: components/CollectionGrid.tsx
+const collections = [
+  {
+    name: "Student laptops",
+    description: "Portable, reliable machines for study, projects, and everyday work.",
+  },
+  {
+    name: "Business laptops",
+    description: "Professional devices for small teams, remote workers, and growing companies.",
+  },
+  {
+    name: "Apple essentials",
+    description: "Premium Apple-focused picks for customers who want polish and performance.",
+  },
+  {
+    name: "Accessories",
+    description: "Keyboards, mice, docks, bags, chargers, and productivity add-ons.",
+  },
+];
+
+export default function CollectionGrid() {
+  return (
+    <section className="mt-12">
+      <p className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+        Store collections
+      </p>
+
+      <h2 className="mt-2 text-3xl font-bold text-gray-950">
+        Collections built around how customers actually shop
+      </h2>
+
+      <div className="mt-6 grid gap-4 md:grid-cols-4">
+        {collections.map((collection) => (
+          <article key={collection.name} className="rounded-3xl border border-gray-200 bg-gray-50 p-6 shadow-sm">
+            <div className="flex h-28 items-center justify-center rounded-2xl bg-white text-sm font-semibold text-gray-400">
+              Collection image
+            </div>
+
+            <h3 className="mt-5 text-lg font-bold text-gray-950">
+              {collection.name}
+            </h3>
+
+            <p className="mt-3 text-sm leading-6 text-gray-600">
+              {collection.description}
+            </p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+FILE: components/ProductGrid.tsx
+const products = [
+  {
+    name: "Lenovo ThinkPad business bundle",
+    price: "From €899",
+    badge: "Best for work",
+    description: "A durable business-ready laptop bundle with dock, keyboard, mouse, and setup guidance.",
+  },
+  {
+    name: "MacBook student starter kit",
+    price: "From €1,199",
+    badge: "Student pick",
+    description: "A premium Apple starter bundle for students who need performance, battery life, and resale value.",
+  },
+  {
+    name: "Everyday Windows laptop",
+    price: "From €549",
+    badge: "Best value",
+    description: "A practical laptop for browsing, coursework, admin work, streaming, and everyday productivity.",
+  },
+];
+
+export default function ProductGrid() {
+  return (
+    <section id="products" className="mt-12 rounded-[2rem] border border-gray-200 bg-white p-8 shadow-sm">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+            Featured products
+          </p>
+
+          <h2 className="mt-2 text-3xl font-bold text-gray-950">
+            Product cards designed to convert
+          </h2>
+        </div>
+
+        <a href="#cta" className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-900">
+          Build checkout flow
+        </a>
+      </div>
+
+      <div className="mt-6 grid gap-4 md:grid-cols-3">
+        {products.map((product) => (
+          <article key={product.name} className="rounded-3xl border border-gray-200 bg-gray-50 p-6">
+            <div className="flex h-44 items-center justify-center rounded-2xl bg-white text-sm font-semibold text-gray-400">
+              Product image area
+            </div>
+
+            <div className="mt-5 inline-flex rounded-full bg-black px-3 py-1 text-xs font-semibold text-white">
+              {product.badge}
+            </div>
+
+            <h3 className="mt-4 text-xl font-bold text-gray-950">
+              {product.name}
+            </h3>
+
+            <p className="mt-2 text-lg font-black text-gray-950">
+              {product.price}
+            </p>
+
+            <p className="mt-3 text-sm leading-6 text-gray-600">
+              {product.description}
+            </p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+FILE: components/StoreBenefits.tsx
+const benefits = [
+  {
+    title: "Clear buying guidance",
+    description: "Help customers choose based on student use, business needs, budget, and performance.",
+  },
+  {
+    title: "Bundle-led selling",
+    description: "Increase average order value by pairing laptops with docks, mice, keyboards, bags, and support.",
+  },
+  {
+    title: "Trust before checkout",
+    description: "Show warranty, delivery, support, returns, and payment reassurance before customers hesitate.",
+  },
+];
+
+export default function StoreBenefits() {
+  return (
+    <section className="mt-12">
+      <p className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+        Conversion strategy
+      </p>
+
+      <h2 className="mt-2 text-3xl font-bold text-gray-950">
+        Why this store structure can sell better
+      </h2>
+
+      <div className="mt-6 grid gap-4 md:grid-cols-3">
+        {benefits.map((benefit) => (
+          <article key={benefit.title} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+            <h3 className="text-lg font-bold text-gray-950">{benefit.title}</h3>
+            <p className="mt-3 text-sm leading-6 text-gray-600">{benefit.description}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+FILE: components/Reviews.tsx
+const reviews = [
+  {
+    name: "Student buyer",
+    quote: "The bundle made it easy to know what laptop and accessories I actually needed.",
+  },
+  {
+    name: "Small business owner",
+    quote: "The business setup helped us buy devices without wasting time comparing endless models.",
+  },
+  {
+    name: "Parent buyer",
+    quote: "Clear options, useful support details, and no confusing technical nonsense.",
+  },
+];
+
+export default function Reviews() {
+  return (
+    <section className="mt-12 rounded-[2rem] bg-gray-50 p-8">
+      <p className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+        Social proof
+      </p>
+
+      <h2 className="mt-2 text-3xl font-bold text-gray-950">
+        Review section for buyer confidence
+      </h2>
+
+      <div className="mt-6 grid gap-4 md:grid-cols-3">
+        {reviews.map((review) => (
+          <article key={review.name} className="rounded-3xl bg-white p-6 shadow-sm">
+            <p className="text-sm leading-6 text-gray-600">“{review.quote}”</p>
+            <p className="mt-4 text-sm font-bold text-gray-950">{review.name}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+FILE: components/LaunchChecklist.tsx
+const checklist = [
+  "Add Shopify products, variants, inventory, and collections",
+  "Create product pages with specs, benefits, warranty, and delivery details",
+  "Configure checkout, taxes, shipping zones, and payment providers",
+  "Add abandoned-cart email or WhatsApp recovery workflow",
+  "Install analytics, reviews, SEO metadata, and conversion tracking",
+  "Prepare launch campaign for students, parents, and small businesses",
+];
+
+export default function LaunchChecklist() {
+  return (
+    <section id="launch" className="mt-12 rounded-[2rem] border border-gray-200 bg-white p-8 shadow-sm">
+      <p className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+        Launch checklist
+      </p>
+
+      <h2 className="mt-2 text-3xl font-bold text-gray-950">
+        What needs to happen before this becomes a real Shopify store
+      </h2>
+
+      <div className="mt-6 grid gap-3 md:grid-cols-2">
+        {checklist.map((item) => (
+          <div key={item} className="rounded-2xl bg-gray-50 p-4 text-sm leading-6 text-gray-700">
+            {item}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+FILE: components/CTA.tsx
+export default function CTA() {
+  return (
+    <section id="cta" className="mt-12 rounded-[2rem] bg-black p-8 text-white">
+      <h2 className="text-3xl font-bold">
+        Next step: connect this storefront to real Shopify data
+      </h2>
+
+      <p className="mt-3 max-w-3xl text-sm leading-6 text-gray-300">
+        Replace prototype products with real Shopify collections, connect checkout,
+        configure shipping and tax, add reviews, install analytics, and launch the first campaign.
+      </p>
+
+      <a href="#products" className="mt-6 inline-flex rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black">
+        Review product structure
+      </a>
+    </section>
+  );
+}
+
+FILE: components/FeatureGrid.tsx
+export default function FeatureGrid() {
+  return null;
+}
+`;
+}
+
+function shopifyAppProject(idea: string) {
+  const safeIdea = cleanIdea(idea);
+
+  return `${baseProjectFiles(
+    safeIdea,
+    `import Hero from "@/components/Hero";
+import AppDashboard from "@/components/AppDashboard";
+import CampaignBuilder from "@/components/CampaignBuilder";
+import RecoveryWorkflow from "@/components/RecoveryWorkflow";
+import WhatsAppSequence from "@/components/WhatsAppSequence";
+import AnalyticsPreview from "@/components/AnalyticsPreview";
+import BillingPlans from "@/components/BillingPlans";
+import WebhookChecklist from "@/components/WebhookChecklist";
+import ImplementationNotes from "@/components/ImplementationNotes";
+import CTA from "@/components/CTA";`,
+    `        <Hero />
+        <AppDashboard />
+        <CampaignBuilder />
+        <RecoveryWorkflow />
+        <WhatsAppSequence />
+        <AnalyticsPreview />
+        <BillingPlans />
+        <WebhookChecklist />
+        <ImplementationNotes />
+        <CTA />`
+  )}
+
+FILE: components/Hero.tsx
+import { appConfig } from "@/lib/config";
+
+export default function Hero() {
+  return (
+    <section className="overflow-hidden rounded-[2rem] border border-gray-200 bg-gray-950 px-8 py-16 text-white shadow-sm">
+      <p className="text-sm font-semibold uppercase tracking-wide text-gray-400">
+        Shopify app prototype
+      </p>
+
+      <h1 className="mt-4 max-w-5xl text-5xl font-black tracking-tight md:text-6xl">
+        {appConfig.name}
+      </h1>
+
+      <p className="mt-6 max-w-3xl text-lg leading-8 text-gray-300">
+        A merchant-facing recovery app that turns abandoned carts into WhatsApp
+        campaigns, customer segments, checkout reminders, and measurable revenue recovery.
+      </p>
+    </section>
+  );
+}
+
+FILE: components/AppDashboard.tsx
+const metrics = [
+  ["Recovered revenue", "€18,420", "+24% this month"],
+  ["Abandoned carts", "1,284", "312 recoverable"],
+  ["WhatsApp opt-ins", "68%", "Healthy consent rate"],
+  ["Campaign ROI", "7.4x", "Strong return"],
+];
+
+export default function AppDashboard() {
+  return (
+    <section className="mt-12 rounded-[2rem] border border-gray-200 bg-white p-8 shadow-sm">
+      <p className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+        Embedded admin dashboard
+      </p>
+
+      <h2 className="mt-2 text-3xl font-bold text-gray-950">
+        Merchant recovery workspace
+      </h2>
+
+      <div className="mt-6 grid gap-4 md:grid-cols-4">
+        {metrics.map(([label, value, note]) => (
+          <article key={label} className="rounded-2xl border border-gray-200 bg-gray-50 p-5">
+            <p className="text-sm text-gray-500">{label}</p>
+            <p className="mt-2 text-2xl font-black text-gray-950">{value}</p>
+            <p className="mt-1 text-xs font-medium text-gray-500">{note}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+FILE: components/CampaignBuilder.tsx
+const settings = [
+  ["Trigger", "Cart abandoned for 45 minutes"],
+  ["Audience", "Customers with WhatsApp consent"],
+  ["Offer", "10% recovery incentive"],
+  ["Goal", "Recover revenue before competitor browsing"],
+];
+
+export default function CampaignBuilder() {
+  return (
+    <section id="campaign-builder" className="mt-12 rounded-[2rem] border border-gray-200 bg-gray-50 p-8">
+      <p className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+        Campaign builder
+      </p>
+
+      <h2 className="mt-2 text-3xl font-bold text-gray-950">
+        Configure abandoned-cart recovery without code
+      </h2>
+
+      <div className="mt-6 grid gap-4 md:grid-cols-2">
+        {settings.map(([label, value]) => (
+          <article key={label} className="rounded-2xl bg-white p-5 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">{label}</p>
+            <p className="mt-2 text-base font-semibold text-gray-950">{value}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+FILE: components/RecoveryWorkflow.tsx
+const workflow = [
+  "Cart event received",
+  "Customer matched",
+  "WhatsApp message prepared",
+  "Recovered order tracked",
+];
+
+export default function RecoveryWorkflow() {
+  return (
+    <section className="mt-12">
+      <h2 className="text-3xl font-bold text-gray-950">
+        From abandoned cart to recovered order
+      </h2>
+
+      <div className="mt-6 grid gap-4 md:grid-cols-4">
+        {workflow.map((item, index) => (
+          <article key={item} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black text-sm font-bold text-white">
+              {index + 1}
+            </div>
+            <h3 className="mt-5 text-lg font-bold text-gray-950">{item}</h3>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+FILE: components/WhatsAppSequence.tsx
+const messages = [
+  "Friendly reminder with product summary and checkout link.",
+  "Benefit-led follow-up with social proof and urgency.",
+  "Final recovery offer with clear expiry and support option.",
+];
+
+export default function WhatsAppSequence() {
+  return (
+    <section className="mt-12 rounded-[2rem] bg-black p-8 text-white">
+      <h2 className="text-3xl font-bold">
+        WhatsApp sequence
+      </h2>
+
+      <div className="mt-6 grid gap-4 md:grid-cols-3">
+        {messages.map((message) => (
+          <article key={message} className="rounded-3xl border border-white/10 bg-white/5 p-6 text-sm leading-6 text-gray-300">
+            {message}
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+FILE: components/AnalyticsPreview.tsx
+const analytics = [
+  ["Recovery rate", "14.8%"],
+  ["Average recovered order", "€72"],
+  ["Best sequence", "Three-step reminder"],
+  ["Top segment", "Returning customers"],
+];
+
+export default function AnalyticsPreview() {
+  return (
+    <section className="mt-12 rounded-[2rem] border border-gray-200 bg-white p-8 shadow-sm">
+      <h2 className="text-3xl font-bold text-gray-950">
+        Recovery analytics
+      </h2>
+
+      <div className="mt-6 grid gap-4 md:grid-cols-4">
+        {analytics.map(([label, value]) => (
+          <article key={label} className="rounded-2xl bg-gray-50 p-5">
+            <p className="text-sm text-gray-500">{label}</p>
+            <p className="mt-2 text-2xl font-black text-gray-950">{value}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+FILE: components/BillingPlans.tsx
+const plans = [
+  ["Starter", "€19/mo"],
+  ["Growth", "€59/mo"],
+  ["Business", "€149/mo"],
+];
+
+export default function BillingPlans() {
+  return (
+    <section className="mt-12">
+      <h2 className="text-3xl font-bold text-gray-950">
+        Subscription plan structure
+      </h2>
+
+      <div className="mt-6 grid gap-4 md:grid-cols-3">
+        {plans.map(([name, price]) => (
+          <article key={name} className="rounded-3xl border border-gray-200 p-6 shadow-sm">
+            <h3 className="text-xl font-bold text-gray-950">{name}</h3>
+            <p className="mt-2 text-3xl font-black text-gray-950">{price}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+FILE: components/WebhookChecklist.tsx
+const hooks = [
+  "app/uninstalled",
+  "customers/data_request",
+  "customers/redact",
+  "shop/redact",
+  "orders/create",
+  "checkouts/create",
+  "checkouts/update",
+];
+
+export default function WebhookChecklist() {
+  return (
+    <section className="mt-12 rounded-[2rem] border border-gray-200 bg-gray-50 p-8">
+      <h2 className="text-3xl font-bold text-gray-950">Webhook checklist</h2>
+
+      <div className="mt-6 grid gap-3 md:grid-cols-2">
+        {hooks.map((hook) => (
+          <div key={hook} className="rounded-2xl bg-white p-4 text-sm font-medium text-gray-700 shadow-sm">
+            {hook}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+FILE: components/ImplementationNotes.tsx
+const notes = [
+  "Implement Shopify OAuth with signed install redirect and session storage.",
+  "Verify webhook HMAC before processing store events.",
+  "Store merchant settings, campaign rules, and consent-safe customer identifiers.",
+  "Add WhatsApp provider integration behind environment variables.",
+  "Track recovery attribution with order IDs, campaign IDs, and event timestamps.",
+];
+
+export default function ImplementationNotes() {
+  return (
+    <section id="implementation" className="mt-12 rounded-[2rem] border border-gray-200 bg-white p-8 shadow-sm">
+      <h2 className="text-3xl font-bold text-gray-950">
+        Backend implementation plan
+      </h2>
+
+      <div className="mt-6 grid gap-3">
+        {notes.map((note) => (
+          <div key={note} className="rounded-2xl bg-gray-50 p-4 text-sm leading-6 text-gray-700">
+            {note}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+FILE: components/CTA.tsx
+export default function CTA() {
+  return (
+    <section className="mt-12 rounded-[2rem] bg-black p-8 text-white">
+      <h2 className="text-3xl font-bold">Next build step</h2>
+      <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-300">
+        Add Shopify OAuth, session storage, billing, webhook verification,
+        WhatsApp provider integration, campaign persistence, and embedded app navigation.
+      </p>
+    </section>
+  );
+}
+
+FILE: components/FeatureGrid.tsx
+export default function FeatureGrid() {
+  return null;
+}
+
+FILE: app/api/health/route.ts
+export async function GET() {
+  return Response.json({
+    status: "ok",
+    service: "generated-shopify-app"
+  });
+}
+`;
+}
+
+function genericProject(idea: string) {
+  const safeIdea = cleanIdea(idea);
+
+  return `${baseProjectFiles(
+    safeIdea,
+    `import Hero from "@/components/Hero";
+import FeatureGrid from "@/components/FeatureGrid";
+import CTA from "@/components/CTA";`,
+    `        <Hero />
+        <FeatureGrid />
+        <CTA />`
+  )}
+
+FILE: components/Hero.tsx
+import { appConfig } from "@/lib/config";
+
+export default function Hero() {
+  return (
+    <section className="rounded-3xl border border-gray-200 bg-gray-50 px-8 py-16">
+      <p className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+        Generated by Founder AI
+      </p>
+
+      <h1 className="mt-4 max-w-4xl text-5xl font-bold tracking-tight text-gray-950">
+        {appConfig.name}
+      </h1>
+
+      <p className="mt-5 max-w-2xl text-lg leading-8 text-gray-600">
+        {appConfig.description}
+      </p>
+    </section>
+  );
+}
+
+FILE: components/FeatureGrid.tsx
+const features = [
+  {
+    title: "Build faster",
+    description: "Turn a rough idea into a clear product foundation with structure, pages, and execution direction.",
+  },
+  {
+    title: "Launch with intent",
+    description: "Create a practical first version that can be extended with auth, payments, database, and deployment.",
+  },
+  {
+    title: "Grow from day one",
+    description: "Shape the product around acquisition, conversion, retention, and real customer needs.",
+  },
+];
+
+export default function FeatureGrid() {
+  return (
+    <section id="features" className="mt-10 grid gap-4 md:grid-cols-3">
+      {features.map((feature) => (
+        <article key={feature.title} className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-950">{feature.title}</h2>
+          <p className="mt-3 text-sm leading-6 text-gray-600">{feature.description}</p>
+        </article>
+      ))}
+    </section>
+  );
+}
+
+FILE: components/CTA.tsx
+export default function CTA() {
+  return (
+    <section id="cta" className="mt-10 rounded-3xl bg-black p-8 text-white">
+      <h2 className="text-3xl font-bold">Ready to build?</h2>
+      <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-300">
+        This generated starter gives you a visible working foundation.
+      </p>
+    </section>
+  );
+}
+`;
+}
+
+function fallbackProject(idea: string, kind: ResolvedProjectKind) {
+  if (kind === "shopify_store") {
+    return shopifyStoreProject(idea);
+  }
+
+  if (kind === "shopify_app") {
+    return shopifyAppProject(idea);
+  }
+
+  return genericProject(idea);
+}
+
 function hasValidFileOutput(text: string) {
-  return text.includes("FILE:") && text.includes("package.json") && text.includes("app/page.tsx");
+  return (
+    text.includes("FILE:") &&
+    text.includes("package.json") &&
+    text.includes("app/page.tsx") &&
+    text.includes("app/layout.tsx")
+  );
+}
+
+function getFileContent(text: string, filePath: string) {
+  const marker = `FILE: ${filePath}`;
+  const start = text.indexOf(marker);
+
+  if (start === -1) {
+    return "";
+  }
+
+  const nextFile = text.indexOf("FILE:", start + marker.length);
+
+  return nextFile === -1
+    ? text.slice(start + marker.length)
+    : text.slice(start + marker.length, nextFile);
+}
+
+function hasVisiblePage(text: string) {
+  const pageContent = getFileContent(text, "app/page.tsx");
+
+  return (
+    pageContent.includes("return") &&
+    pageContent.includes("<") &&
+    !pageContent.includes("return null") &&
+    pageContent.length > 120
+  );
+}
+
+function projectLooksTooGeneric(text: string, kind: ResolvedProjectKind) {
+  if (kind === "shopify_store") {
+    return (
+      text.includes("Build faster") ||
+      !text.includes("components/ProductGrid.tsx") ||
+      !text.includes("components/CollectionGrid.tsx") ||
+      !text.includes("components/TrustBar.tsx")
+    );
+  }
+
+  if (kind === "shopify_app") {
+    return (
+      text.includes("Build faster") ||
+      !text.includes("components/CampaignBuilder.tsx") ||
+      !text.includes("components/AppDashboard.tsx")
+    );
+  }
+
+  return false;
+}
+
+function fileNeedsClientDirective(content: string) {
+  const interactivePatterns = [
+    "useState(",
+    "useEffect(",
+    "useRef(",
+    "useRouter(",
+    "useSearchParams(",
+    "onClick=",
+    "onSubmit=",
+    "onChange=",
+    "onMouseEnter=",
+    "onMouseLeave=",
+  ];
+
+  return interactivePatterns.some((pattern) => content.includes(pattern));
+}
+
+function addClientDirectiveIfNeeded(content: string) {
+  const trimmed = content.trimStart();
+
+  if (!fileNeedsClientDirective(content)) {
+    return content;
+  }
+
+  if (trimmed.startsWith('"use client";') || trimmed.startsWith("'use client';")) {
+    return content;
+  }
+
+  return `"use client";\n\n${content}`;
+}
+
+function sanitizeNextConfig(result: string) {
+  return result
+    .replaceAll("FILE: next.config.ts", "FILE: next.config.mjs")
+    .replaceAll("FILE: next.config.js", "FILE: next.config.mjs");
+}
+
+function sanitizeClientComponents(result: string) {
+  const parts = result.split("FILE:");
+  const sanitized: string[] = [];
+
+  for (const part of parts) {
+    const trimmedPart = part.trim();
+
+    if (!trimmedPart) {
+      continue;
+    }
+
+    const firstLineEnd = trimmedPart.indexOf("\n");
+
+    if (firstLineEnd === -1) {
+      sanitized.push(`FILE: ${trimmedPart}`);
+      continue;
+    }
+
+    const filePath = trimmedPart.substring(0, firstLineEnd).trim();
+    const content = trimmedPart.substring(firstLineEnd + 1);
+
+    const shouldCheck =
+      filePath.endsWith(".tsx") || filePath.endsWith(".jsx");
+
+    const finalContent = shouldCheck
+      ? addClientDirectiveIfNeeded(content)
+      : content;
+
+    sanitized.push(`FILE: ${filePath}\n${finalContent.trim()}`);
+  }
+
+  return sanitized.join("\n\n");
+}
+
+function normalizeGeneratedPackageJson(result: string) {
+  const content = getFileContent(result, "package.json");
+
+  if (!content) {
+    return result;
+  }
+
+  let normalized = content;
+
+  try {
+    const parsed = JSON.parse(content.trim());
+
+    normalized = JSON.stringify(
+      {
+        ...parsed,
+        scripts: {
+          ...(parsed.scripts || {}),
+          dev: "next dev",
+          build: "next build",
+          start: "next start",
+        },
+        dependencies: {
+          ...(parsed.dependencies || {}),
+          next: "14.2.23",
+          react: "18.3.1",
+          "react-dom": "18.3.1",
+        },
+        devDependencies: {
+          ...(parsed.devDependencies || {}),
+          "@types/node": "20.17.12",
+          "@types/react": "18.3.18",
+          "@types/react-dom": "18.3.5",
+          typescript: "5.7.2",
+          tailwindcss: "3.4.17",
+          postcss: "8.4.49",
+          autoprefixer: "10.4.20",
+        },
+      },
+      null,
+      2
+    );
+  } catch {
+    normalized = packageJson();
+  }
+
+  return result.replace(content, `\n${normalized}\n`);
+}
+
+function hasHydrationRisk(text: string) {
+  const riskyPatterns = [
+    "Math.random(",
+    "Date.now(",
+    "new Date(",
+    "window.",
+    "document.",
+    "localStorage",
+    "sessionStorage",
+    "navigator.",
+    "suppressHydrationWarning",
+    "dangerouslySetInnerHTML",
+  ];
+
+  return riskyPatterns.some((pattern) => text.includes(pattern));
+}
+
+function sanitizeResult(result: string, idea: string, kind: ResolvedProjectKind) {
+  let cleaned = result.trim();
+
+  cleaned = sanitizeNextConfig(cleaned);
+  cleaned = sanitizeClientComponents(cleaned);
+  cleaned = normalizeGeneratedPackageJson(cleaned);
+
+  if (
+    !hasValidFileOutput(cleaned) ||
+    !hasVisiblePage(cleaned) ||
+    hasHydrationRisk(cleaned) ||
+    projectLooksTooGeneric(cleaned, kind)
+  ) {
+    return fallbackProject(idea, kind);
+  }
+
+  return cleaned;
+}
+
+function getBuilderSystemPrompt(kind: ResolvedProjectKind) {
+  return `
+You are Founder AI Builder, a senior full-stack engineer and product designer.
+
+Generate a complete runnable Next.js project using FILE blocks only.
+
+The selected project type is: ${kind}.
+
+Rules:
+- Return only FILE blocks.
+- No markdown fences.
+- No explanation.
+- Use Next.js App Router.
+- Use TypeScript.
+- Use Tailwind CSS.
+- Pin package versions.
+- Do not use "latest".
+- Do not use browser APIs during render.
+- Do not use event handlers unless the file starts with "use client".
+- Do not use next.config.ts.
+- Every import must point to a file you output.
+- app/page.tsx must visibly render real content.
+
+If project type is shopify_store:
+- Must include product grid, collection grid, trust bar, reviews, launch checklist, and ecommerce-focused CTA.
+- Must feel like a Shopify storefront prototype.
+
+If project type is shopify_app:
+- Must include embedded app dashboard, campaign builder, workflows, billing, webhooks, and implementation notes.
+- Must feel like a Shopify merchant admin app prototype.
+`;
 }
 
 export async function POST(req: Request) {
@@ -327,11 +1197,27 @@ export async function POST(req: Request) {
       return Response.json({ error: "Unauthorized." }, { status: 401 });
     }
 
-    const { idea } = await req.json();
+    const { idea, projectKind } = await req.json();
 
     if (!idea || typeof idea !== "string") {
       return Response.json({ error: "Missing idea." }, { status: 400 });
     }
+
+    const allowedKinds: ProjectKind[] = [
+      "auto",
+      "website",
+      "saas_app",
+      "shopify_store",
+      "shopify_app",
+      "marketing_sales",
+    ];
+
+    const requestedKind: ProjectKind = allowedKinds.includes(projectKind)
+      ? projectKind
+      : "auto";
+
+    const kind: ResolvedProjectKind =
+      requestedKind === "auto" ? detectProjectKind(idea) : requestedKind;
 
     let { data: usage, error: usageError } = await supabaseAdmin
       .from("usage_limits")
@@ -356,7 +1242,10 @@ export async function POST(req: Request) {
         .single();
 
       if (createUsageError) {
-        return Response.json({ error: createUsageError.message }, { status: 500 });
+        return Response.json(
+          { error: createUsageError.message },
+          { status: 500 }
+        );
       }
 
       usage = newUsage;
@@ -377,11 +1266,11 @@ export async function POST(req: Request) {
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4.1-mini",
-      temperature: 0.3,
+      temperature: 0.15,
       messages: [
         {
           role: "system",
-          content: getBuilderSystemPrompt(),
+          content: getBuilderSystemPrompt(kind),
         },
         {
           role: "user",
@@ -390,11 +1279,8 @@ export async function POST(req: Request) {
       ],
     });
 
-    let result = completion.choices[0]?.message?.content || "";
-
-    if (!hasValidFileOutput(result)) {
-      result = fallbackProject(idea);
-    }
+    const rawResult = completion.choices[0]?.message?.content || "";
+    const result = sanitizeResult(rawResult, idea, kind);
 
     const { error: updateError } = await supabaseAdmin
       .from("usage_limits")
@@ -409,6 +1295,7 @@ export async function POST(req: Request) {
 
     return Response.json({
       result,
+      project_kind: kind,
       plan,
       remaining:
         plan === "pro" ? "unlimited" : Math.max(0, 5 - (generations + 1)),

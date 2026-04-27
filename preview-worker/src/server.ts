@@ -1,0 +1,569 @@
+import cors from "cors";
+import express from "express";
+import { execa } from "execa";
+import { copyFile, mkdir, rm, writeFile } from "fs/promises";
+import path from "path";
+import { v4 as uuidv4 } from "uuid";
+
+type FileItem = {
+  path: string;
+  content: string;
+};
+
+type PreviewCheckResult = {
+  ready: boolean;
+  status?: number;
+  htmlSnippet?: string;
+  reason?: string;
+};
+
+const app = express();
+
+app.use(cors());
+app.use(express.json({ limit: "10mb" }));
+
+const PORT = Number(process.env.PORT || 5050);
+const PUBLIC_BASE_URL =
+  process.env.PREVIEW_PUBLIC_BASE_URL || "http://localhost";
+const PREVIEW_MIN_PORT = Number(process.env.PREVIEW_MIN_PORT || 4100);
+const PREVIEW_MAX_PORT = Number(process.env.PREVIEW_MAX_PORT || 4999);
+
+function normalizePath(filePath: string) {
+  return filePath
+    .replace(/^\/+/, "")
+    .replace(/\.\./g, "")
+    .replace(/\\/g, "/")
+    .trim();
+}
+
+function hasFile(files: FileItem[], filePath: string) {
+  return files.some((file) => file.path === filePath);
+}
+
+function removeFiles(files: FileItem[], paths: string[]) {
+  return files.filter((file) => !paths.includes(file.path));
+}
+
+function getRandomPreviewPort() {
+  return (
+    PREVIEW_MIN_PORT +
+    Math.floor(Math.random() * (PREVIEW_MAX_PORT - PREVIEW_MIN_PORT))
+  );
+}
+
+function sanitizeFileContent(filePath: string, content: string) {
+  let next = content;
+
+  if (filePath.endsWith(".tsx") || filePath.endsWith(".jsx")) {
+    const needsClient =
+      next.includes("useState(") ||
+      next.includes("useEffect(") ||
+      next.includes("useRef(") ||
+      next.includes("useRouter(") ||
+      next.includes("useSearchParams(") ||
+      next.includes("onClick=") ||
+      next.includes("onSubmit=") ||
+      next.includes("onChange=") ||
+      next.includes("onMouseEnter=") ||
+      next.includes("onMouseLeave=");
+
+    const trimmed = next.trimStart();
+
+    if (
+      needsClient &&
+      !trimmed.startsWith('"use client";') &&
+      !trimmed.startsWith("'use client';")
+    ) {
+      next = `"use client";\n\n${next}`;
+    }
+  }
+
+  return next;
+}
+
+function safePackageJson() {
+  return JSON.stringify(
+    {
+      name: "founder-ai-preview-project",
+      version: "0.1.0",
+      private: true,
+      scripts: {
+        dev: "next dev",
+        build: "next build",
+        start: "next start",
+      },
+      dependencies: {
+        next: "14.2.23",
+        react: "18.3.1",
+        "react-dom": "18.3.1",
+      },
+      devDependencies: {
+        "@types/node": "20.17.12",
+        "@types/react": "18.3.18",
+        "@types/react-dom": "18.3.5",
+        typescript: "5.7.2",
+        tailwindcss: "3.4.17",
+        postcss: "8.4.49",
+        autoprefixer: "10.4.20",
+      },
+    },
+    null,
+    2
+  );
+}
+
+function normalizePackageJson(content: string) {
+  try {
+    const pkg = JSON.parse(content);
+
+    return JSON.stringify(
+      {
+        ...pkg,
+        scripts: {
+          ...(pkg.scripts || {}),
+          dev: "next dev",
+          build: "next build",
+          start: "next start",
+        },
+        dependencies: {
+          ...(pkg.dependencies || {}),
+          next: "14.2.23",
+          react: "18.3.1",
+          "react-dom": "18.3.1",
+        },
+        devDependencies: {
+          ...(pkg.devDependencies || {}),
+          "@types/node": "20.17.12",
+          "@types/react": "18.3.18",
+          "@types/react-dom": "18.3.5",
+          typescript: "5.7.2",
+          tailwindcss: "3.4.17",
+          postcss: "8.4.49",
+          autoprefixer: "10.4.20",
+        },
+      },
+      null,
+      2
+    );
+  } catch {
+    return safePackageJson();
+  }
+}
+
+function ensureBaseFiles(files: FileItem[]) {
+  let finalFiles = [...files];
+
+  finalFiles = removeFiles(finalFiles, ["next.config.ts", "next.config.js"]);
+
+  finalFiles = finalFiles.map((file) => {
+    const safePath = normalizePath(file.path);
+
+    if (safePath === "package.json") {
+      return {
+        path: safePath,
+        content: normalizePackageJson(file.content),
+      };
+    }
+
+    return {
+      path: safePath,
+      content: sanitizeFileContent(safePath, file.content),
+    };
+  });
+
+  if (!hasFile(finalFiles, "package.json")) {
+    finalFiles.push({
+      path: "package.json",
+      content: safePackageJson(),
+    });
+  }
+
+  if (!hasFile(finalFiles, "app/page.tsx")) {
+    finalFiles.push({
+      path: "app/page.tsx",
+      content: `export default function Home() {
+  return (
+    <main style={{ minHeight: "100vh", background: "white", color: "black", padding: 48 }}>
+      <h1 style={{ fontSize: 40, fontWeight: 800 }}>Founder AI Preview</h1>
+      <p style={{ marginTop: 16, color: "#555" }}>
+        No generated page was found, so Founder AI created this fallback page.
+      </p>
+    </main>
+  );
+}
+`,
+    });
+  }
+
+  if (!hasFile(finalFiles, "app/layout.tsx")) {
+    finalFiles.push({
+      path: "app/layout.tsx",
+      content: `import "./globals.css";
+
+export const metadata = {
+  title: "Founder AI Preview",
+  description: "Preview generated by Founder AI",
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  );
+}
+`,
+    });
+  }
+
+  if (!hasFile(finalFiles, "app/globals.css")) {
+    finalFiles.push({
+      path: "app/globals.css",
+      content: `@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: white;
+  color: #111111;
+}
+
+* {
+  box-sizing: border-box;
+}
+`,
+    });
+  }
+
+  if (!hasFile(finalFiles, "postcss.config.mjs")) {
+    finalFiles.push({
+      path: "postcss.config.mjs",
+      content: `const config = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+};
+
+export default config;
+`,
+    });
+  }
+
+  if (!hasFile(finalFiles, "tailwind.config.ts")) {
+    finalFiles.push({
+      path: "tailwind.config.ts",
+      content: `import type { Config } from "tailwindcss";
+
+const config: Config = {
+  content: [
+    "./app/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./lib/**/*.{ts,tsx}",
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+};
+
+export default config;
+`,
+    });
+  }
+
+  if (!hasFile(finalFiles, "tsconfig.json")) {
+    finalFiles.push({
+      path: "tsconfig.json",
+      content: JSON.stringify(
+        {
+          compilerOptions: {
+            target: "ES2017",
+            lib: ["dom", "dom.iterable", "esnext"],
+            allowJs: true,
+            skipLibCheck: true,
+            strict: false,
+            noEmit: true,
+            esModuleInterop: true,
+            module: "esnext",
+            moduleResolution: "bundler",
+            resolveJsonModule: true,
+            isolatedModules: true,
+            jsx: "preserve",
+            incremental: true,
+            plugins: [
+              {
+                name: "next",
+              },
+            ],
+            paths: {
+              "@/*": ["./*"],
+            },
+          },
+          include: [
+            "next-env.d.ts",
+            "**/*.ts",
+            "**/*.tsx",
+            ".next/types/**/*.ts",
+          ],
+          exclude: ["node_modules"],
+        },
+        null,
+        2
+      ),
+    });
+  }
+
+  if (!hasFile(finalFiles, "next.config.mjs")) {
+    finalFiles.push({
+      path: "next.config.mjs",
+      content: `/** @type {import('next').NextConfig} */
+const nextConfig = {};
+
+export default nextConfig;
+`,
+    });
+  }
+
+  if (!hasFile(finalFiles, "next-env.d.ts")) {
+    finalFiles.push({
+      path: "next-env.d.ts",
+      content: `/// <reference types="next" />
+/// <reference types="next/image-types/global" />
+
+// This file was generated by Founder AI Preview Worker.
+`,
+    });
+  }
+
+  return finalFiles;
+}
+
+async function writeProjectFiles(projectPath: string, files: FileItem[]) {
+  await mkdir(projectPath, { recursive: true });
+
+  for (const file of files) {
+    if (!file.path) continue;
+
+    const fullPath = path.join(projectPath, file.path);
+
+    if (!fullPath.startsWith(projectPath)) {
+      continue;
+    }
+
+    await mkdir(path.dirname(fullPath), { recursive: true });
+    await writeFile(fullPath, file.content);
+  }
+}
+
+async function checkPreview(url: string): Promise<PreviewCheckResult> {
+  try {
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "FounderAI-Preview-Worker",
+      },
+    });
+
+    const html = await response.text();
+    const cleaned = html.replace(/\s+/g, " ").trim();
+    const htmlSnippet = cleaned.slice(0, 2500);
+
+    if (!response.ok) {
+      return {
+        ready: false,
+        status: response.status,
+        htmlSnippet,
+        reason: `HTTP ${response.status}`,
+      };
+    }
+
+    return {
+      ready: true,
+      status: response.status,
+      htmlSnippet,
+      reason: "HTTP page responded.",
+    };
+  } catch {
+    return {
+      ready: false,
+      reason: "Preview URL not reachable yet.",
+    };
+  }
+}
+
+async function waitForPreview(url: string, timeoutMs = 120000) {
+  const start = Date.now();
+  let lastCheck: PreviewCheckResult = { ready: false };
+
+  while (Date.now() - start < timeoutMs) {
+    lastCheck = await checkPreview(url);
+
+    if (lastCheck.ready) {
+      return lastCheck;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+  }
+
+  return lastCheck;
+}
+
+async function getDockerLogs(containerName: string) {
+  try {
+    const logs = await execa("docker", ["logs", containerName]);
+    return `${logs.stdout || ""}\n${logs.stderr || ""}`.trim() || "No Docker logs returned.";
+  } catch (error) {
+    return `Could not read Docker logs: ${String(error)}`;
+  }
+}
+
+async function getFileFromContainer(containerName: string, filePath: string) {
+  try {
+    const result = await execa("docker", [
+      "exec",
+      containerName,
+      "sh",
+      "-lc",
+      `sed -n '1,260p' ${filePath}`,
+    ]);
+
+    return result.stdout || "";
+  } catch (error) {
+    return `Could not read ${filePath}: ${String(error)}`;
+  }
+}
+
+app.get("/", (_req, res) => {
+  res.json({
+    status: "ok",
+    service: "founder-ai-preview-worker",
+    message: "Preview worker is running. Use POST /preview to run generated apps.",
+  });
+});
+
+app.get("/health", (_req, res) => {
+  res.json({
+    status: "ok",
+    service: "founder-ai-preview-worker",
+  });
+});
+
+app.post("/preview", async (req, res) => {
+  let containerName = "";
+  let projectPath = "";
+
+  try {
+    const rawFiles = req.body.files;
+
+    if (!Array.isArray(rawFiles) || rawFiles.length === 0) {
+      return res.status(400).json({
+        error: "No files provided.",
+      });
+    }
+
+    const safeFiles: FileItem[] = rawFiles.map((file) => ({
+      path: normalizePath(String(file.path || "")),
+      content: String(file.content || ""),
+    }));
+
+    const finalFiles = ensureBaseFiles(safeFiles);
+
+    const id = uuidv4();
+    projectPath = path.join(process.cwd(), "tmp", id);
+    containerName = `founder-preview-${id}`;
+    const previewPort = getRandomPreviewPort();
+    const previewUrl = `${PUBLIC_BASE_URL}:${previewPort}`;
+
+    await writeProjectFiles(projectPath, finalFiles);
+
+    await copyFile(
+      path.join(process.cwd(), "GeneratedApp.Dockerfile"),
+      path.join(projectPath, "Dockerfile")
+    );
+
+    await execa("docker", ["build", "-t", containerName, "."], {
+      cwd: projectPath,
+    });
+
+    await execa("docker", [
+      "run",
+      "-d",
+      "--name",
+      containerName,
+      "-p",
+      `${previewPort}:3000`,
+      "--memory=512m",
+      "--cpus=1",
+      containerName,
+    ]);
+
+    const previewCheck = await waitForPreview(previewUrl);
+    const logs = await getDockerLogs(containerName);
+    const pageFile = await getFileFromContainer(containerName, "app/page.tsx");
+    const layoutFile = await getFileFromContainer(containerName, "app/layout.tsx");
+    const packageFile = await getFileFromContainer(containerName, "package.json");
+
+    if (!previewCheck.ready) {
+      return res.status(500).json({
+        error:
+          "Preview container started, but the app did not become reachable.",
+        reason: previewCheck.reason || "Unknown preview failure.",
+        url: previewUrl,
+        status: previewCheck.status || null,
+        htmlSnippet: previewCheck.htmlSnippet || null,
+        logs,
+        pageFile,
+        layoutFile,
+        packageFile,
+        container: containerName,
+      });
+    }
+
+    setTimeout(async () => {
+      try {
+        await execa("docker", ["rm", "-f", containerName]);
+        await execa("docker", ["rmi", "-f", containerName]);
+        await rm(projectPath, { recursive: true, force: true });
+      } catch {
+        // Quiet cleanup. The machine has suffered enough.
+      }
+    }, 10 * 60 * 1000);
+
+    return res.json({
+      url: previewUrl,
+      container: containerName,
+      expires_in_seconds: 600,
+      htmlSnippet: previewCheck.htmlSnippet || null,
+      logs,
+      pageFile,
+      layoutFile,
+      packageFile,
+      warning:
+        "Preview URL returned. If the browser shows a runtime error, use the logs/pageFile to repair the generated code.",
+    });
+  } catch (error) {
+    if (containerName) {
+      await execa("docker", ["rm", "-f", containerName]).catch(() => {});
+      await execa("docker", ["rmi", "-f", containerName]).catch(() => {});
+    }
+
+    if (projectPath) {
+      await rm(projectPath, { recursive: true, force: true }).catch(() => {});
+    }
+
+    return res.status(500).json({
+      error: String(error),
+    });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`Founder AI preview worker running on port ${PORT}`);
+});

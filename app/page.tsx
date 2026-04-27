@@ -9,6 +9,21 @@ type FileItem = {
   content: string;
 };
 
+type PreviewDiagnostics = {
+  error?: string | null;
+  reason?: string | null;
+  url?: string | null;
+  status?: number | null;
+  htmlSnippet?: string | null;
+  logs?: string | null;
+  pageFile?: string | null;
+  layoutFile?: string | null;
+  packageFile?: string | null;
+  container?: string | null;
+  worker_status?: number | null;
+  warning?: string | null;
+};
+
 function parseFiles(text?: string): FileItem[] {
   if (!text || typeof text !== "string") {
     return [];
@@ -28,7 +43,7 @@ function parseFiles(text?: string): FileItem[] {
     }
 
     const filePath = part.substring(0, firstLineEnd).trim();
-    const content = part.substring(firstLineEnd).trim();
+    const content = part.substring(firstLineEnd + 1).trim();
 
     if (!filePath || !content) {
       continue;
@@ -58,8 +73,16 @@ export default function Home() {
   const [idea, setIdea] = useState("");
   const [files, setFiles] = useState<FileItem[]>([]);
   const [selected, setSelected] = useState(0);
+
   const [previewUrl, setPreviewUrl] = useState("");
+  const [previewStatus, setPreviewStatus] = useState("");
+  const [previewError, setPreviewError] = useState("");
+  const [previewDiagnostics, setPreviewDiagnostics] =
+    useState<PreviewDiagnostics | null>(null);
+
   const [loading, setLoading] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [fixing, setFixing] = useState(false);
 
   const [userEmail, setUserEmail] = useState("");
   const [plan, setPlan] = useState("free");
@@ -135,7 +158,7 @@ export default function Home() {
   }
 
   async function generate() {
-    if (!idea.trim() || loading) return;
+    if (!idea.trim() || loading || previewLoading || fixing) return;
 
     const headers = await getAuthHeaders();
 
@@ -147,6 +170,9 @@ export default function Home() {
     setLoading(true);
     setFiles([]);
     setPreviewUrl("");
+    setPreviewStatus("");
+    setPreviewError("");
+    setPreviewDiagnostics(null);
 
     try {
       const res = await fetch("/api/generate", {
@@ -187,6 +213,11 @@ export default function Home() {
 
       setFiles(parsed);
       setSelected(0);
+      setPreviewStatus(
+        data.project_kind
+          ? `Generated project type: ${data.project_kind}. Click Run App to preview.`
+          : "Project generated. Click Run App to preview."
+      );
       await loadUsage();
     } catch (error) {
       alert(`Generate error: ${String(error)}`);
@@ -199,15 +230,21 @@ export default function Home() {
     if (value === undefined) return;
 
     const updated = [...files];
+
+    if (!updated[selected]) return;
+
     updated[selected].content = value;
     setFiles(updated);
     setPreviewUrl("");
+    setPreviewStatus("Files changed. Run App again to refresh preview.");
+    setPreviewError("");
+    setPreviewDiagnostics(null);
   }
 
   async function regenerateFile() {
     const file = files[selected];
 
-    if (!file || loading) return;
+    if (!file || loading || previewLoading || fixing) return;
 
     const headers = await getAuthHeaders();
 
@@ -217,6 +254,10 @@ export default function Home() {
     }
 
     setLoading(true);
+    setPreviewUrl("");
+    setPreviewStatus("");
+    setPreviewError("");
+    setPreviewDiagnostics(null);
 
     try {
       const projectContext = rebuildProject(files);
@@ -267,12 +308,92 @@ FILE: ${file.path}
       updatedFiles[selected] = parsed[0];
 
       setFiles(updatedFiles);
-      setPreviewUrl("");
+      setPreviewStatus("File regenerated. Run App to preview the updated project.");
       await loadUsage();
     } catch (error) {
       alert(`Regenerate error: ${String(error)}`);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function fixPreviewError() {
+    if (files.length === 0) {
+      alert("Generate a project first.");
+      return;
+    }
+
+    if (!previewDiagnostics && !previewError) {
+      alert("No preview error diagnostics available.");
+      return;
+    }
+
+    const headers = await getAuthHeaders();
+
+    if (!headers) {
+      alert("Login required.");
+      return;
+    }
+
+    setFixing(true);
+    setPreviewStatus("Repairing preview error with Founder AI...");
+    setPreviewError("");
+
+    try {
+      const res = await fetch("/api/fix", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          files,
+          diagnostics: {
+            error: previewError || previewDiagnostics?.error || null,
+            reason: previewDiagnostics?.reason || null,
+            logs: previewDiagnostics?.logs || null,
+            htmlSnippet: previewDiagnostics?.htmlSnippet || null,
+            pageFile: previewDiagnostics?.pageFile || null,
+            layoutFile: previewDiagnostics?.layoutFile || null,
+            packageFile: previewDiagnostics?.packageFile || null,
+            container: previewDiagnostics?.container || null,
+            status: previewDiagnostics?.status || null,
+          },
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setPreviewError(data.error || "Fix failed.");
+        setPreviewDiagnostics(data);
+        setPreviewStatus("");
+        return;
+      }
+
+      let repairedFiles: FileItem[] = [];
+
+      if (Array.isArray(data.files) && data.files.length > 0) {
+        repairedFiles = data.files;
+      } else if (data.result) {
+        repairedFiles = parseFiles(data.result);
+      }
+
+      if (repairedFiles.length === 0) {
+        setPreviewError("Fix failed: no repaired files returned.");
+        setPreviewDiagnostics(data);
+        setPreviewStatus("");
+        return;
+      }
+
+      setFiles(repairedFiles);
+      setSelected(0);
+      setPreviewUrl("");
+      setPreviewError("");
+      setPreviewDiagnostics(null);
+      setPreviewStatus("Preview error repaired. Click Run App again.");
+    } catch (error) {
+      setPreviewError(`Fix error: ${String(error)}`);
+      setPreviewStatus("");
+    } finally {
+      setFixing(false);
     }
   }
 
@@ -289,7 +410,7 @@ FILE: ${file.path}
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          result: rebuildProject(files),
+          files,
         }),
       });
 
@@ -319,7 +440,11 @@ FILE: ${file.path}
       return;
     }
 
-    setLoading(true);
+    setPreviewLoading(true);
+    setPreviewUrl("");
+    setPreviewError("");
+    setPreviewDiagnostics(null);
+    setPreviewStatus("Sending files to preview worker...");
 
     try {
       const res = await fetch("/api/preview", {
@@ -333,20 +458,30 @@ FILE: ${file.path}
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data.error || "Preview failed.");
+        setPreviewError(data.error || "Preview failed.");
+        setPreviewDiagnostics(data);
+        setPreviewStatus("");
         return;
       }
 
       if (!data.url) {
-        alert("Preview failed: no preview URL returned.");
+        setPreviewError("Preview failed: no preview URL returned.");
+        setPreviewDiagnostics(data);
+        setPreviewStatus("");
         return;
       }
 
       setPreviewUrl(data.url);
+      setPreviewDiagnostics(data);
+      setPreviewStatus(
+        `Preview running at ${data.url}. It may take a few seconds to load.`
+      );
     } catch (error) {
-      alert(`Preview error: ${String(error)}`);
+      setPreviewError(`Preview error: ${String(error)}`);
+      setPreviewStatus("");
+      setPreviewDiagnostics(null);
     } finally {
-      setLoading(false);
+      setPreviewLoading(false);
     }
   }
 
@@ -433,9 +568,25 @@ FILE: ${file.path}
     setSubscriptionStatus("inactive");
     setFiles([]);
     setPreviewUrl("");
+    setPreviewStatus("");
+    setPreviewError("");
+    setPreviewDiagnostics(null);
     setIdea("");
 
     alert("Logged out.");
+  }
+
+  function diagnosticBlock(title: string, value?: string | null) {
+    if (!value) return null;
+
+    return (
+      <details className="mt-3 rounded-xl border border-gray-200 bg-white p-3">
+        <summary className="cursor-pointer text-sm font-semibold">{title}</summary>
+        <pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap text-xs text-gray-800">
+          {value}
+        </pre>
+      </details>
+    );
   }
 
   const selectedFile = files[selected];
@@ -447,7 +598,13 @@ FILE: ${file.path}
 
   const isFreeOut = plan === "free" && remainingNum !== null && remainingNum <= 0;
   const isFreeLow =
-    plan === "free" && remainingNum !== null && remainingNum > 0 && remainingNum <= 3;
+    plan === "free" &&
+    remainingNum !== null &&
+    remainingNum > 0 &&
+    remainingNum <= 3;
+
+  const busy = loading || previewLoading || fixing;
+  const canFixPreview = files.length > 0 && (!!previewError || !!previewDiagnostics);
 
   return (
     <main className="min-h-screen bg-white text-black">
@@ -457,7 +614,7 @@ FILE: ${file.path}
             <h1 className="text-3xl font-bold">Founder AI Builder</h1>
 
             <p className="mt-2 text-sm text-gray-600">
-              Generate, edit, preview, and download full-stack project files.
+              Generate, edit, preview, repair, and download full-stack project files.
             </p>
 
             {userEmail ? (
@@ -514,7 +671,7 @@ FILE: ${file.path}
             {!isPro && (
               <button
                 onClick={upgrade}
-                disabled={loading}
+                disabled={busy}
                 className="rounded-xl bg-green-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
               >
                 Upgrade to Pro
@@ -524,7 +681,7 @@ FILE: ${file.path}
             {isPro && (
               <button
                 onClick={openBillingPortal}
-                disabled={loading}
+                disabled={busy}
                 className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium disabled:opacity-50"
               >
                 Manage Subscription
@@ -534,7 +691,7 @@ FILE: ${file.path}
             {userEmail && (
               <button
                 onClick={logout}
-                disabled={loading}
+                disabled={busy}
                 className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium disabled:opacity-50"
               >
                 Log out
@@ -553,7 +710,7 @@ FILE: ${file.path}
         <div className="mt-3 flex flex-wrap gap-2">
           <button
             onClick={generate}
-            disabled={loading || isFreeOut}
+            disabled={busy || isFreeOut}
             className="rounded-xl bg-black px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? "Working..." : "Generate Project"}
@@ -562,7 +719,7 @@ FILE: ${file.path}
           {isFreeOut && (
             <button
               onClick={upgrade}
-              disabled={loading}
+              disabled={busy}
               className="rounded-xl bg-green-600 px-4 py-2 text-white disabled:opacity-50"
             >
               Upgrade to Continue
@@ -573,7 +730,7 @@ FILE: ${file.path}
             <>
               <button
                 onClick={regenerateFile}
-                disabled={loading || isFreeOut}
+                disabled={busy || isFreeOut}
                 className="rounded-xl border border-gray-300 px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Regenerate File
@@ -581,15 +738,25 @@ FILE: ${file.path}
 
               <button
                 onClick={runPreview}
-                disabled={loading}
+                disabled={busy}
                 className="rounded-xl bg-green-600 px-4 py-2 text-white disabled:opacity-50"
               >
-                Run App
+                {previewLoading ? "Starting Preview..." : "Run App"}
               </button>
+
+              {canFixPreview && (
+                <button
+                  onClick={fixPreviewError}
+                  disabled={busy}
+                  className="rounded-xl bg-orange-600 px-4 py-2 text-white disabled:opacity-50"
+                >
+                  {fixing ? "Fixing..." : "Fix Preview Error"}
+                </button>
+              )}
 
               <button
                 onClick={downloadProject}
-                disabled={loading}
+                disabled={busy}
                 className="rounded-xl border border-gray-300 px-4 py-2 disabled:opacity-50"
               >
                 Download ZIP
@@ -597,10 +764,66 @@ FILE: ${file.path}
             </>
           )}
         </div>
+
+        {(previewStatus || previewError || previewUrl || previewDiagnostics) && (
+          <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm">
+            {previewStatus && <p className="text-gray-700">{previewStatus}</p>}
+
+            {previewError && (
+              <p className="font-medium text-red-700">{previewError}</p>
+            )}
+
+            {previewDiagnostics?.reason && (
+              <p className="mt-1 text-gray-700">
+                Reason: {previewDiagnostics.reason}
+              </p>
+            )}
+
+            {previewDiagnostics?.container && (
+              <p className="mt-1 text-gray-700">
+                Container: {previewDiagnostics.container}
+              </p>
+            )}
+
+            {previewDiagnostics?.warning && (
+              <p className="mt-1 text-orange-700">
+                Warning: {previewDiagnostics.warning}
+              </p>
+            )}
+
+            {previewUrl && (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <span className="text-gray-600">Preview URL:</span>
+
+                <a
+                  href={previewUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-medium text-blue-600 underline"
+                >
+                  {previewUrl}
+                </a>
+
+                <button
+                  onClick={() => window.open(previewUrl, "_blank")}
+                  className="rounded-lg border border-gray-300 px-3 py-1"
+                >
+                  Open Preview
+                </button>
+              </div>
+            )}
+
+            {diagnosticBlock("Docker logs", previewDiagnostics?.logs)}
+            {diagnosticBlock("Generated package.json", previewDiagnostics?.packageFile)}
+            {diagnosticBlock("Generated app/page.tsx", previewDiagnostics?.pageFile)}
+            {diagnosticBlock("Generated app/layout.tsx", previewDiagnostics?.layoutFile)}
+            {diagnosticBlock("HTML snippet", previewDiagnostics?.htmlSnippet)}
+          </div>
+        )}
       </div>
 
       {files.length > 0 ? (
-        <div className="flex h-[calc(100vh-260px)] min-h-[520px]">
+        <div className="flex h-[calc(100vh-300px)] min-h-[520px]">
           <aside className="w-1/5 overflow-auto border-r bg-gray-50 text-sm">
             <div className="border-b px-3 py-2 font-semibold">Files</div>
 
@@ -652,6 +875,12 @@ FILE: ${file.path}
               ) : (
                 <div className="p-4 text-sm text-gray-500">
                   Click <strong>Run App</strong> to preview the generated project.
+                  {canFixPreview && (
+                    <span>
+                      {" "}
+                      If preview failed, click <strong>Fix Preview Error</strong>.
+                    </span>
+                  )}
                 </div>
               )}
             </div>

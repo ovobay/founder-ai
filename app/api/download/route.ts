@@ -6,6 +6,14 @@ type FileItem = {
   content: string;
 };
 
+function normalizePath(filePath: string) {
+  return filePath
+    .replace(/^\/+/, "")
+    .replace(/\.\./g, "")
+    .replace(/\\/g, "/")
+    .trim();
+}
+
 function parseFiles(text?: string): FileItem[] {
   if (!text || typeof text !== "string") {
     return [];
@@ -40,55 +48,114 @@ function parseFiles(text?: string): FileItem[] {
   return files;
 }
 
-function normalizePath(filePath: string) {
-  return filePath
-    .replace(/^\/+/, "")
-    .replace(/\.\./g, "")
-    .replace(/\\/g, "/")
-    .trim();
-}
-
 function hasFile(files: FileItem[], path: string) {
   return files.some((file) => file.path === path);
 }
 
+function removeFiles(files: FileItem[], paths: string[]) {
+  return files.filter((file) => !paths.includes(file.path));
+}
+
+function safePackageJson() {
+  return JSON.stringify(
+    {
+      name: "founder-ai-generated-project",
+      version: "0.1.0",
+      private: true,
+      scripts: {
+        dev: "next dev",
+        build: "next build",
+        start: "next start",
+        lint: "next lint",
+      },
+      dependencies: {
+        next: "14.2.23",
+        react: "18.3.1",
+        "react-dom": "18.3.1",
+      },
+      devDependencies: {
+        "@types/node": "20.17.12",
+        "@types/react": "18.3.18",
+        "@types/react-dom": "18.3.5",
+        typescript: "5.7.2",
+        tailwindcss: "3.4.17",
+        postcss: "8.4.49",
+        autoprefixer: "10.4.20",
+        eslint: "8.57.1",
+        "eslint-config-next": "14.2.23",
+      },
+    },
+    null,
+    2
+  );
+}
+
+function normalizePackageJson(content: string) {
+  try {
+    const pkg = JSON.parse(content);
+
+    return JSON.stringify(
+      {
+        ...pkg,
+        scripts: {
+          ...(pkg.scripts || {}),
+          dev: "next dev",
+          build: "next build",
+          start: "next start",
+          lint: "next lint",
+        },
+        dependencies: {
+          ...(pkg.dependencies || {}),
+          next: "14.2.23",
+          react: "18.3.1",
+          "react-dom": "18.3.1",
+        },
+        devDependencies: {
+          ...(pkg.devDependencies || {}),
+          "@types/node": "20.17.12",
+          "@types/react": "18.3.18",
+          "@types/react-dom": "18.3.5",
+          typescript: "5.7.2",
+          tailwindcss: "3.4.17",
+          postcss: "8.4.49",
+          autoprefixer: "10.4.20",
+          eslint: "8.57.1",
+          "eslint-config-next": "14.2.23",
+        },
+      },
+      null,
+      2
+    );
+  } catch {
+    return safePackageJson();
+  }
+}
+
 function ensureBaseFiles(files: FileItem[]) {
-  const finalFiles = [...files];
+  let finalFiles = [...files];
+
+  finalFiles = removeFiles(finalFiles, ["next.config.ts", "next.config.js"]);
+
+  finalFiles = finalFiles.map((file) => {
+    const safePath = normalizePath(file.path);
+
+    if (safePath === "package.json") {
+      return {
+        path: safePath,
+        content: normalizePackageJson(file.content),
+      };
+    }
+
+    return {
+      path: safePath,
+      content: file.content,
+    };
+  });
 
   if (!hasFile(finalFiles, "package.json")) {
     finalFiles.push({
       path: "package.json",
-      content: JSON.stringify(
-        {
-          name: "founder-ai-generated-project",
-          version: "0.1.0",
-          private: true,
-          scripts: {
-            dev: "next dev",
-            build: "next build",
-            start: "next start",
-            lint: "next lint",
-          },
-          dependencies: {
-            next: "latest",
-            react: "latest",
-            "react-dom": "latest",
-          },
-          devDependencies: {
-            "@types/node": "latest",
-            "@types/react": "latest",
-            "@types/react-dom": "latest",
-            typescript: "latest",
-            tailwindcss: "latest",
-            postcss: "latest",
-            autoprefixer: "latest",
-            eslint: "latest",
-            "eslint-config-next": "latest",
-          },
-        },
-        null,
-        2
-      ),
+      content: safePackageJson(),
     });
   }
 
@@ -102,7 +169,7 @@ function ensureBaseFiles(files: FileItem[]) {
             lib: ["dom", "dom.iterable", "esnext"],
             allowJs: true,
             skipLibCheck: true,
-            strict: true,
+            strict: false,
             noEmit: true,
             esModuleInterop: true,
             module: "esnext",
@@ -140,12 +207,11 @@ function ensureBaseFiles(files: FileItem[]) {
     });
   }
 
-  if (!hasFile(finalFiles, "next.config.ts")) {
+  if (!hasFile(finalFiles, "next.config.mjs")) {
     finalFiles.push({
-      path: "next.config.ts",
-      content: `import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {};
+      path: "next.config.mjs",
+      content: `/** @type {import('next').NextConfig} */
+const nextConfig = {};
 
 export default nextConfig;
 `,

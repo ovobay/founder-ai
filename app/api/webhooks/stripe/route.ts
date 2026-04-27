@@ -1,6 +1,8 @@
 // Stripe webhook route.
-// Upgrades users to Pro when subscription checkout succeeds.
-// Downgrades users to Free when subscription is cancelled.
+// Handles subscription lifecycle:
+// - checkout.session.completed → Pro
+// - customer.subscription.updated → active/cancelling/past_due/unpaid
+// - customer.subscription.deleted → Free
 
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
@@ -12,7 +14,7 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-async function updateUserPlan({
+async function updateUsageByUserId({
   userId,
   plan,
   customerId,
@@ -23,20 +25,46 @@ async function updateUserPlan({
   plan: "free" | "pro";
   customerId?: string | null;
   subscriptionId?: string | null;
-  subscriptionStatus?: string | null;
+  subscriptionStatus: string;
 }) {
   const { error } = await supabaseAdmin.from("usage_limits").upsert(
     {
       user_id: userId,
       plan,
-      stripe_customer_id: customerId || null,
-      stripe_subscription_id: subscriptionId || null,
-      subscription_status: subscriptionStatus || "inactive",
+      stripe_customer_id: customerId ?? null,
+      stripe_subscription_id: subscriptionId ?? null,
+      subscription_status: subscriptionStatus,
     },
     {
       onConflict: "user_id",
     }
   );
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+async function updateUsageBySubscriptionId({
+  subscriptionId,
+  plan,
+  subscriptionStatus,
+  cancelAtPeriodEnd,
+}: {
+  subscriptionId: string;
+  plan: "free" | "pro";
+  subscriptionStatus: string;
+  cancelAtPeriodEnd?: boolean;
+}) {
+  const finalStatus = cancelAtPeriodEnd ? "cancelling" : subscriptionStatus;
+
+  const { error } = await supabaseAdmin
+    .from("usage_limits")
+    .update({
+      plan,
+      subscription_status: finalStatus,
+    })
+    .eq("stripe_subscription_id", subscriptionId);
 
   if (error) {
     throw new Error(error.message);
@@ -71,6 +99,7 @@ export async function POST(req: Request) {
   }
 
   try {
+    // User completed Stripe Checkout successfully
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
 
@@ -84,12 +113,12 @@ export async function POST(req: Request) {
 
       if (!userId) {
         return Response.json(
-          { error: "Missing user_id in Stripe checkout metadata." },
+          { error: "Missing user_id in checkout metadata." },
           { status: 400 }
         );
       }
 
-      await updateUserPlan({
+      await updateUsageByUserId({
         userId,
         plan: "pro",
         customerId,
@@ -99,56 +128,62 @@ export async function POST(req: Request) {
 
       return Response.json({
         received: true,
-        upgraded: true,
-        user_id: userId,
+        event: event.type,
+        action: "upgraded_to_pro",
       });
     }
 
-if (event.type === "customer.subscription.updated") {
-  const subscription = event.data.object as Stripe.Subscription;
+    // Subscription changed: cancelled at period end, resumed, past due, unpaid, etc.
+    if (event.type === "customer.subscription.updated") {
+      const subscription = event.data.object as Stripe.Subscription;
 
-  const userId = subscription.metadata?.user_id;
+      const userId = subscription.metadata?.user_id;
 
-  if (!userId) {
-    return Response.json(
-      { error: "Missing user_id in subscription metadata." },
-      { status: 400 }
-    );
-  }
-
-  const cancelAtPeriodEnd = subscription.cancel_at_period_end;
-
-  // If user cancelled but period hasn't ended yet
-  if (cancelAtPeriodEnd) {
-    await updateUserPlan({
-      userId,
-      plan: "pro", // still pro until expiry
-      customerId:
+      const customerId =
         typeof subscription.customer === "string"
           ? subscription.customer
-          : null,
-      subscriptionId: subscription.id,
-      subscriptionStatus: "cancelling",
-    });
+          : null;
 
-    return Response.json({ received: true, cancelling: true });
-  }
+      const subscriptionId = subscription.id;
 
-  // If subscription is active again (e.g. user resumed)
-  await updateUserPlan({
-    userId,
-    plan: "pro",
-    customerId:
-      typeof subscription.customer === "string"
-        ? subscription.customer
-        : null,
-    subscriptionId: subscription.id,
-    subscriptionStatus: "active",
-  });
+      const isCancelling = subscription.cancel_at_period_end === true;
 
-  return Response.json({ received: true, updated: true });
-}
+      const isActive =
+        subscription.status === "active" || subscription.status === "trialing";
 
+      const plan = isActive ? "pro" : "free";
+
+      const subscriptionStatus = isCancelling
+        ? "cancelling"
+        : subscription.status;
+
+      if (userId) {
+        await updateUsageByUserId({
+          userId,
+          plan,
+          customerId,
+          subscriptionId,
+          subscriptionStatus,
+        });
+      } else {
+        // Fallback: update using stored subscription ID
+        await updateUsageBySubscriptionId({
+          subscriptionId,
+          plan,
+          subscriptionStatus,
+          cancelAtPeriodEnd: isCancelling,
+        });
+      }
+
+      return Response.json({
+        received: true,
+        event: event.type,
+        action: "subscription_updated",
+        subscription_status: subscriptionStatus,
+      });
+    }
+
+    // Subscription fully ended
     if (event.type === "customer.subscription.deleted") {
       const subscription = event.data.object as Stripe.Subscription;
 
@@ -159,29 +194,36 @@ if (event.type === "customer.subscription.updated") {
           ? subscription.customer
           : null;
 
-      if (!userId) {
-        return Response.json(
-          { error: "Missing user_id in Stripe subscription metadata." },
-          { status: 400 }
-        );
-      }
+      const subscriptionId = subscription.id;
 
-      await updateUserPlan({
-        userId,
-        plan: "free",
-        customerId,
-        subscriptionId: subscription.id,
-        subscriptionStatus: "cancelled",
-      });
+      if (userId) {
+        await updateUsageByUserId({
+          userId,
+          plan: "free",
+          customerId,
+          subscriptionId,
+          subscriptionStatus: "cancelled",
+        });
+      } else {
+        await updateUsageBySubscriptionId({
+          subscriptionId,
+          plan: "free",
+          subscriptionStatus: "cancelled",
+        });
+      }
 
       return Response.json({
         received: true,
-        downgraded: true,
-        user_id: userId,
+        event: event.type,
+        action: "downgraded_to_free",
       });
     }
 
-    return Response.json({ received: true });
+    return Response.json({
+      received: true,
+      event: event.type,
+      action: "ignored",
+    });
   } catch (error) {
     return Response.json(
       { error: `Webhook handler failed: ${String(error)}` },

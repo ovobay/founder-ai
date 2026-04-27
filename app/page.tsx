@@ -30,20 +30,13 @@ export default function Home() {
 
   async function getSession() {
     const supabase = createClient();
-
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
+    const { data: { session } } = await supabase.auth.getSession();
     return session;
   }
 
   async function getAuthHeaders() {
     const session = await getSession();
-
-    if (!session?.access_token) {
-      return null;
-    }
+    if (!session?.access_token) return null;
 
     return {
       "Content-Type": "application/json",
@@ -64,618 +57,170 @@ export default function Home() {
     }
 
     setUserEmail(session.user.email || "");
-
     await loadProjects();
     await loadUsage();
   }
 
   async function loadUsage() {
-    try {
-      const headers = await getAuthHeaders();
+    const headers = await getAuthHeaders();
+    if (!headers) return;
 
-      if (!headers) return;
+    const res = await fetch("/api/usage", { headers });
+    const data = await res.json();
 
-      const res = await fetch("/api/usage", {
-        method: "GET",
-        headers,
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        console.error("Usage failed:", data.error);
-        return;
-      }
-
-      setPlan(data.plan || "free");
-      setRemaining(data.remaining ?? 5);
-      setSubscriptionStatus(data.subscription_status || "inactive");
-    } catch (error) {
-      console.error("Failed to load usage:", error);
-    }
+    setPlan(data.plan);
+    setRemaining(data.remaining);
+    setSubscriptionStatus(data.subscription_status);
   }
 
   async function loadProjects() {
-    try {
-      const headers = await getAuthHeaders();
+    const headers = await getAuthHeaders();
+    if (!headers) return;
 
-      if (!headers) {
-        setProjects([]);
-        return;
-      }
-
-      const res = await fetch("/api/projects", {
-        method: "GET",
-        headers,
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        console.error("Projects failed:", data.error);
-        setProjects([]);
-        return;
-      }
-
-      setProjects(data.projects || []);
-    } catch (error) {
-      console.error("Failed to load projects:", error);
-    }
-  }
-
-  function splitSections(text: string) {
-    return text.split(/\n(?=# )/g).map((section) => {
-      const lines = section.split("\n");
-
-      return {
-        title: lines[0] || "Untitled Section",
-        content: lines.slice(1).join("\n"),
-      };
-    });
-  }
-
-  function joinSections(updatedSections: any[]) {
-    return updatedSections.map((s) => `${s.title}\n${s.content}`).join("\n\n");
+    const res = await fetch("/api/projects", { headers });
+    const data = await res.json();
+    setProjects(data.projects || []);
   }
 
   async function generate() {
     if (!idea.trim() || loading) return;
 
     const headers = await getAuthHeaders();
-
-    if (!headers) {
-      alert("Login required.");
-      return;
-    }
+    if (!headers) return alert("Login required");
 
     setLoading(true);
     setResult("");
     setSections([]);
 
-    try {
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          idea,
-          mode,
-        }),
-      });
+    const res = await fetch("/api/generate", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ idea, mode }),
+    });
 
-      const data = await res.json();
+    const data = await res.json();
 
-      if (!res.ok) {
-        if (data.upgrade) {
-          alert("You’ve hit the free limit. Upgrade to continue.");
-          await loadUsage();
-          return;
-        }
-
-        alert(data.error || "Generation failed.");
+    if (!res.ok) {
+      if (data.upgrade) {
+        alert("You've hit the free limit. Upgrade to continue.");
         return;
       }
-
-      setResult(data.result);
-      setSections(splitSections(data.result));
-
-      await loadUsage();
-    } catch (error) {
-      alert(`Generate error: ${String(error)}`);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function regenerateSection(index: number, title: string) {
-    if (!idea.trim() || loading) return;
-
-    const headers = await getAuthHeaders();
-
-    if (!headers) {
-      alert("Login required.");
-      return;
+      return alert(data.error);
     }
 
-    setLoading(true);
-
-    try {
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          idea: `Regenerate ONLY this section: ${title}\n\nOriginal idea: ${idea}`,
-          mode,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        if (data.upgrade) {
-          alert("You’ve hit the free limit. Upgrade to continue.");
-          await loadUsage();
-          return;
-        }
-
-        alert(data.error || "Regenerate failed.");
-        return;
-      }
-
-      const newSections = [...sections];
-
-      newSections[index] = {
-        title,
-        content: data.result,
-      };
-
-      setSections(newSections);
-      setResult(joinSections(newSections));
-
-      await loadUsage();
-    } catch (error) {
-      alert(`Regenerate error: ${String(error)}`);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function saveProject() {
-    if (!idea.trim() || !result.trim()) {
-      alert("Generate a result before saving.");
-      return;
-    }
-
-    const headers = await getAuthHeaders();
-
-    if (!headers) {
-      alert("Login required.");
-      return;
-    }
-
-    try {
-      const res = await fetch("/api/projects", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          idea,
-          mode,
-          result,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        alert(data.error || "Save failed.");
-        return;
-      }
-
-      alert("Project saved.");
-      await loadProjects();
-    } catch (error) {
-      alert(`Save error: ${String(error)}`);
-    }
+    setResult(data.result);
+    await loadUsage();
+    setLoading(false);
   }
 
   async function upgrade() {
     const headers = await getAuthHeaders();
+    if (!headers) return;
 
-    if (!headers) {
-      alert("Login required.");
-      return;
-    }
+    const res = await fetch("/api/stripe", {
+      method: "POST",
+      headers,
+    });
 
-    setLoading(true);
-
-    try {
-      const res = await fetch("/api/stripe", {
-        method: "POST",
-        headers,
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        alert(data.error || "Upgrade failed.");
-        return;
-      }
-
-      if (!data.url) {
-        alert("Stripe did not return a checkout URL.");
-        return;
-      }
-
-      window.location.href = data.url;
-    } catch (error) {
-      alert(`Upgrade error: ${String(error)}`);
-    } finally {
-      setLoading(false);
-    }
+    const data = await res.json();
+    window.location.href = data.url;
   }
 
   async function openBillingPortal() {
     const headers = await getAuthHeaders();
-
-    if (!headers) {
-      alert("Login required.");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const res = await fetch("/api/stripe/portal", {
-        method: "POST",
-        headers,
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        alert(data.error || "Failed to open billing portal.");
-        return;
-      }
-
-      if (!data.url) {
-        alert("Stripe did not return a billing portal URL.");
-        return;
-      }
-
-      window.location.href = data.url;
-    } catch (error) {
-      alert(`Portal error: ${String(error)}`);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function deleteProject(id: string) {
-    if (!confirm("Delete this project?")) return;
-
-    const headers = await getAuthHeaders();
-
-    if (!headers) {
-      alert("Login required.");
-      return;
-    }
-
-    try {
-      const res = await fetch("/api/projects", {
-        method: "DELETE",
-        headers,
-        body: JSON.stringify({ id }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        alert(data.error || "Delete failed.");
-        return;
-      }
-
-      await loadProjects();
-      alert("Project deleted.");
-    } catch (error) {
-      alert(`Delete error: ${String(error)}`);
-    }
-  }
-
-  async function updateTitle(id: string, title: string) {
-    const headers = await getAuthHeaders();
-
     if (!headers) return;
 
-    try {
-      const res = await fetch("/api/projects", {
-        method: "PATCH",
-        headers,
-        body: JSON.stringify({ id, title }),
-      });
+    const res = await fetch("/api/stripe/portal", {
+      method: "POST",
+      headers,
+    });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        alert(data.error || "Title update failed.");
-        return;
-      }
-
-      await loadProjects();
-    } catch (error) {
-      alert(`Title update error: ${String(error)}`);
-    }
-  }
-
-  function copyLink(id: string) {
-    const url = `${window.location.origin}/project/${id}`;
-    navigator.clipboard.writeText(url);
-    alert("Share link copied.");
-  }
-
-  async function logout() {
-    const supabase = createClient();
-
-    await supabase.auth.signOut();
-
-    setUserEmail("");
-    setProjects([]);
-    setIdea("");
-    setResult("");
-    setSections([]);
-    setPlan("free");
-    setRemaining(5);
-    setSubscriptionStatus("inactive");
-
-    alert("Logged out.");
+    const data = await res.json();
+    window.location.href = data.url;
   }
 
   const isPro = plan === "pro";
   const isCancelling = subscriptionStatus === "cancelling";
-  const isFreeAlmostOut =
-    plan === "free" && typeof remaining === "number" && remaining <= 2;
-  const isFreeOut =
-    plan === "free" && typeof remaining === "number" && remaining <= 0;
+
+  const remainingNum =
+    typeof remaining === "number" ? remaining : null;
 
   return (
-    <main className="min-h-screen bg-white px-6 py-10 text-black">
-      <div className="mx-auto max-w-5xl">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-4xl font-bold tracking-tight">Founder AI</h1>
+    <main className="min-h-screen p-6">
+      <h1 className="text-3xl font-bold">Founder AI</h1>
 
-            <p className="mt-3 text-gray-600">
-              Generate, edit, save, and share SaaS plans.
-            </p>
+      <div className="mt-4 text-sm">
+        <p>Logged in as {userEmail}</p>
+        <p>Plan: {plan}</p>
+        <p>Status: {subscriptionStatus}</p>
+        <p>Remaining: {remaining}</p>
 
-            {userEmail ? (
-              <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm">
-                <p className="text-gray-600">Logged in as {userEmail}</p>
-
-                <p className="mt-1 font-medium">
-                  Plan:{" "}
-                  <span
-                    className={
-                      isPro ? "text-green-700" : "text-gray-900"
-                    }
-                  >
-                    {isPro ? "Pro" : "Free"}
-                  </span>
-                </p>
-
-                <p className="mt-1 text-gray-600">
-                  Subscription status:{" "}
-                  <span className={isCancelling ? "text-orange-600" : ""}>
-                    {subscriptionStatus}
-                  </span>
-                </p>
-
-                <p className="mt-1 text-gray-600">
-                  Remaining generations:{" "}
-                  {remaining === "unlimited" ? "Unlimited" : remaining}
-                </p>
-
-                {isFreeAlmostOut && !isFreeOut && (
-                  <p className="mt-2 text-orange-700">
-                    ⚠ You’re almost out of free generations. Upgrade to keep
-                    generating.
-                  </p>
-                )}
-
-                {isFreeOut && (
-                  <p className="mt-2 text-red-700">
-                    You’ve used all free generations. Upgrade to continue.
-                  </p>
-                )}
-
-                {isCancelling && (
-                  <p className="mt-2 text-orange-700">
-                    Your subscription is cancelling. You keep Pro access until
-                    the billing period ends.
-                  </p>
-                )}
-              </div>
-            ) : (
-              <p className="mt-2 text-sm text-red-600">
-                Not logged in. Go to /login before using the app.
-              </p>
-            )}
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {!isPro && (
-              <button
-                onClick={upgrade}
-                className="rounded-xl bg-green-600 px-4 py-2 text-sm font-medium text-white"
-              >
-                Upgrade to Pro
-              </button>
-            )}
-
-            {isPro && (
-              <button
-                onClick={openBillingPortal}
-                className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium"
-              >
-                Manage Subscription
-              </button>
-            )}
-
-            {userEmail && (
-              <button
-                onClick={logout}
-                className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium"
-              >
-                Log out
-              </button>
-            )}
-          </div>
-        </div>
-
-        <select
-          className="mt-8 w-full rounded-xl border border-gray-300 p-3 outline-none focus:border-black"
-          value={mode}
-          onChange={(e) => setMode(e.target.value)}
-        >
-          {modes.map((item) => (
-            <option key={item.value} value={item.value}>
-              {item.label}
-            </option>
-          ))}
-        </select>
-
-        <textarea
-          className="mt-4 min-h-40 w-full rounded-xl border border-gray-300 p-4 outline-none focus:border-black"
-          placeholder="Example: Build a helpdesk SaaS for small IT teams"
-          value={idea}
-          onChange={(e) => setIdea(e.target.value)}
-        />
-
-        <div className="mt-4 flex flex-wrap gap-3">
-          <button
-            onClick={generate}
-            disabled={loading || isFreeOut}
-            className="rounded-xl bg-black px-5 py-3 font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {loading ? "Working..." : "Generate"}
-          </button>
-
-          {isFreeOut && (
-            <button
-              onClick={upgrade}
-              className="rounded-xl bg-green-600 px-5 py-3 font-medium text-white"
-            >
-              Upgrade to Continue
-            </button>
-          )}
-
-          {result && (
-            <button
-              onClick={saveProject}
-              className="rounded-xl border border-gray-300 px-5 py-3 font-medium text-black"
-            >
-              Save Project
-            </button>
-          )}
-        </div>
-
-        {sections.length > 0 && (
-          <section className="mt-8 space-y-4">
-            {sections.map((section, index) => (
-              <div
-                key={index}
-                className="rounded-2xl border border-gray-200 bg-gray-50 p-5"
-              >
-                <h2 className="text-lg font-semibold">{section.title}</h2>
-
-                <textarea
-                  value={section.content}
-                  onChange={(e) => {
-                    const newSections = [...sections];
-                    newSections[index].content = e.target.value;
-
-                    setSections(newSections);
-                    setResult(joinSections(newSections));
-                  }}
-                  className="mt-3 min-h-[140px] w-full resize-none bg-transparent text-sm leading-6 outline-none"
-                />
-
-                <button
-                  onClick={() => regenerateSection(index, section.title)}
-                  disabled={loading || isFreeOut}
-                  className="mt-3 text-sm font-medium text-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Regenerate section
-                </button>
-              </div>
-            ))}
-          </section>
+        {/* 🔥 SMART UPGRADE PRESSURE */}
+        {plan === "free" && remainingNum === 3 && (
+          <p className="text-yellow-600">You’re getting close 👀</p>
         )}
 
-        <section className="mt-10">
-          <h2 className="text-xl font-semibold">Saved Projects</h2>
+        {plan === "free" && remainingNum === 2 && (
+          <p className="text-orange-600">Only 2 generations left</p>
+        )}
 
-          {!userEmail && (
-            <p className="mt-3 text-sm text-gray-500">
-              Log in to save and view your projects.
+        {plan === "free" && remainingNum === 1 && (
+          <p className="text-red-600">Last one. Choose wisely.</p>
+        )}
+
+        {plan === "free" && remainingNum === 0 && (
+          <p className="text-red-700 font-bold">
+            You’re out. Upgrade to continue.
+          </p>
+        )}
+
+        {/* 🔁 RESUME BUTTON */}
+        {isCancelling && (
+          <div className="mt-2 flex gap-2">
+            <p className="text-orange-600">
+              Cancelling... still active until billing ends.
             </p>
-          )}
-
-          {userEmail && projects.length === 0 && (
-            <p className="mt-3 text-sm text-gray-500">
-              No saved projects yet.
-            </p>
-          )}
-
-          {projects.length > 0 && (
-            <div className="mt-4 space-y-3">
-              {projects.map((project) => (
-                <div
-                  key={project.id}
-                  className="rounded-xl border border-gray-200 p-4"
-                >
-                  <input
-                    value={project.title || ""}
-                    onChange={(e) => updateTitle(project.id, e.target.value)}
-                    className="w-full rounded-lg border border-gray-200 p-2 text-sm font-medium"
-                    placeholder="Project title"
-                  />
-
-                  <p className="mt-2 text-xs text-gray-500">
-                    Mode: {project.mode}
-                  </p>
-
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <button
-                      onClick={() => {
-                        setIdea(project.idea);
-                        setMode(project.mode);
-                        setResult(project.result);
-                        setSections(splitSections(project.result));
-                      }}
-                      className="rounded-lg border px-3 py-2 text-sm"
-                    >
-                      Load
-                    </button>
-
-                    <button
-                      onClick={() => copyLink(project.id)}
-                      className="rounded-lg border px-3 py-2 text-sm"
-                    >
-                      Copy Share Link
-                    </button>
-
-                    <button
-                      onClick={() => deleteProject(project.id)}
-                      className="rounded-lg border border-red-200 px-3 py-2 text-sm text-red-600"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
+            <button onClick={openBillingPortal} className="border px-2">
+              Resume
+            </button>
+          </div>
+        )}
       </div>
+
+      <div className="mt-4 flex gap-2">
+        {!isPro && (
+          <button onClick={upgrade} className="bg-green-600 text-white px-3 py-2">
+            Upgrade
+          </button>
+        )}
+
+        {isPro && (
+          <button onClick={openBillingPortal} className="border px-3 py-2">
+            Manage Subscription
+          </button>
+        )}
+      </div>
+
+      <textarea
+        className="mt-6 w-full border p-3"
+        value={idea}
+        onChange={(e) => setIdea(e.target.value)}
+        placeholder="Your SaaS idea..."
+      />
+
+      <button
+        onClick={generate}
+        disabled={plan === "free" && remainingNum === 0}
+        className="mt-3 bg-black text-white px-4 py-2 disabled:opacity-50"
+      >
+        {loading ? "Thinking..." : "Generate"}
+      </button>
+
+      {result && (
+        <pre className="mt-6 whitespace-pre-wrap border p-4">
+          {result}
+        </pre>
+      )}
     </main>
   );
 }

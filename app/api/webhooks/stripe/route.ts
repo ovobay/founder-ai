@@ -104,6 +104,51 @@ export async function POST(req: Request) {
       });
     }
 
+if (event.type === "customer.subscription.updated") {
+  const subscription = event.data.object as Stripe.Subscription;
+
+  const userId = subscription.metadata?.user_id;
+
+  if (!userId) {
+    return Response.json(
+      { error: "Missing user_id in subscription metadata." },
+      { status: 400 }
+    );
+  }
+
+  const cancelAtPeriodEnd = subscription.cancel_at_period_end;
+
+  // If user cancelled but period hasn't ended yet
+  if (cancelAtPeriodEnd) {
+    await updateUserPlan({
+      userId,
+      plan: "pro", // still pro until expiry
+      customerId:
+        typeof subscription.customer === "string"
+          ? subscription.customer
+          : null,
+      subscriptionId: subscription.id,
+      subscriptionStatus: "cancelling",
+    });
+
+    return Response.json({ received: true, cancelling: true });
+  }
+
+  // If subscription is active again (e.g. user resumed)
+  await updateUserPlan({
+    userId,
+    plan: "pro",
+    customerId:
+      typeof subscription.customer === "string"
+        ? subscription.customer
+        : null,
+    subscriptionId: subscription.id,
+    subscriptionStatus: "active",
+  });
+
+  return Response.json({ received: true, updated: true });
+}
+
     if (event.type === "customer.subscription.deleted") {
       const subscription = event.data.object as Stripe.Subscription;
 

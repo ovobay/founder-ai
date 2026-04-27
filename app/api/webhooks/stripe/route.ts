@@ -1,8 +1,5 @@
 // Stripe webhook route.
-// Handles subscription lifecycle:
-// - checkout.session.completed → Pro
-// - customer.subscription.updated → active/cancelling/past_due/unpaid
-// - customer.subscription.deleted → Free
+// Keeps Supabase in sync with Stripe subscription lifecycle.
 
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
@@ -35,9 +32,7 @@ async function updateUsageByUserId({
       stripe_subscription_id: subscriptionId ?? null,
       subscription_status: subscriptionStatus,
     },
-    {
-      onConflict: "user_id",
-    }
+    { onConflict: "user_id" }
   );
 
   if (error) {
@@ -49,20 +44,16 @@ async function updateUsageBySubscriptionId({
   subscriptionId,
   plan,
   subscriptionStatus,
-  cancelAtPeriodEnd,
 }: {
   subscriptionId: string;
   plan: "free" | "pro";
   subscriptionStatus: string;
-  cancelAtPeriodEnd?: boolean;
 }) {
-  const finalStatus = cancelAtPeriodEnd ? "cancelling" : subscriptionStatus;
-
   const { error } = await supabaseAdmin
     .from("usage_limits")
     .update({
       plan,
-      subscription_status: finalStatus,
+      subscription_status: subscriptionStatus,
     })
     .eq("stripe_subscription_id", subscriptionId);
 
@@ -99,15 +90,12 @@ export async function POST(req: Request) {
   }
 
   try {
-    // User completed Stripe Checkout successfully
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
 
       const userId = session.metadata?.user_id;
-
       const customerId =
         typeof session.customer === "string" ? session.customer : null;
-
       const subscriptionId =
         typeof session.subscription === "string" ? session.subscription : null;
 
@@ -133,29 +121,24 @@ export async function POST(req: Request) {
       });
     }
 
-    // Subscription changed: cancelled at period end, resumed, past due, unpaid, etc.
     if (event.type === "customer.subscription.updated") {
       const subscription = event.data.object as Stripe.Subscription;
 
       const userId = subscription.metadata?.user_id;
-
       const customerId =
         typeof subscription.customer === "string"
           ? subscription.customer
           : null;
-
       const subscriptionId = subscription.id;
 
-      const isCancelling = subscription.cancel_at_period_end === true;
-
-      const isActive =
-        subscription.status === "active" || subscription.status === "trialing";
-
-      const plan = isActive ? "pro" : "free";
-
-      const subscriptionStatus = isCancelling
+      const subscriptionStatus = subscription.cancel_at_period_end
         ? "cancelling"
         : subscription.status;
+
+      const plan =
+        subscription.status === "active" || subscription.status === "trialing"
+          ? "pro"
+          : "free";
 
       if (userId) {
         await updateUsageByUserId({
@@ -166,12 +149,10 @@ export async function POST(req: Request) {
           subscriptionStatus,
         });
       } else {
-        // Fallback: update using stored subscription ID
         await updateUsageBySubscriptionId({
           subscriptionId,
           plan,
           subscriptionStatus,
-          cancelAtPeriodEnd: isCancelling,
         });
       }
 
@@ -183,17 +164,14 @@ export async function POST(req: Request) {
       });
     }
 
-    // Subscription fully ended
     if (event.type === "customer.subscription.deleted") {
       const subscription = event.data.object as Stripe.Subscription;
 
       const userId = subscription.metadata?.user_id;
-
       const customerId =
         typeof subscription.customer === "string"
           ? subscription.customer
           : null;
-
       const subscriptionId = subscription.id;
 
       if (userId) {

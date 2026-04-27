@@ -1,6 +1,6 @@
-// Secure Stripe Checkout subscription route.
-// Frontend sends Supabase access token.
-// Backend verifies the real user, then creates Stripe subscription checkout.
+// Secure Stripe checkout route.
+// If user already has an active subscription, send them to Billing Portal instead.
+// Otherwise, create a new Stripe subscription checkout session.
 
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
@@ -50,13 +50,17 @@ export async function POST(req: Request) {
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-    const { data: usage } = await supabaseAdmin
+    const { data: usage, error: usageError } = await supabaseAdmin
       .from("usage_limits")
       .select("*")
       .eq("user_id", user.id)
       .maybeSingle();
 
-    let customerId = usage?.stripe_customer_id;
+    if (usageError) {
+      return Response.json({ error: usageError.message }, { status: 500 });
+    }
+
+    let customerId = usage?.stripe_customer_id || null;
 
     if (!customerId) {
       const customer = await stripe.customers.create({
@@ -74,9 +78,47 @@ export async function POST(req: Request) {
           stripe_customer_id: customerId,
           plan: usage?.plan || "free",
           generations: usage?.generations || 0,
+          subscription_status: usage?.subscription_status || "inactive",
         },
         { onConflict: "user_id" }
       );
+    }
+
+    // Check if this Stripe customer already has an active/trialing subscription.
+    // This prevents multiple subscriptions for one user.
+    const subscriptions = await stripe.subscriptions.list({
+      customer: customerId,
+      status: "all",
+      limit: 20,
+    });
+
+    const existingActiveSubscription = subscriptions.data.find((subscription) =>
+      ["active", "trialing", "past_due", "unpaid"].includes(subscription.status)
+    );
+
+    if (existingActiveSubscription) {
+      await supabaseAdmin.from("usage_limits").upsert(
+        {
+          user_id: user.id,
+          plan: "pro",
+          stripe_customer_id: customerId,
+          stripe_subscription_id: existingActiveSubscription.id,
+          subscription_status: existingActiveSubscription.cancel_at_period_end
+            ? "cancelling"
+            : existingActiveSubscription.status,
+        },
+        { onConflict: "user_id" }
+      );
+
+      const portal = await stripe.billingPortal.sessions.create({
+        customer: customerId,
+        return_url: appUrl,
+      });
+
+      return Response.json({
+        url: portal.url,
+        type: "billing_portal",
+      });
     }
 
     const session = await stripe.checkout.sessions.create({
@@ -105,7 +147,10 @@ export async function POST(req: Request) {
       },
     });
 
-    return Response.json({ url: session.url });
+    return Response.json({
+      url: session.url,
+      type: "checkout",
+    });
   } catch (error) {
     return Response.json({ error: String(error) }, { status: 500 });
   }

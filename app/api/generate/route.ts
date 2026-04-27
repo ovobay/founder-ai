@@ -1,7 +1,3 @@
-// Secure AI generation route.
-// The frontend sends a Supabase access token.
-// The backend verifies the token, gets the real user, checks usage, then generates.
-
 import { createClient } from "@supabase/supabase-js";
 import OpenAI from "openai";
 
@@ -16,7 +12,6 @@ const openai = new OpenAI({
 
 async function getUser(req: Request) {
   const authHeader = req.headers.get("authorization");
-
   if (!authHeader?.startsWith("Bearer ")) return null;
 
   const token = authHeader.replace("Bearer ", "");
@@ -28,13 +23,80 @@ async function getUser(req: Request) {
   return user;
 }
 
+function getSystemPrompt(mode: string) {
+  switch (mode) {
+    case "web":
+      return `
+You are a senior web developer.
+
+Output:
+- Full website structure
+- Pages
+- Components
+- Tailwind + Next.js code
+- File structure
+- Deployment steps
+
+Return REAL code blocks.
+`;
+
+    case "app":
+      return `
+You are a senior full-stack engineer.
+
+Output:
+- Full SaaS architecture
+- Database schema
+- API routes
+- Auth
+- Stripe integration
+- Frontend pages
+- Folder structure
+- Full code snippets
+
+Be practical and production-ready.
+`;
+
+    case "shopify":
+      return `
+You are a Shopify expert.
+
+Output:
+- Store niche
+- Product strategy
+- Theme structure
+- Sections
+- Apps needed
+- SEO structure
+- Launch checklist
+`;
+
+    case "marketing":
+      return `
+You are a growth marketer.
+
+Output:
+- ICP
+- Offer
+- Channels
+- Campaign plan
+- Ad copy
+- Email sequence
+`;
+
+    default:
+      return `You are a startup operator. Give a structured plan.`;
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const user = await getUser(req);
-
     if (!user) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const { idea, mode } = await req.json();
 
     const { data: usage } = await supabaseAdmin
       .from("usage_limits")
@@ -45,29 +107,23 @@ export async function POST(req: Request) {
     const plan = usage?.plan || "free";
     const generations = usage?.generations || 0;
 
-    // 🚨 HARD LIMIT
     if (plan === "free" && generations >= 5) {
       return Response.json(
-        {
-          error: "Free limit reached",
-          upgrade: true,
-        },
+        { error: "Free limit reached", upgrade: true },
         { status: 403 }
       );
     }
 
-    const { idea, mode } = await req.json();
-
-    const prompt = `Create a ${mode} plan for: ${idea}`;
-
     const completion = await openai.chat.completions.create({
       model: "gpt-4.1-mini",
-      messages: [{ role: "user", content: prompt }],
+      messages: [
+        { role: "system", content: getSystemPrompt(mode) },
+        { role: "user", content: idea },
+      ],
     });
 
     const result = completion.choices[0].message.content || "";
 
-    // Increment usage
     await supabaseAdmin.from("usage_limits").upsert(
       {
         user_id: user.id,

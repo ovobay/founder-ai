@@ -1,51 +1,106 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { NextResponse, type NextRequest } from "next/server";
 
-// Middleware protects app pages but allows login, auth callback, and webhooks
-export async function middleware(req: NextRequest) {
-  const pathname = req.nextUrl.pathname;
+function getSupabaseEnvironment() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  // Allow login page
-  if (pathname.startsWith("/login")) {
-    return NextResponse.next();
+  if (!supabaseUrl) {
+    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL environment variable.");
   }
 
-  // Allow auth callback
-  if (pathname.startsWith("/auth")) {
-    return NextResponse.next();
+  if (!supabaseKey) {
+    throw new Error(
+      "Missing NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable."
+    );
   }
 
-  // Allow Stripe webhooks
-  if (pathname.startsWith("/api/webhooks")) {
-    return NextResponse.next();
-  }
+  return {
+    supabaseUrl,
+    supabaseKey,
+  };
+}
 
-  const res = NextResponse.next();
+export async function middleware(request: NextRequest) {
+  let response = NextResponse.next({
+    request,
+  });
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get: (name) => req.cookies.get(name)?.value,
-        set: () => {},
-        remove: () => {},
+  const { supabaseUrl, supabaseKey } = getSupabaseEnvironment();
+
+  const supabase = createServerClient(supabaseUrl, supabaseKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
       },
-    }
-  );
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) => {
+          request.cookies.set(name, value);
+        });
+
+        response = NextResponse.next({
+          request,
+        });
+
+        cookiesToSet.forEach(({ name, value, options }) => {
+          response.cookies.set(name, value, options);
+        });
+      },
+    },
+  });
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    return NextResponse.redirect(new URL("/login", req.url));
+  const pathname = request.nextUrl.pathname;
+  const isLoginRoute = pathname.startsWith("/login");
+  const isAuthRoute = pathname.startsWith("/auth");
+  const isApiRoute = pathname.startsWith("/api");
+  const isProtectedPage = pathname === "/";
+
+  if (!user && isProtectedPage) {
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = "/login";
+    redirectUrl.searchParams.set("next", pathname);
+
+    return NextResponse.redirect(redirectUrl);
   }
 
-  return res;
+  if (user && isLoginRoute) {
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = "/";
+    redirectUrl.search = "";
+
+    return NextResponse.redirect(redirectUrl);
+  }
+
+  if (!user && isApiRoute && !isAuthRoute) {
+    return Response.json(
+      {
+        ok: false,
+        error: "Unauthorized.",
+      },
+      {
+        status: 401,
+      }
+    );
+  }
+
+  return response;
 }
 
 export const config = {
-  matcher: ["/((?!_next|favicon.ico).*)"],
+  matcher: [
+    /*
+      Match all request paths except:
+      - _next/static
+      - _next/image
+      - favicon.ico
+      - common public assets
+    */
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+  ],
 };

@@ -1,151 +1,122 @@
-// Secure project API.
-// The frontend sends a Supabase access token.
-// The backend verifies that token and gets the real user ID itself.
+import {
+  getAuthenticatedUser,
+  getSupabaseAdmin,
+  jsonError,
+  jsonOk,
+} from "@/lib/supabase/admin";
 
-import { createClient } from "@supabase/supabase-js";
+export const dynamic = "force-dynamic";
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+type CreateProjectBody = {
+  name?: unknown;
+  description?: unknown;
+};
 
-// Get the real logged-in user from the Authorization header
-async function getAuthenticatedUser(req: Request) {
-  const authHeader = req.headers.get("authorization");
+function normalizeCreateProjectBody(body: CreateProjectBody) {
+  const name =
+    typeof body.name === "string" && body.name.trim().length > 0
+      ? body.name.trim()
+      : null;
 
-  if (!authHeader?.startsWith("Bearer ")) {
-    return null;
-  }
+  const description =
+    typeof body.description === "string" && body.description.trim().length > 0
+      ? body.description.trim()
+      : null;
 
-  const token = authHeader.replace("Bearer ", "");
-
-  const {
-    data: { user },
-    error,
-  } = await supabaseAdmin.auth.getUser(token);
-
-  if (error || !user) {
-    return null;
-  }
-
-  return user;
+  return {
+    name,
+    description,
+  };
 }
 
-// Save a project
-export async function POST(req: Request) {
-  try {
-    const user = await getAuthenticatedUser(req);
+export async function GET(request: Request) {
+  const user = await getAuthenticatedUser(request);
 
-    if (!user) {
-      return Response.json({ error: "Unauthorized." }, { status: 401 });
-    }
-
-    const { idea, mode, result } = await req.json();
-
-    if (!idea || !mode || !result) {
-      return Response.json(
-        { error: "Missing idea, mode, or result." },
-        { status: 400 }
-      );
-    }
-
-    const { data, error } = await supabaseAdmin
-      .from("projects")
-      .insert({
-        idea,
-        mode,
-        result,
-        user_id: user.id,
-        title: idea.slice(0, 50).replace(/\.$/, ""),
-      })
-      .select("*")
-      .single();
-
-    if (error) {
-      return Response.json({ error: error.message }, { status: 500 });
-    }
-
-    return Response.json({ success: true, project: data });
-  } catch (error) {
-    return Response.json({ error: String(error) }, { status: 500 });
+  if (!user) {
+    return jsonError("Unauthorized. Missing or invalid session.", 401);
   }
+
+  const supabase = getSupabaseAdmin();
+
+  const { data, error } = await supabase
+    .from("founder_projects")
+    .select(
+      `
+      id,
+      owner_user_id,
+      name,
+      description,
+      status,
+      created_at,
+      updated_at
+    `
+    )
+    .eq("owner_user_id", user.id)
+    .order("created_at", {
+      ascending: false,
+    });
+
+  if (error) {
+    return jsonError(error.message, 500);
+  }
+
+  return jsonOk({
+    projects: data ?? [],
+  });
 }
 
-// Load current user's projects
-export async function GET(req: Request) {
-  try {
-    const user = await getAuthenticatedUser(req);
+export async function POST(request: Request) {
+  const user = await getAuthenticatedUser(request);
 
-    if (!user) {
-      return Response.json({ error: "Unauthorized." }, { status: 401 });
-    }
-
-    const { data, error } = await supabaseAdmin
-      .from("projects")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      return Response.json({ error: error.message }, { status: 500 });
-    }
-
-    return Response.json({ projects: data || [] });
-  } catch (error) {
-    return Response.json({ error: String(error) }, { status: 500 });
+  if (!user) {
+    return jsonError("Unauthorized. Missing or invalid session.", 401);
   }
-}
 
-// Update current user's project title
-export async function PATCH(req: Request) {
+  let body: CreateProjectBody;
+
   try {
-    const user = await getAuthenticatedUser(req);
-
-    if (!user) {
-      return Response.json({ error: "Unauthorized." }, { status: 401 });
-    }
-
-    const { id, title } = await req.json();
-
-    const { error } = await supabaseAdmin
-      .from("projects")
-      .update({ title })
-      .eq("id", id)
-      .eq("user_id", user.id);
-
-    if (error) {
-      return Response.json({ error: error.message }, { status: 500 });
-    }
-
-    return Response.json({ success: true });
-  } catch (error) {
-    return Response.json({ error: String(error) }, { status: 500 });
+    body = (await request.json()) as CreateProjectBody;
+  } catch {
+    return jsonError("Invalid JSON body.", 400);
   }
-}
 
-// Delete current user's project
-export async function DELETE(req: Request) {
-  try {
-    const user = await getAuthenticatedUser(req);
+  const normalized = normalizeCreateProjectBody(body);
 
-    if (!user) {
-      return Response.json({ error: "Unauthorized." }, { status: 401 });
-    }
-
-    const { id } = await req.json();
-
-    const { error } = await supabaseAdmin
-      .from("projects")
-      .delete()
-      .eq("id", id)
-      .eq("user_id", user.id);
-
-    if (error) {
-      return Response.json({ error: error.message }, { status: 500 });
-    }
-
-    return Response.json({ success: true });
-  } catch (error) {
-    return Response.json({ error: String(error) }, { status: 500 });
+  if (!normalized.name) {
+    return jsonError("Project name is required.", 400);
   }
+
+  const supabase = getSupabaseAdmin();
+
+  const { data, error } = await supabase
+    .from("founder_projects")
+    .insert({
+      owner_user_id: user.id,
+      name: normalized.name,
+      description: normalized.description,
+      status: "active",
+    })
+    .select(
+      `
+      id,
+      owner_user_id,
+      name,
+      description,
+      status,
+      created_at,
+      updated_at
+    `
+    )
+    .single();
+
+  if (error) {
+    return jsonError(error.message, 500);
+  }
+
+  return jsonOk(
+    {
+      project: data,
+    },
+    201
+  );
 }

@@ -1,43 +1,30 @@
-// This route receives the magic-link login code from Supabase.
-// It exchanges that code for a real user session, then sends the user home.
-
-import { createServerClient } from "@supabase/ssr";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
+
+export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
-
-  // Supabase adds ?code=... to the URL after the user clicks the email link
   const code = requestUrl.searchParams.get("code");
+  const next = requestUrl.searchParams.get("next") ?? "/";
 
-  // After login, send the user back to the homepage
-  const redirectTo = requestUrl.origin;
+  if (!code) {
+    const redirectUrl = new URL("/login", requestUrl.origin);
+    redirectUrl.searchParams.set("error", "missing_auth_code");
 
-  if (code) {
-    const cookieStore = await cookies();
-
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value;
-          },
-          set(name: string, value: string, options: any) {
-            cookieStore.set({ name, value, ...options });
-          },
-          remove(name: string, options: any) {
-            cookieStore.set({ name, value: "", ...options });
-          },
-        },
-      }
-    );
-
-    // This creates the actual logged-in session
-    await supabase.auth.exchangeCodeForSession(code);
+    return NextResponse.redirect(redirectUrl);
   }
 
-  return NextResponse.redirect(redirectTo);
+  const supabase = await createSupabaseServerClient();
+
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+  if (error) {
+    const redirectUrl = new URL("/login", requestUrl.origin);
+    redirectUrl.searchParams.set("error", "auth_callback_failed");
+
+    return NextResponse.redirect(redirectUrl);
+  }
+
+  return NextResponse.redirect(new URL(next, requestUrl.origin));
 }

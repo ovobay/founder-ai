@@ -44,15 +44,15 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 type Mode = "build" | "visual-edits";
 type WorkspaceView = "preview" | "code" | "architecture" | "history";
 
-type ProjectType = string;
-
-type BuildClassification = {
-  primaryCategory: string;
-  secondaryCategories: string[];
-  industry: string | null;
-  platformTargets: string[];
-  complexity: "simple" | "standard" | "advanced" | "enterprise";
-};
+type ProjectType =
+  | "marketing-site"
+  | "saas"
+  | "web-app"
+  | "crm"
+  | "shopify-store"
+  | "shopify-app"
+  | "marketing-engine"
+  | "mobile-app";
 
 type BuildStepStatus = "pending" | "active" | "complete";
 type AssistantStatus = "building" | "completed";
@@ -172,17 +172,6 @@ type ApiResponse<T> = {
   error?: string;
 };
 
-type AiGeneratedBuild = {
-  projectType: ProjectType;
-  classification?: BuildClassification;
-  modules: DetectedModule[];
-  architecture: ArchitecturePlan;
-  files: ChangedFile[];
-  previewState: PreviewState;
-  summary: string;
-  changes: string[];
-};
-
 type FeedItem =
   | {
       id: string;
@@ -229,7 +218,7 @@ type SecurityFinding = {
 };
 
 function getProjectTypeLabel(projectType: ProjectType): string {
-  const labels: Record<string, string> = {
+  const labels: Record<ProjectType, string> = {
     "marketing-site": "Marketing site",
     saas: "SaaS",
     "web-app": "Web app",
@@ -240,15 +229,7 @@ function getProjectTypeLabel(projectType: ProjectType): string {
     "mobile-app": "Mobile app",
   };
 
-  if (labels[projectType]) {
-    return labels[projectType];
-  }
-
-  return projectType
-    .split("-")
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ") || "Custom product";
+  return labels[projectType];
 }
 
 function includesAny(value: string, keywords: string[]) {
@@ -275,7 +256,16 @@ function formatDatabaseBuildTime(value: string) {
 }
 
 function isProjectType(value: string): value is ProjectType {
-  return typeof value === "string" && value.trim().length > 0;
+  return [
+    "marketing-site",
+    "saas",
+    "web-app",
+    "crm",
+    "shopify-store",
+    "shopify-app",
+    "marketing-engine",
+    "mobile-app",
+  ].includes(value);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -309,56 +299,6 @@ function parseChangedFiles(value: unknown): ChangedFile[] {
       ["created", "updated", "checked"].includes(item.status)
     );
   });
-}
-
-function parseClassification(
-  value: unknown,
-  projectType: string
-): BuildClassification {
-  if (!isRecord(value)) {
-    return {
-      primaryCategory: getProjectTypeLabel(projectType),
-      secondaryCategories: [],
-      industry: null,
-      platformTargets: ["web"],
-      complexity: "standard",
-    };
-  }
-
-  const secondaryCategories = Array.isArray(value.secondaryCategories)
-    ? value.secondaryCategories.filter(
-        (item): item is string => typeof item === "string"
-      )
-    : [];
-
-  const platformTargets = Array.isArray(value.platformTargets)
-    ? value.platformTargets.filter(
-        (item): item is string => typeof item === "string"
-      )
-    : [];
-
-  const complexity =
-    value.complexity === "simple" ||
-    value.complexity === "standard" ||
-    value.complexity === "advanced" ||
-    value.complexity === "enterprise"
-      ? value.complexity
-      : "standard";
-
-  return {
-    primaryCategory:
-      typeof value.primaryCategory === "string" &&
-      value.primaryCategory.trim().length > 0
-        ? value.primaryCategory
-        : getProjectTypeLabel(projectType),
-    secondaryCategories,
-    industry:
-      typeof value.industry === "string" && value.industry.trim().length > 0
-        ? value.industry
-        : null,
-    platformTargets: platformTargets.length > 0 ? platformTargets : ["web"],
-    complexity,
-  };
 }
 
 function parseProjectFiles(value: unknown): DatabaseProjectFile[] {
@@ -478,10 +418,6 @@ function mapDatabaseBuildToHistoryItem(build: DatabaseBuild): BuildHistoryItem {
     ? build.project_type
     : "saas";
 
-  const classification = parseClassification(
-    build.classification,
-    projectType
-  );
   const modules = parseModules(build.modules);
   const architecture = parseArchitecture(build.architecture);
   const files = parseChangedFiles(build.files);
@@ -2120,8 +2056,8 @@ export default function Page() {
       buildModules,
       buildArchitecture
     );
-
     const assistantId = existingAssistantId ?? assistantMessage.id;
+    const nextFiles = assistantMessage.files;
 
     setIsBuilding(true);
     setWorkspaceError("");
@@ -2149,7 +2085,7 @@ export default function Page() {
 
     scheduleScrollUpdate();
 
-    await wait(450);
+    await wait(500);
 
     setFeedItems((current) =>
       current.map((item) =>
@@ -2160,202 +2096,61 @@ export default function Page() {
     );
 
     scheduleScrollUpdate();
-
-    let generatedBuild: AiGeneratedBuild | null = null;
-
-    try {
-      const response = await fetch("/api/ai/generate-build", {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          prompt: promptValue,
-        }),
-      });
-
-      const result = await readApiResponse<{
-        build: AiGeneratedBuild;
-      }>(response);
-
-      if (!response.ok || !result.ok || !result.data) {
-        throw new Error(result.error ?? "Failed to generate AI build.");
-      }
-
-      generatedBuild = result.data.build;
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "AI generation failed. Falling back to local planner.";
-
-      setWorkspaceError(message);
-
-      const fallbackFiles = createChangedFiles(
-        promptValue,
-        buildProjectType,
-        buildModules,
-        buildArchitecture
-      );
-
-      generatedBuild = {
-        projectType: buildProjectType,
-        classification: {
-          primaryCategory: getProjectTypeLabel(buildProjectType),
-          secondaryCategories: [],
-          industry: null,
-          platformTargets: ["web"],
-          complexity: "standard",
-        },
-        modules: buildModules,
-        architecture: buildArchitecture,
-        files: fallbackFiles,
-        previewState: createPreviewState(
-          promptValue,
-          buildProjectType,
-          fallbackFiles.length,
-          buildModules,
-          buildArchitecture
-        ),
-        summary:
-          "AI generation failed, so the local project planner created a fallback build.",
-        changes: [
-          "Generated fallback build from local planner.",
-          "Kept project type inference, modules, architecture, files, and preview state available.",
-        ],
-      };
-    }
-
-    const generatedProjectType =
-      generatedBuild.projectType || buildProjectType;
-
-    const generatedClassification =
-      generatedBuild.classification ?? {
-        primaryCategory: getProjectTypeLabel(generatedProjectType),
-        secondaryCategories: [],
-        industry: null,
-        platformTargets: ["web"],
-        complexity: "standard",
-      };
-
-    const generatedModules =
-      generatedBuild.modules.length > 0
-        ? generatedBuild.modules
-        : buildModules;
-
-    const generatedArchitecture =
-      generatedBuild.architecture ?? buildArchitecture;
-
-    const generatedFiles =
-      generatedBuild.files.length > 0
-        ? generatedBuild.files
-        : createChangedFiles(
-            promptValue,
-            generatedProjectType,
-            generatedModules,
-            generatedArchitecture
-          );
-
-    const generatedPreviewState: PreviewState = {
-      ...generatedBuild.previewState,
-      fileCount: generatedFiles.length,
-      modules: generatedModules,
-      architecture: generatedArchitecture,
-    };
-
-    const generatedChanges =
-      generatedBuild.changes.length > 0
-        ? generatedBuild.changes
-        : buildChangeList(
-            promptValue,
-            generatedProjectType,
-            generatedModules,
-            generatedArchitecture
-          );
+    await wait(550);
 
     setFeedItems((current) =>
       current.map((item) =>
         item.id === assistantId && item.role === "assistant"
-          ? advanceAssistantUpdate(
-              {
-                ...item,
-                projectType: generatedProjectType,
-                classification: generatedClassification,
-                modules: generatedModules,
-                architecture: generatedArchitecture,
-                files: generatedFiles,
-                summary: generatedBuild.summary,
-                changes: generatedChanges,
-              },
-              2
-            )
+          ? advanceAssistantUpdate(item, 2)
           : item
       )
     );
 
     scheduleScrollUpdate();
-
-    await wait(500);
+    await wait(600);
 
     setFeedItems((current) =>
       current.map((item) =>
         item.id === assistantId && item.role === "assistant"
-          ? advanceAssistantUpdate(
-              {
-                ...item,
-                projectType: generatedProjectType,
-                modules: generatedModules,
-                architecture: generatedArchitecture,
-                files: generatedFiles,
-                summary: generatedBuild.summary,
-                changes: generatedChanges,
-              },
-              3
-            )
+          ? advanceAssistantUpdate(item, 3)
           : item
       )
     );
 
     scheduleScrollUpdate();
+    await wait(650);
 
-    await wait(500);
+    const nextPreviewState = createPreviewState(
+      promptValue,
+      buildProjectType,
+      nextFiles.length,
+      buildModules,
+      buildArchitecture
+    );
+
+    setChangedFiles(nextFiles);
+    setSelectedFileId(nextFiles[0]?.id ?? "");
+    setPreviewState(nextPreviewState);
 
     setFeedItems((current) =>
       current.map((item) =>
         item.id === assistantId && item.role === "assistant"
-          ? advanceAssistantUpdate(
-              {
-                ...item,
-                projectType: generatedProjectType,
-                modules: generatedModules,
-                architecture: generatedArchitecture,
-                files: generatedFiles,
-                summary: generatedBuild.summary,
-                changes: generatedChanges,
-              },
-              4
-            )
+          ? advanceAssistantUpdate(item, 4)
           : item
       )
     );
 
-    setChangedFiles(generatedFiles);
-    setSelectedFileId(generatedFiles[0]?.id ?? "");
-    setPreviewState(generatedPreviewState);
-
     scheduleScrollUpdate();
-
-    await wait(500);
+    await wait(600);
 
     try {
       const savedHistoryItem = await saveBuildToDatabase(
         promptValue,
-        generatedProjectType,
-        generatedModules,
-        generatedArchitecture,
-        generatedFiles,
-        generatedPreviewState
+        buildProjectType,
+        buildModules,
+        buildArchitecture,
+        nextFiles,
+        nextPreviewState
       );
 
       addBuildHistoryItem(savedHistoryItem);
@@ -2369,46 +2164,18 @@ export default function Page() {
     setFeedItems((current) =>
       current.map((item) =>
         item.id === assistantId && item.role === "assistant"
-          ? advanceAssistantUpdate(
-              {
-                ...item,
-                projectType: generatedProjectType,
-                modules: generatedModules,
-                architecture: generatedArchitecture,
-                files: generatedFiles,
-                summary: generatedBuild.summary,
-                changes: generatedChanges,
-              },
-              5
-            )
+          ? advanceAssistantUpdate(item, 5)
           : item
       )
     );
 
     scheduleScrollUpdate();
-
-    await wait(420);
+    await wait(520);
 
     setFeedItems((current) =>
       current.map((item) =>
         item.id === assistantId && item.role === "assistant"
-          ? advanceAssistantUpdate(
-              {
-                ...item,
-                projectType: generatedProjectType,
-                modules: generatedModules,
-                architecture: generatedArchitecture,
-                files: generatedFiles,
-                summary:
-                  generatedBuild.summary ||
-                  `${getProjectTypeLabel(
-                    generatedProjectType
-                  )} implementation complete.`,
-                changes: generatedChanges,
-              },
-              6,
-              true
-            )
+          ? advanceAssistantUpdate(item, 6, true)
           : item
       )
     );
@@ -2416,8 +2183,6 @@ export default function Page() {
     setIsBuilding(false);
     scheduleScrollUpdate();
   }
-
-  async function handleSendPrompt()
 
   async function handleSendPrompt() {
     const value = prompt.trim();

@@ -4793,34 +4793,6 @@ function PublishDropdownSummaryRow({
   );
 }
 
-function PublishDropdownChecklistRow({
-  label,
-  done,
-}: {
-  label: string;
-  done: boolean;
-}) {
-  // Compact checklist row used in publish security/settings panels.
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: "10px",
-        color: "#374151",
-        fontSize: "12px",
-        lineHeight: 1.35,
-      }}
-    >
-      <span>{label}</span>
-      <strong style={{ color: done ? "#166534" : "#9a3412" }}>
-        {done ? "Ready" : "Missing"}
-      </strong>
-    </div>
-  );
-}
-
 function PublishDropdownPopover({
   previewState,
   files,
@@ -6107,11 +6079,15 @@ function PublishDropdownPopover({
 
             <div style={{ display: "grid", gap: "7px" }}>
               {securityChecklist.map((item) => (
-                <PublishDropdownChecklistRow
+                <div
                   key={item.label}
-                  label={item.label}
-                  done={item.done}
-                />
+                  style={getPublishChecklistRowStyle()}
+                >
+                  <span>{item.label}</span>
+                  <strong style={getPublishChecklistStatusStyle(item.done)}>
+                    {item.done ? "Ready" : "Missing"}
+                  </strong>
+                </div>
               ))}
             </div>
 
@@ -6167,11 +6143,15 @@ function PublishDropdownPopover({
 
             <div style={{ display: "grid", gap: "7px" }}>
               {settingsChecklist.map((item) => (
-                <PublishDropdownChecklistRow
+                <div
                   key={item.label}
-                  label={item.label}
-                  done={item.done}
-                />
+                  style={getPublishChecklistRowStyle()}
+                >
+                  <span>{item.label}</span>
+                  <strong style={getPublishChecklistStatusStyle(item.done)}>
+                    {item.done ? "Ready" : "Missing"}
+                  </strong>
+                </div>
               ))}
             </div>
 

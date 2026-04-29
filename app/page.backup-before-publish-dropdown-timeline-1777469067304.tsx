@@ -4768,59 +4768,6 @@ function getCompactPublishSecurityCount(files?: ChangedFile[]) {
   ].filter((filePath) => currentFiles.some((file) => file.path === filePath)).length;
 }
 
-function PublishRevealPanel({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  // Shared wrapper for compact dropdown panels.
-  // It gives inline publish panels a gentle entrance animation.
-  return <div className="publish-reveal-panel">{children}</div>;
-}
-
-function PublishDropdownSummaryRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: React.ReactNode;
-}) {
-  // Compact label/value row used inside publish dropdown details.
-  return (
-    <div>
-      <strong style={{ color: "#111827" }}>{label}:</strong> {value}
-    </div>
-  );
-}
-
-function PublishDropdownChecklistRow({
-  label,
-  done,
-}: {
-  label: string;
-  done: boolean;
-}) {
-  // Compact checklist row used in publish security/settings panels.
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: "10px",
-        color: "#374151",
-        fontSize: "12px",
-        lineHeight: 1.35,
-      }}
-    >
-      <span>{label}</span>
-      <strong style={{ color: done ? "#166534" : "#9a3412" }}>
-        {done ? "Ready" : "Missing"}
-      </strong>
-    </div>
-  );
-}
-
 function PublishDropdownPopover({
   previewState,
   files,
@@ -4860,12 +4807,9 @@ function PublishDropdownPopover({
   const [customDomain, setCustomDomain] = useState("");
   const [visibility, setVisibility] = useState<"public" | "private">("public");
   const [message, setMessage] = useState("");
-  const [toastMessage, setToastMessage] = useState("");
   const [lastUpdatedLabel, setLastUpdatedLabel] = useState("Not updated yet");
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isDnsSettingsOpen, setIsDnsSettingsOpen] = useState(false);
-  const [isSecurityPanelOpen, setIsSecurityPanelOpen] = useState(false);
-  const [isSettingsPanelOpen, setIsSettingsPanelOpen] = useState(false);
   const [domainStatus, setDomainStatus] = useState<
     "none" | "needs-dns" | "verifying" | "verified"
   >("none");
@@ -4874,8 +4818,6 @@ function PublishDropdownPopover({
   const [publishVersion, setPublishVersion] = useState(0);
   const [lastPublishedLabel, setLastPublishedLabel] = useState("Never");
   const [publishedFileCount, setPublishedFileCount] = useState(0);
-  const [publishActionFeedback, setPublishActionFeedback] = useState("");
-  const [isPublishingAction, setIsPublishingAction] = useState(false);
 
   useEffect(() => {
     // Load saved publish dropdown state for this project.
@@ -4970,44 +4912,6 @@ function PublishDropdownPopover({
 
   const hasUnpublishedChanges =
     hasPublishedSnapshot && currentFiles.length !== publishedFileCount;
-
-  const deploymentStage =
-    hasPublishedSnapshot && !hasUnpublishedChanges
-      ? "published"
-      : !hasFiles || !gateReport
-        ? "draft"
-        : gateReport.decision === "can-publish" || gateReport.decision === "can-stage"
-          ? "staging"
-          : gateReport.decision === "can-preview"
-            ? "preview"
-            : "draft";
-
-  const deploymentTimeline = [
-    {
-      id: "draft",
-      label: "Draft",
-      detail: "Build generated",
-    },
-    {
-      id: "preview",
-      label: "Preview",
-      detail: "Internal review",
-    },
-    {
-      id: "staging",
-      label: "Staging",
-      detail: "Ready to test",
-    },
-    {
-      id: "published",
-      label: "Published",
-      detail: "Live snapshot",
-    },
-  ] as const;
-
-  const deploymentStageIndex = deploymentTimeline.findIndex(
-    (item) => item.id === deploymentStage
-  );
 
   const publishStage =
     !hasFiles || !gateReport
@@ -5108,50 +5012,6 @@ function PublishDropdownPopover({
               border: "#e5e7eb",
             };
 
-  const securityTone =
-    securityCount >= 3
-      ? {
-          label: "Ready",
-          background: "#ecfdf5",
-          color: "#166534",
-          border: "#bbf7d0",
-        }
-      : securityCount > 0
-        ? {
-            label: "Partial",
-            background: "#fff7ed",
-            color: "#9a3412",
-            border: "#fed7aa",
-          }
-        : {
-            label: "Missing",
-            background: "#fef2f2",
-            color: "#991b1b",
-            border: "#fecaca",
-          };
-
-  const settingsTone =
-    settingsCount >= 4
-      ? {
-          label: "Ready",
-          background: "#ecfdf5",
-          color: "#166534",
-          border: "#bbf7d0",
-        }
-      : settingsCount > 0
-        ? {
-            label: "Partial",
-            background: "#fff7ed",
-            color: "#9a3412",
-            border: "#fed7aa",
-          }
-        : {
-            label: "Missing",
-            background: "#fef2f2",
-            color: "#991b1b",
-            border: "#fecaca",
-          };
-
   const mainPublishActionLabel =
     !hasFiles || !gateReport
       ? "Update snapshot"
@@ -5162,40 +5022,6 @@ function PublishDropdownPopover({
           : hasUnpublishedChanges
             ? "Republish"
             : "Update";
-
-  const securityChecklist = [
-    {
-      label: "Security review exported",
-      done: currentFiles.some((file) => file.path === "config/security-review.md"),
-    },
-    {
-      label: "Security rules exported",
-      done: currentFiles.some((file) => file.path === "config/security-rules.md"),
-    },
-    {
-      label: "Publish gate report exported",
-      done: currentFiles.some((file) => file.path === "config/publish-gate-report.md"),
-    },
-  ];
-
-  const settingsChecklist = [
-    {
-      label: "Environment example exported",
-      done: currentFiles.some((file) => file.path === "config/env.example"),
-    },
-    {
-      label: "Deployment checklist exported",
-      done: currentFiles.some((file) => file.path === "config/deploy-checklist.md"),
-    },
-    {
-      label: "Developer instructions exported",
-      done: currentFiles.some((file) => file.path === "config/developer-instructions.md"),
-    },
-    {
-      label: "Launch readiness report exported",
-      done: currentFiles.some((file) => file.path === "config/launch-readiness-report.md"),
-    },
-  ];
 
   const secondaryButtonStyle: React.CSSProperties = {
     minHeight: "38px",
@@ -5210,143 +5036,13 @@ function PublishDropdownPopover({
     boxShadow: "0 1px 2px rgba(15, 23, 42, 0.06)",
   };
 
-  function getPublishBadgeStyle(toneValue: {
-    background: string;
-    color: string;
-    border: string;
-  }): React.CSSProperties {
-    // Shared badge style for domain, security, and settings status pills.
-    return {
-      borderRadius: "999px",
-      border: `1px solid ${toneValue.border}`,
-      background: toneValue.background,
-      color: toneValue.color,
-      fontSize: "11px",
-      fontWeight: 850,
-      padding: "6px 9px",
-      whiteSpace: "nowrap",
-    };
-  }
-
-  function getPublishCardStyle(): React.CSSProperties {
-    // Shared compact card shell for grouped publish controls.
-    return {
-      border: "1px solid #eef1f4",
-      borderRadius: "17px",
-      padding: "12px",
-      display: "grid",
-      gap: "9px",
-    };
-  }
-
-  function getPublishPanelStyle(): React.CSSProperties {
-    // Shared inset panel shell for expanded dropdown panels.
-    return {
-      border: "1px solid #eef1f4",
-      borderRadius: "16px",
-      background: "#f9fafb",
-      padding: "12px",
-      display: "grid",
-      gap: "10px",
-    };
-  }
-
-  function getPublishChecklistStatusStyle(done: boolean): React.CSSProperties {
-    // Shared status text for readiness checklist rows.
-    return {
-      color: done ? "#166534" : "#9a3412",
-    };
-  }
-
-  function getPublishTinyLabelStyle(): React.CSSProperties {
-    // Shared tiny uppercase label style.
-    return {
-      color: "#6b7280",
-      fontSize: "10px",
-      fontWeight: 900,
-      letterSpacing: "0.14em",
-      textTransform: "uppercase",
-      marginBottom: "5px",
-    };
-  }
-
-  function getPublishSectionHeadingStyle(): React.CSSProperties {
-    // Shared compact section heading style.
-    return {
-      color: "#111827",
-      fontSize: "14px",
-      fontWeight: 850,
-    };
-  }
-
-  function getPublishMetaTextStyle(): React.CSSProperties {
-    // Shared muted helper text style.
-    return {
-      color: "#4b5563",
-      fontSize: "12px",
-      lineHeight: 1.35,
-    };
-  }
-
-  function getPublishChecklistRowStyle(): React.CSSProperties {
-    // Shared checklist row layout style.
-    return {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: "10px",
-      color: "#374151",
-      fontSize: "12px",
-      lineHeight: 1.35,
-    };
-  }
-
-  function showPublishToast(value: string) {
-    // Show compact feedback without increasing dropdown height.
-    setMessage(value);
-    setToastMessage(value);
-
-    window.setTimeout(() => {
-      setToastMessage((current) => (current === value ? "" : current));
-    }, 2600);
-  }
-
-  function closeOtherPublishPanels(panel: "dns" | "security" | "settings" | "details") {
-    // Keep only one compact publish panel open at a time.
-    if (panel !== "dns") setIsDnsSettingsOpen(false);
-    if (panel !== "security") setIsSecurityPanelOpen(false);
-    if (panel !== "settings") setIsSettingsPanelOpen(false);
-    if (panel !== "details") setIsDetailsOpen(false);
-  }
-
-  function runPublishActionFeedback({
-    loadingLabel,
-    successLabel,
-  }: {
-    loadingLabel: string;
-    successLabel: string;
-  }) {
-    // Briefly show action feedback on the main publish button.
-    setIsPublishingAction(true);
-    setPublishActionFeedback(loadingLabel);
-
-    window.setTimeout(() => {
-      setPublishActionFeedback(successLabel);
-
-      window.setTimeout(() => {
-        setIsPublishingAction(false);
-        setPublishActionFeedback("");
-      }, 700);
-    }, 450);
-  }
-
   async function copyText(value: string, successMessage: string) {
     // Generic clipboard helper for URL and DNS records.
     try {
       await navigator.clipboard.writeText(value);
-      showPublishToast(successMessage);
+      setMessage(successMessage);
     } catch {
-      showPublishToast("Could not copy. Select the value and copy it manually.");
+      setMessage("Could not copy. Select the value and copy it manually.");
     }
   }
 
@@ -5366,38 +5062,22 @@ function PublishDropdownPopover({
     setLastUpdatedLabel(timestamp);
 
     if (!hasFiles || !gateReport) {
-      runPublishActionFeedback({
-        loadingLabel: "Checking...",
-        successLabel: "Not ready",
-      });
-      showPublishToast("No generated files yet. Build something first.");
+      setMessage("No generated files yet. Build something first.");
       return;
     }
 
     if (gateReport.decision === "blocked") {
-      runPublishActionFeedback({
-        loadingLabel: "Checking...",
-        successLabel: "Blocked",
-      });
-      showPublishToast("Snapshot updated. Publishing is still blocked.");
+      setMessage("Snapshot updated. Publishing is still blocked.");
       return;
     }
 
     if (gateReport.decision === "can-preview") {
-      runPublishActionFeedback({
-        loadingLabel: "Updating...",
-        successLabel: "Preview updated",
-      });
-      showPublishToast("Preview snapshot updated. Review before staging.");
+      setMessage("Preview snapshot updated. Review before staging.");
       return;
     }
 
     if (gateReport.decision === "can-stage") {
-      runPublishActionFeedback({
-        loadingLabel: "Updating...",
-        successLabel: "Staging updated",
-      });
-      showPublishToast("Staging snapshot updated. Run tests before production.");
+      setMessage("Staging snapshot updated. Run tests before production.");
       return;
     }
 
@@ -5407,55 +5087,36 @@ function PublishDropdownPopover({
     setLastPublishedLabel(timestamp);
 
     if (!hasPublishedSnapshot) {
-      runPublishActionFeedback({
-        loadingLabel: "Publishing...",
-        successLabel: "Published",
-      });
-      showPublishToast("Published locally. Wire real deployment provider next.");
+      setMessage("Published locally. Wire real deployment provider next.");
       return;
     }
 
     if (hasUnpublishedChanges) {
-      runPublishActionFeedback({
-        loadingLabel: "Republishing...",
-        successLabel: "Republished",
-      });
-      showPublishToast("Republished locally with the latest generated files.");
+      setMessage("Republished locally with the latest generated files.");
       return;
     }
 
-    runPublishActionFeedback({
-      loadingLabel: "Updating...",
-      successLabel: "Updated",
-    });
-
-    showPublishToast("Published snapshot updated.");
+    setMessage("Published snapshot updated.");
   }
 
   function reviewSecurity() {
-    // Toggle the compact security panel and close the other compact panels.
-    closeOtherPublishPanels("security");
-    setIsSecurityPanelOpen((current) => !current);
-
+    // Give fast security feedback without opening the full page.
     if (securityCount >= 3) {
-      showPublishToast("Security checks are ready for manual review.");
+      setMessage("Security handoff files are present. Review them before publishing.");
       return;
     }
 
-    showPublishToast("Security checks are incomplete. Open full publish center for exports.");
+    setMessage("Security exports are incomplete. Review security before going live.");
   }
 
   function editSettings() {
-    // Toggle the compact settings panel and close the other compact panels.
-    closeOtherPublishPanels("settings");
-    setIsSettingsPanelOpen((current) => !current);
-
+    // Give fast settings feedback without turning the dropdown into a spreadsheet.
     if (settingsCount >= 4) {
-      showPublishToast("Core publish settings are present.");
+      setMessage("Core publish settings exist. Configure real deployment values next.");
       return;
     }
 
-    showPublishToast("Publish settings are incomplete. Open full publish center for setup exports.");
+    setMessage("Publish settings are incomplete. Export the remaining setup files.");
   }
 
   function handleCustomDomainChange(value: string) {
@@ -5474,11 +5135,10 @@ function PublishDropdownPopover({
 
   function openDnsSettings() {
     // Open compact DNS verification instructions inside this dropdown.
-    closeOtherPublishPanels("dns");
     setIsDnsSettingsOpen((current) => !current);
 
     if (!cleanCustomDomain) {
-      showPublishToast("Enter a custom domain first.");
+      setMessage("Enter a custom domain first.");
       setDomainStatus("none");
       return;
     }
@@ -5487,23 +5147,23 @@ function PublishDropdownPopover({
       setDomainStatus("needs-dns");
     }
 
-    showPublishToast("Add the DNS record shown below, then verify the domain.");
+    setMessage("Add the DNS record shown below, then verify the domain.");
   }
 
   function verifyDomain() {
     // Simulated verification. Real DNS lookup/provider verification comes later.
     if (!cleanCustomDomain) {
-      showPublishToast("Enter a custom domain first.");
+      setMessage("Enter a custom domain first.");
       setDomainStatus("none");
       return;
     }
 
     setDomainStatus("verifying");
-    showPublishToast("Checking DNS record...");
+    setMessage("Checking DNS record...");
 
     window.setTimeout(() => {
       setDomainStatus("verified");
-      showPublishToast("Domain verified locally. Wire real DNS verification next.");
+      setMessage("Domain verified locally. Wire real DNS verification next.");
     }, 650);
   }
 
@@ -5517,13 +5177,9 @@ function PublishDropdownPopover({
     setPublishVersion(0);
     setLastPublishedLabel("Never");
     setPublishedFileCount(0);
-    setPublishActionFeedback("");
-    setIsPublishingAction(false);
-    showPublishToast("Publish settings reset.");
+    setMessage("Publish settings reset.");
     setIsDnsSettingsOpen(false);
     setIsDetailsOpen(false);
-    setIsSecurityPanelOpen(false);
-    setIsSettingsPanelOpen(false);
 
     try {
       window.localStorage.removeItem(publishStorageKey);
@@ -5542,7 +5198,6 @@ function PublishDropdownPopover({
     <div
       role="dialog"
       aria-label="Publish options"
-      className="publish-dropdown-shell"
       style={{
         position: "fixed",
         top: "58px",
@@ -5633,116 +5288,73 @@ function PublishDropdownPopover({
             background: tone.background,
             borderRadius: "17px",
             padding: "12px",
-            display: "grid",
-            gap: "10px",
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: "12px",
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "flex-start",
-              justifyContent: "space-between",
-              gap: "12px",
-            }}
-          >
-            <div>
-              <div
-                style={getPublishTinyLabelStyle()}
-              >
-                Status
-              </div>
-
-              <div
-                style={{
-                  color: "#111827",
-                  fontSize: "14px",
-                  fontWeight: 850,
-                  lineHeight: 1.25,
-                }}
-              >
-                {gateReport ? `${gateReport.label} · ${gateReport.score}%` : "Draft · 0%"}
-              </div>
-
-              <div
-                style={{
-                  ...getPublishMetaTextStyle(),
-                  marginTop: "4px",
-                }}
-              >
-                Published: {hasPublishedSnapshot ? `v${publishVersion} · ${lastPublishedLabel}` : "Never"}
-              </div>
+          <div>
+            <div
+              style={{
+                color: "#6b7280",
+                fontSize: "10px",
+                fontWeight: 900,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                marginBottom: "5px",
+              }}
+            >
+              Status
             </div>
 
             <div
               style={{
-                alignSelf: "flex-start",
-                borderRadius: "999px",
-                background: tone.badgeBackground,
-                color: tone.badgeColor,
-                fontSize: "12px",
+                color: "#111827",
+                fontSize: "14px",
                 fontWeight: 850,
-                padding: "7px 11px",
-                whiteSpace: "nowrap",
+                lineHeight: 1.25,
               }}
             >
-              {publishStage.label}
+              {gateReport ? `${gateReport.label} · ${gateReport.score}%` : "Draft · 0%"}
+            </div>
+
+            <div
+              style={{
+                color: "#4b5563",
+                fontSize: "12px",
+                lineHeight: 1.35,
+                marginTop: "4px",
+              }}
+            >
+              Published: {hasPublishedSnapshot ? `v${publishVersion} · ${lastPublishedLabel}` : "Never"}
             </div>
           </div>
 
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-              gap: "6px",
-              alignItems: "center",
+              alignSelf: "flex-start",
+              borderRadius: "999px",
+              background: tone.badgeBackground,
+              color: tone.badgeColor,
+              fontSize: "12px",
+              fontWeight: 850,
+              padding: "7px 11px",
+              whiteSpace: "nowrap",
             }}
           >
-            {deploymentTimeline.map((item, index) => {
-              const isCurrent = item.id === deploymentStage;
-              const isComplete = index < deploymentStageIndex;
-
-              return (
-                <div
-                  key={item.id}
-                  title={item.detail}
-                  style={{
-                    display: "grid",
-                    gap: "5px",
-                    minWidth: 0,
-                  }}
-                >
-                  <div
-                    style={{
-                      height: "5px",
-                      borderRadius: "999px",
-                      background: isCurrent
-                        ? "#2563eb"
-                        : isComplete
-                          ? "#16a34a"
-                          : "rgba(148, 163, 184, 0.45)",
-                    }}
-                  />
-                  <div
-                    style={{
-                      color: isCurrent ? "#111827" : "#6b7280",
-                      fontSize: "10px",
-                      fontWeight: isCurrent ? 900 : 750,
-                      lineHeight: 1.1,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {item.label}
-                  </div>
-                </div>
-              );
-            })}
+            {publishStage.label}
           </div>
         </div>
 
         <div
-          style={getPublishCardStyle()}
+          style={{
+            border: "1px solid #eef1f4",
+            borderRadius: "17px",
+            padding: "12px",
+            display: "grid",
+            gap: "9px",
+          }}
         >
           <div
             style={{
@@ -5753,7 +5365,11 @@ function PublishDropdownPopover({
             }}
           >
             <div
-              style={getPublishSectionHeadingStyle()}
+              style={{
+                color: "#111827",
+                fontSize: "14px",
+                fontWeight: 850,
+              }}
             >
               Website URL
             </div>
@@ -5790,7 +5406,13 @@ function PublishDropdownPopover({
         </div>
 
         <div
-          style={getPublishCardStyle()}
+          style={{
+            border: "1px solid #eef1f4",
+            borderRadius: "17px",
+            padding: "12px",
+            display: "grid",
+            gap: "9px",
+          }}
         >
           <div
             style={{
@@ -5801,13 +5423,26 @@ function PublishDropdownPopover({
             }}
           >
             <div
-              style={getPublishSectionHeadingStyle()}
+              style={{
+                color: "#111827",
+                fontSize: "14px",
+                fontWeight: 850,
+              }}
             >
               Custom domain
             </div>
 
             <span
-              style={getPublishBadgeStyle(domainTone)}
+              style={{
+                borderRadius: "999px",
+                border: `1px solid ${domainTone.border}`,
+                background: domainTone.background,
+                color: domainTone.color,
+                fontSize: "11px",
+                fontWeight: 850,
+                padding: "6px 9px",
+                whiteSpace: "nowrap",
+              }}
             >
               {domainTone.label}
             </span>
@@ -5852,17 +5487,16 @@ function PublishDropdownPopover({
           </div>
 
           {isDnsSettingsOpen ? (
-            <PublishRevealPanel>
-              <div
-                style={{
-                  border: "1px solid #e5e7eb",
-                  borderRadius: "15px",
-                  background: "#f9fafb",
-                  padding: "11px",
-                  display: "grid",
-                  gap: "9px",
-                }}
-              >
+            <div
+              style={{
+                border: "1px solid #e5e7eb",
+                borderRadius: "15px",
+                background: "#f9fafb",
+                padding: "11px",
+                display: "grid",
+                gap: "9px",
+              }}
+            >
               <div
                 style={{
                   color: "#374151",
@@ -5969,12 +5603,17 @@ function PublishDropdownPopover({
                     : "Verify domain"}
               </button>
             </div>
-          </PublishRevealPanel>
           ) : null}
         </div>
 
         <div
-          style={getPublishCardStyle()}
+          style={{
+            border: "1px solid #eef1f4",
+            borderRadius: "17px",
+            padding: "12px",
+            display: "grid",
+            gap: "9px",
+          }}
         >
           <div
             style={{
@@ -6040,185 +5679,26 @@ function PublishDropdownPopover({
             gap: "9px",
           }}
         >
-          <button
-            type="button"
-            onClick={reviewSecurity}
-            style={{
-              ...secondaryButtonStyle,
-              border: isSecurityPanelOpen
-                ? "1px solid #2563eb"
-                : secondaryButtonStyle.border,
-              background: isSecurityPanelOpen ? "#eff6ff" : "#ffffff",
-            }}
-          >
+          <button type="button" onClick={reviewSecurity} style={secondaryButtonStyle}>
             Security · {securityCount}
           </button>
 
-          <button
-            type="button"
-            onClick={editSettings}
-            style={{
-              ...secondaryButtonStyle,
-              border: isSettingsPanelOpen
-                ? "1px solid #2563eb"
-                : secondaryButtonStyle.border,
-              background: isSettingsPanelOpen ? "#eff6ff" : "#ffffff",
-            }}
-          >
+          <button type="button" onClick={editSettings} style={secondaryButtonStyle}>
             Settings
           </button>
         </div>
 
-        {isSecurityPanelOpen ? (
-          <PublishRevealPanel>
-            <div
-              style={{
-                border: "1px solid #eef1f4",
-                borderRadius: "16px",
-                background: "#f9fafb",
-                padding: "12px",
-                display: "grid",
-                gap: "10px",
-              }}
-            >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "10px",
-              }}
-            >
-              <strong
-                style={{
-                  color: "#111827",
-                  fontSize: "13px",
-                }}
-              >
-                Security readiness
-              </strong>
-
-              <span
-                style={getPublishBadgeStyle(securityTone)}
-              >
-                {securityTone.label}
-              </span>
-            </div>
-
-            <div style={{ display: "grid", gap: "7px" }}>
-              {securityChecklist.map((item) => (
-                <PublishDropdownChecklistRow
-                  key={item.label}
-                  label={item.label}
-                  done={item.done}
-                />
-              ))}
-            </div>
-
-            <button
-              type="button"
-              onClick={openFullPublishCenter}
-              style={{
-                ...secondaryButtonStyle,
-                width: "100%",
-              }}
-            >
-              Open security review
-            </button>
-          </div>
-        </PublishRevealPanel>
-        ) : null}
-
-        {isSettingsPanelOpen ? (
-          <PublishRevealPanel>
-            <div
-              style={{
-                border: "1px solid #eef1f4",
-                borderRadius: "16px",
-                background: "#f9fafb",
-                padding: "12px",
-                display: "grid",
-                gap: "10px",
-              }}
-            >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "10px",
-              }}
-            >
-              <strong
-                style={{
-                  color: "#111827",
-                  fontSize: "13px",
-                }}
-              >
-                Publish settings
-              </strong>
-
-              <span
-                style={getPublishBadgeStyle(settingsTone)}
-              >
-                {settingsTone.label}
-              </span>
-            </div>
-
-            <div style={{ display: "grid", gap: "7px" }}>
-              {settingsChecklist.map((item) => (
-                <PublishDropdownChecklistRow
-                  key={item.label}
-                  label={item.label}
-                  done={item.done}
-                />
-              ))}
-            </div>
-
-            <div
-              style={{
-                borderTop: "1px solid #e5e7eb",
-                paddingTop: "8px",
-                display: "grid",
-                gap: "6px",
-                color: "#4b5563",
-                fontSize: "12px",
-                lineHeight: 1.35,
-              }}
-            >
-              <div>Visibility: {visibility === "public" ? "Public" : "Private"}</div>
-              <div>Domain: {domainTone.label}</div>
-            </div>
-
-            <button
-              type="button"
-              onClick={openFullPublishCenter}
-              style={{
-                ...secondaryButtonStyle,
-                width: "100%",
-              }}
-            >
-              Open publish settings
-            </button>
-          </div>
-        </PublishRevealPanel>
-        ) : null}
-
         <button
           type="button"
           onClick={updateSnapshot}
-          disabled={isPublishingAction}
-          aria-busy={isPublishingAction}
           className="publish-button"
           style={{
             width: "100%",
             minHeight: "44px",
             borderRadius: "15px",
-            opacity: isPublishingAction ? 0.86 : 1,
-            cursor: isPublishingAction ? "wait" : "pointer",
           }}
         >
-          {publishActionFeedback || mainPublishActionLabel}
+          {mainPublishActionLabel}
         </button>
 
         <div style={{ display: "flex", gap: "9px" }}>
@@ -6235,10 +5715,7 @@ function PublishDropdownPopover({
 
           <button
             type="button"
-            onClick={() => {
-              closeOtherPublishPanels("details");
-              setIsDetailsOpen((current) => !current);
-            }}
+            onClick={() => setIsDetailsOpen((current) => !current)}
             style={{
               ...secondaryButtonStyle,
               minWidth: "112px",
@@ -6249,104 +5726,47 @@ function PublishDropdownPopover({
         </div>
 
         {isDetailsOpen ? (
-          <PublishRevealPanel>
-            <div
-              style={{
-                border: "1px solid #eef1f4",
-                borderRadius: "16px",
-                background: "#f9fafb",
-                padding: "12px",
-                display: "grid",
-                gap: "10px",
-                color: "#4b5563",
-                fontSize: "12px",
-                lineHeight: 1.45,
-              }}
-            >
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-                gap: "8px",
-              }}
-            >
-              {deploymentTimeline.map((item, index) => {
-                const isCurrent = item.id === deploymentStage;
-                const isComplete = index < deploymentStageIndex;
-
-                return (
-                  <div
-                    key={item.id}
-                    style={{
-                      borderRadius: "13px",
-                      border: isCurrent
-                        ? "1px solid #2563eb"
-                        : isComplete
-                          ? "1px solid #bbf7d0"
-                          : "1px solid #e5e7eb",
-                      background: isCurrent
-                        ? "#eff6ff"
-                        : isComplete
-                          ? "#ecfdf5"
-                          : "#ffffff",
-                      padding: "9px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        color: "#111827",
-                        fontSize: "11px",
-                        fontWeight: 900,
-                        marginBottom: "3px",
-                      }}
-                    >
-                      {item.label}
-                    </div>
-
-                    <div
-                      style={{
-                        color: "#6b7280",
-                        fontSize: "10px",
-                        lineHeight: 1.25,
-                      }}
-                    >
-                      {item.detail}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
+          <div
+            style={{
+              border: "1px solid #eef1f4",
+              borderRadius: "16px",
+              background: "#f9fafb",
+              padding: "12px",
+              display: "grid",
+              gap: "7px",
+              color: "#4b5563",
+              fontSize: "12px",
+              lineHeight: 1.45,
+            }}
+          >
             <div>
               <strong style={{ color: "#111827" }}>Gate:</strong>{" "}
               {gateReport ? gateReport.summary : "No publish gate available yet."}
             </div>
-            <PublishDropdownSummaryRow
-              label="Security files"
-              value={`${securityCount}/3`}
-            />
-            <PublishDropdownSummaryRow
-              label="Settings files"
-              value={`${settingsCount}/4`}
-            />
-            <PublishDropdownSummaryRow
-              label="Visibility"
-              value={visibility === "public" ? "Public" : "Private"}
-            />
-            <PublishDropdownSummaryRow
-              label="Domain"
-              value={domainTone.label}
-            />
-            <PublishDropdownSummaryRow
-              label="Version"
-              value={hasPublishedSnapshot ? `v${publishVersion}` : "Not published"}
-            />
-            <PublishDropdownSummaryRow
-              label="Unpublished changes"
-              value={hasUnpublishedChanges ? "Yes" : "No"}
-            />
+            <div>
+              <strong style={{ color: "#111827" }}>Security files:</strong>{" "}
+              {securityCount}/3
+            </div>
+            <div>
+              <strong style={{ color: "#111827" }}>Settings files:</strong>{" "}
+              {settingsCount}/4
+            </div>
+            <div>
+              <strong style={{ color: "#111827" }}>Visibility:</strong>{" "}
+              {visibility === "public" ? "Public" : "Private"}
+            </div>
+            <div>
+              <strong style={{ color: "#111827" }}>Domain:</strong> {domainTone.label}
+            </div>
+            <div>
+              <strong style={{ color: "#111827" }}>Version:</strong>{" "}
+              {hasPublishedSnapshot ? `v${publishVersion}` : "Not published"}
+            </div>
+            <div>
+              <strong style={{ color: "#111827" }}>Unpublished changes:</strong>{" "}
+              {hasUnpublishedChanges ? "Yes" : "No"}
+            </div>
           </div>
-        </PublishRevealPanel>
         ) : null}
 
         <button
@@ -6365,18 +5785,23 @@ function PublishDropdownPopover({
           Reset publish settings
         </button>
 
-
+        {message ? (
+          <div
+            style={{
+              borderRadius: "13px",
+              border: "1px solid #e5e7eb",
+              background: "#f9fafb",
+              padding: "11px 13px",
+              color: "#374151",
+              fontSize: "12px",
+              fontWeight: 750,
+              lineHeight: 1.4,
+            }}
+          >
+            {message}
+          </div>
+        ) : null}
       </div>
-
-      {toastMessage ? (
-        <div
-          className="publish-dropdown-toast"
-          role="status"
-          aria-live="polite"
-        >
-          {toastMessage}
-        </div>
-      ) : null}
     </div>
   );
 }

@@ -1332,6 +1332,62 @@ button:active:not(:disabled),
   }
 }
 
+
+/* Founder AI background working card polish */
+.feed-list .assistant-build-card,
+.feed-list .background-working-card,
+.feed-list [data-background-working="true"] {
+  max-width: min(760px, 100%);
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: 22px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(250, 247, 241, 0.94));
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+}
+
+.assistant-build-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 0 10px;
+  background: rgba(37, 99, 235, 0.08);
+  color: #1d4ed8;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.assistant-build-status::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  margin-right: 7px;
+  border-radius: 999px;
+  background: currentColor;
+  animation: founderAiWorkingPulse 1100ms ease-in-out infinite;
+}
+
+.assistant-build-heading {
+  margin-top: 10px;
+  margin-bottom: 5px;
+  color: #111827;
+  font-size: clamp(16px, 1.4vw, 20px);
+  font-weight: 850;
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+}
+
+.assistant-build-summary {
+  margin: 0;
+  color: #4b5563;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 /* Keep running work compact. Nobody needs a novel while the machine is still chewing. */
 .assistant-build-card ul,
 .background-working-card ul,
@@ -1398,6 +1454,29 @@ button:active:not(:disabled),
   [data-background-working="true"]::after {
     animation: none;
   }
+}
+
+
+/* Founder AI generated preview polish */
+.preview-frame {
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.06), transparent 34%),
+    linear-gradient(180deg, #fffaf2 0%, #ffffff 42%, #f8fafc 100%);
+}
+
+.preview-frame * {
+  box-sizing: border-box;
+}
+
+.preview-frame h1,
+.preview-frame h2,
+.preview-frame h3 {
+  color: #111827;
+  letter-spacing: -0.045em;
+}
+
+.preview-frame p {
+  color: #4b5563;
 }
 
 /* Generic generated-preview shell support */
@@ -1627,6 +1706,30 @@ button:active:not(:disabled),
   .preview-frame button:active:not(:disabled) {
     transform: none;
   }
+}
+
+
+/* Founder AI preview frame shell polish */
+.preview-frame-wrap {
+  background:
+    radial-gradient(circle at 18% 12%, rgba(37, 99, 235, 0.08), transparent 28%),
+    radial-gradient(circle at 88% 22%, rgba(124, 58, 237, 0.07), transparent 26%),
+    linear-gradient(180deg, #fbf7ef 0%, #f8fafc 100%);
+  border-radius: 28px;
+  padding: clamp(10px, 1.5vw, 18px);
+  min-width: 0;
+}
+
+.preview-frame {
+  position: relative;
+  min-width: 0;
+  border: 1px solid rgba(226, 232, 240, 0.98);
+  border-radius: 26px;
+  background: #ffffff;
+  box-shadow:
+    0 24px 70px rgba(15, 23, 42, 0.10),
+    0 1px 0 rgba(255, 255, 255, 0.86) inset;
+  overflow: hidden;
 }
 
 /* Subtle browser-like top edge without adding markup */
@@ -2567,928 +2670,6 @@ pre[class*="language-"] {
   .preview-frame [data-workspace="history"] button:active:not(:disabled),
   .preview-frame [class*="history"] button:active:not(:disabled),
   .preview-frame [class*="History"] button:active:not(:disabled) {
-    transform: none;
-  }
-}
-
-
-/* Founder AI command center input polish */
-.command-center,
-.command-panel,
-.activity-panel,
-.builder-command-center {
-  background:
-    radial-gradient(circle at 16% 0%, rgba(37, 99, 235, 0.07), transparent 26%),
-    linear-gradient(180deg, #fffaf2 0%, #ffffff 44%, #f8fafc 100%);
-}
-
-.activity-feed,
-.feed-list,
-.command-scroll-area {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(148, 163, 184, 0.7) transparent;
-}
-
-.activity-feed::-webkit-scrollbar,
-.feed-list::-webkit-scrollbar,
-.command-scroll-area::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-.activity-feed::-webkit-scrollbar-thumb,
-.feed-list::-webkit-scrollbar-thumb,
-.command-scroll-area::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.55);
-  border: 3px solid transparent;
-  border-radius: 999px;
-  background-clip: content-box;
-}
-
-/* Feed rhythm */
-.feed-list {
-  display: grid;
-  gap: 12px;
-}
-
-.feed-list article,
-.activity-feed article {
-  transition:
-    transform 140ms ease,
-    box-shadow 140ms ease,
-    border-color 140ms ease,
-    background-color 140ms ease;
-}
-
-.feed-list article:hover,
-.activity-feed article:hover {
-  border-color: rgba(37, 99, 235, 0.24);
-  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.075);
-}
-
-/* Composer/input surfaces */
-.command-composer,
-.prompt-composer,
-.chat-composer,
-.composer,
-.input-composer,
-.command-input-wrap {
-  border: 1px solid rgba(226, 232, 240, 0.96);
-  border-radius: 24px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(249, 250, 251, 0.94));
-  box-shadow:
-    0 18px 46px rgba(15, 23, 42, 0.09),
-    0 1px 0 rgba(255, 255, 255, 0.85) inset;
-}
-
-.command-composer:focus-within,
-.prompt-composer:focus-within,
-.chat-composer:focus-within,
-.composer:focus-within,
-.input-composer:focus-within,
-.command-input-wrap:focus-within {
-  border-color: rgba(37, 99, 235, 0.48);
-  box-shadow:
-    0 0 0 4px rgba(37, 99, 235, 0.10),
-    0 22px 52px rgba(15, 23, 42, 0.12);
-}
-
-/* General prompt textareas/inputs inside command area */
-.command-center textarea,
-.command-panel textarea,
-.activity-panel textarea,
-.builder-command-center textarea,
-.command-center input[type="text"],
-.command-panel input[type="text"],
-.activity-panel input[type="text"],
-.builder-command-center input[type="text"] {
-  color: #111827;
-  caret-color: #2563eb;
-}
-
-.command-center textarea::placeholder,
-.command-panel textarea::placeholder,
-.activity-panel textarea::placeholder,
-.builder-command-center textarea::placeholder,
-.command-center input::placeholder,
-.command-panel input::placeholder,
-.activity-panel input::placeholder,
-.builder-command-center input::placeholder {
-  color: #9ca3af;
-}
-
-/* Keep text from touching borders like it owes them money */
-.command-center textarea,
-.command-panel textarea,
-.activity-panel textarea,
-.builder-command-center textarea {
-  line-height: 1.5;
-  padding: 14px 16px;
-}
-
-/* Action buttons */
-.command-center button,
-.command-panel button,
-.activity-panel button,
-.builder-command-center button,
-.command-composer button,
-.prompt-composer button,
-.chat-composer button,
-.composer button,
-.input-composer button {
-  transition:
-    transform 140ms ease,
-    box-shadow 140ms ease,
-    border-color 140ms ease,
-    background-color 140ms ease,
-    color 140ms ease,
-    opacity 140ms ease;
-}
-
-.command-center button:hover:not(:disabled),
-.command-panel button:hover:not(:disabled),
-.activity-panel button:hover:not(:disabled),
-.builder-command-center button:hover:not(:disabled),
-.command-composer button:hover:not(:disabled),
-.prompt-composer button:hover:not(:disabled),
-.chat-composer button:hover:not(:disabled),
-.composer button:hover:not(:disabled),
-.input-composer button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.09);
-  border-color: rgba(37, 99, 235, 0.32) !important;
-}
-
-.command-center button:active:not(:disabled),
-.command-panel button:active:not(:disabled),
-.activity-panel button:active:not(:disabled),
-.builder-command-center button:active:not(:disabled),
-.command-composer button:active:not(:disabled),
-.prompt-composer button:active:not(:disabled),
-.chat-composer button:active:not(:disabled),
-.composer button:active:not(:disabled),
-.input-composer button:active:not(:disabled) {
-  transform: translateY(0) scale(0.985);
-}
-
-.command-center button:disabled,
-.command-panel button:disabled,
-.activity-panel button:disabled,
-.builder-command-center button:disabled {
-  opacity: 0.58;
-  cursor: not-allowed;
-}
-
-/* Queue/security cards should be compact unless needed */
-.queue-card,
-.security-card,
-.assistant-queue-card,
-.assistant-security-card {
-  border: 1px solid rgba(226, 232, 240, 0.95);
-  border-radius: 20px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(249, 250, 251, 0.94));
-  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06);
-}
-
-.queue-card:empty,
-.security-card:empty,
-.assistant-queue-card:empty,
-.assistant-security-card:empty {
-  display: none;
-}
-
-/* Warning/error surfaces */
-.workspace-error,
-.command-error,
-.build-error {
-  border: 1px solid rgba(252, 165, 165, 0.78);
-  border-radius: 18px;
-  background: #fef2f2;
-  color: #991b1b;
-  box-shadow: 0 14px 32px rgba(153, 27, 27, 0.08);
-}
-
-/* Floating fade polish */
-.activity-fade {
-  pointer-events: none;
-}
-
-.activity-fade-top {
-  background: linear-gradient(180deg, rgba(255, 250, 242, 0.96), transparent);
-}
-
-.activity-fade-bottom {
-  background: linear-gradient(0deg, rgba(248, 250, 252, 0.96), transparent);
-}
-
-/* Mobile tightening */
-@media (max-width: 760px) {
-  .command-composer,
-  .prompt-composer,
-  .chat-composer,
-  .composer,
-  .input-composer,
-  .command-input-wrap {
-    border-radius: 20px;
-  }
-
-  .command-center textarea,
-  .command-panel textarea,
-  .activity-panel textarea,
-  .builder-command-center textarea {
-    padding: 12px 13px;
-    font-size: 14px;
-  }
-
-  .feed-list {
-    gap: 10px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .feed-list article,
-  .activity-feed article,
-  .command-center button,
-  .command-panel button,
-  .activity-panel button,
-  .builder-command-center button,
-  .command-composer button,
-  .prompt-composer button,
-  .chat-composer button,
-  .composer button,
-  .input-composer button {
-    transition: none;
-  }
-
-  .feed-list article:hover,
-  .activity-feed article:hover,
-  .command-center button:hover:not(:disabled),
-  .command-panel button:hover:not(:disabled),
-  .activity-panel button:hover:not(:disabled),
-  .builder-command-center button:hover:not(:disabled),
-  .command-composer button:hover:not(:disabled),
-  .prompt-composer button:hover:not(:disabled),
-  .chat-composer button:hover:not(:disabled),
-  .composer button:hover:not(:disabled),
-  .input-composer button:hover:not(:disabled),
-  .command-center button:active:not(:disabled),
-  .command-panel button:active:not(:disabled),
-  .activity-panel button:active:not(:disabled),
-  .builder-command-center button:active:not(:disabled),
-  .command-composer button:active:not(:disabled),
-  .prompt-composer button:active:not(:disabled),
-  .chat-composer button:active:not(:disabled),
-  .composer button:active:not(:disabled),
-  .input-composer button:active:not(:disabled) {
-    transform: none;
-  }
-}
-
-/* Let any feed item behave like a chat row when role classes/data attrs exist */
-.feed-list [data-role="user"],
-.feed-list .feed-message-user,
-.feed-list .message-user,
-.feed-list .user-message,
-.feed-list article[class*="user"] {
-  justify-self: end;
-  margin-left: auto;
-  margin-right: 0;
-  max-width: min(78%, 720px);
-}
-
-.feed-list [data-role="assistant"],
-.feed-list .feed-message-assistant,
-.feed-list .message-assistant,
-.feed-list .assistant-message,
-.feed-list article[class*="assistant"],
-.feed-list .assistant-build-card,
-.feed-list .background-working-card,
-.feed-list [data-background-working="true"] {
-  justify-self: start;
-  margin-left: 0;
-  margin-right: auto;
-  max-width: min(82%, 780px);
-}
-
-/* Generic feed article bubble shape */
-.feed-list article {
-  overflow-wrap: anywhere;
-  word-break: normal;
-}
-
-/* User bubble styling */
-.feed-list [data-role="user"],
-.feed-list .feed-message-user,
-.feed-list .message-user,
-.feed-list .user-message,
-.feed-list article[class*="user"] {
-  border: 1px solid rgba(37, 99, 235, 0.22);
-  border-radius: 22px 22px 8px 22px;
-  background:
-    linear-gradient(135deg, rgba(37, 99, 235, 0.98), rgba(29, 78, 216, 0.96));
-  color: #ffffff;
-  box-shadow: 0 16px 34px rgba(37, 99, 235, 0.18);
-}
-
-/* Assistant bubble styling */
-.feed-list [data-role="assistant"],
-.feed-list .feed-message-assistant,
-.feed-list .message-assistant,
-.feed-list .assistant-message,
-.feed-list article[class*="assistant"] {
-  border: 1px solid rgba(226, 232, 240, 0.95);
-  border-radius: 22px 22px 22px 8px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(249, 250, 251, 0.94));
-  color: #111827;
-  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.07);
-}
-
-/* Preserve special assistant build card styling while still aligning left */
-.feed-list .assistant-build-card,
-.feed-list .background-working-card,
-.feed-list [data-background-working="true"] {
-  border-radius: 22px;
-}
-
-/* Text colour inside user bubbles */
-.feed-list [data-role="user"] *,
-.feed-list .feed-message-user *,
-.feed-list .message-user *,
-.feed-list .user-message *,
-.feed-list article[class*="user"] * {
-  color: inherit;
-}
-
-.feed-list [data-role="user"] p,
-.feed-list .feed-message-user p,
-.feed-list .message-user p,
-.feed-list .user-message p,
-.feed-list article[class*="user"] p {
-  color: rgba(255, 255, 255, 0.92);
-}
-
-/* Text rhythm inside assistant bubbles */
-.feed-list [data-role="assistant"] p,
-.feed-list .feed-message-assistant p,
-.feed-list .message-assistant p,
-.feed-list .assistant-message p,
-.feed-list article[class*="assistant"] p {
-  color: #4b5563;
-  line-height: 1.55;
-}
-
-/* Keep headings inside generated assistant cards crisp */
-.feed-list article h1,
-.feed-list article h2,
-.feed-list article h3,
-.feed-list article strong {
-  letter-spacing: -0.025em;
-}
-
-/* Message metadata and small labels */
-.feed-list article small,
-.feed-list article time,
-.feed-list article code {
-  font-size: 12px;
-  font-weight: 750;
-}
-
-.feed-list article code {
-  border-radius: 999px;
-  padding: 3px 8px;
-  background: rgba(248, 250, 252, 0.92);
-  border: 1px solid rgba(226, 232, 240, 0.86);
-  color: #374151;
-}
-
-.feed-list article[class*="user"] code,
-.feed-list [data-role="user"] code {
-  background: rgba(255, 255, 255, 0.16);
-  border-color: rgba(255, 255, 255, 0.22);
-  color: #ffffff;
-}
-
-/* Actions inside feed cards */
-.feed-list article button {
-  transition:
-    transform 140ms ease,
-    box-shadow 140ms ease,
-    border-color 140ms ease,
-    background-color 140ms ease,
-    color 140ms ease,
-    opacity 140ms ease;
-}
-
-.feed-list article button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.09);
-  border-color: rgba(37, 99, 235, 0.34) !important;
-}
-
-.feed-list article button:active:not(:disabled) {
-  transform: translateY(0) scale(0.99);
-}
-
-/* Generated output cards should stay assistant-side, not drift right */
-.feed-list .generated-output,
-.feed-list .build-output,
-.feed-list .preview-output,
-.feed-list .file-output,
-.feed-list .assistant-output {
-  justify-self: start;
-  margin-left: 0;
-  margin-right: auto;
-  max-width: min(82%, 780px);
-}
-
-/* If messages lack role classes, use common structural fallbacks.
-   This is intentionally soft so it does not bulldoze existing layout. */
-.feed-list > article:not([class*="user"]):not([class*="assistant"]) {
-  max-width: min(82%, 780px);
-}
-
-/* Long generated content */
-.feed-list pre {
-  max-width: 100%;
-  overflow: auto;
-  border-radius: 18px;
-  background: #111827;
-  color: #e5e7eb;
-  padding: 14px;
-  font-size: 12px;
-  line-height: 1.55;
-}
-
-.feed-list ul,
-.feed-list ol {
-  margin-top: 8px;
-  margin-bottom: 8px;
-}
-
-.feed-list li {
-  line-height: 1.5;
-}
-
-/* Mobile message widths */
-@media (max-width: 760px) {
-  .feed-list [data-role="user"],
-  .feed-list .feed-message-user,
-  .feed-list .message-user,
-  .feed-list .user-message,
-  .feed-list article[class*="user"],
-  .feed-list [data-role="assistant"],
-  .feed-list .feed-message-assistant,
-  .feed-list .message-assistant,
-  .feed-list .assistant-message,
-  .feed-list article[class*="assistant"],
-  .feed-list .assistant-build-card,
-  .feed-list .background-working-card,
-  .feed-list [data-background-working="true"],
-  .feed-list .generated-output,
-  .feed-list .build-output,
-  .feed-list .preview-output,
-  .feed-list .file-output,
-  .feed-list .assistant-output {
-    max-width: 94%;
-  }
-
-  .feed-list [data-role="user"],
-  .feed-list .feed-message-user,
-  .feed-list .message-user,
-  .feed-list .user-message,
-  .feed-list article[class*="user"] {
-    border-radius: 20px 20px 8px 20px;
-  }
-
-  .feed-list [data-role="assistant"],
-  .feed-list .feed-message-assistant,
-  .feed-list .message-assistant,
-  .feed-list .assistant-message,
-  .feed-list article[class*="assistant"] {
-    border-radius: 20px 20px 20px 8px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .feed-list article button {
-    transition: none;
-  }
-
-  .feed-list article button:hover:not(:disabled),
-  .feed-list article button:active:not(:disabled) {
-    transform: none;
-  }
-}
-
-
-/* Founder AI feed and preview clarity repair */
-
-/* -------------------------------------------------------
-   1. Preview clarity repair
-   ------------------------------------------------------- */
-
-/* Remove accidental blur/softening from preview surfaces. */
-.preview-frame,
-.preview-frame *,
-.preview-website,
-.preview-website *,
-.generated-preview,
-.generated-preview *,
-.product-preview,
-.product-preview *,
-.preview-site,
-.preview-site * {
-  filter: none !important;
-  text-shadow: none !important;
-  -webkit-font-smoothing: antialiased;
-  text-rendering: geometricPrecision;
-}
-
-/* Keep the preview frame clean without fake blur chrome sitting over the content. */
-.preview-frame {
-  background: #ffffff !important;
-  overflow: auto;
-}
-
-/* Remove pseudo chrome that may visually overlay content. */
-.preview-frame::before,
-.preview-frame::after {
-  content: none !important;
-  display: none !important;
-}
-
-/* Prevent parent overlays from washing out generated content. */
-.preview-frame-wrap {
-  background:
-    linear-gradient(180deg, #fbf7ef 0%, #f8fafc 100%) !important;
-  border-radius: 24px;
-  padding: 12px;
-}
-
-/* Make generated dark hero sections readable and crisp.
-   The generated preview often uses inline dark backgrounds, so we use !important.
- */
-.preview-frame [style*="background"] h1,
-.preview-frame [style*="background"] h2,
-.preview-frame [style*="background"] h3 {
-  opacity: 1 !important;
-}
-
-/* If a hero/card is dark, force the major text to be light and readable. */
-.preview-frame [style*="#020617"] h1,
-.preview-frame [style*="#020617"] h2,
-.preview-frame [style*="#020617"] h3,
-.preview-frame [style*="#030712"] h1,
-.preview-frame [style*="#030712"] h2,
-.preview-frame [style*="#030712"] h3,
-.preview-frame [style*="#0f172a"] h1,
-.preview-frame [style*="#0f172a"] h2,
-.preview-frame [style*="#0f172a"] h3,
-.preview-frame [style*="rgb(2, 6, 23)"] h1,
-.preview-frame [style*="rgb(2, 6, 23)"] h2,
-.preview-frame [style*="rgb(2, 6, 23)"] h3,
-.preview-frame [style*="rgb(3, 7, 18)"] h1,
-.preview-frame [style*="rgb(3, 7, 18)"] h2,
-.preview-frame [style*="rgb(3, 7, 18)"] h3,
-.preview-frame [style*="rgb(15, 23, 42)"] h1,
-.preview-frame [style*="rgb(15, 23, 42)"] h2,
-.preview-frame [style*="rgb(15, 23, 42)"] h3 {
-  color: #ffffff !important;
-  opacity: 1 !important;
-}
-
-/* Dark hero body text should not look like smoke. */
-.preview-frame [style*="#020617"] p,
-.preview-frame [style*="#030712"] p,
-.preview-frame [style*="#0f172a"] p,
-.preview-frame [style*="rgb(2, 6, 23)"] p,
-.preview-frame [style*="rgb(3, 7, 18)"] p,
-.preview-frame [style*="rgb(15, 23, 42)"] p {
-  color: rgba(255, 255, 255, 0.78) !important;
-  opacity: 1 !important;
-}
-
-/* Keep preview content sharp when transforms were added elsewhere. */
-.preview-frame,
-.preview-frame-wrap,
-.preview-content {
-  transform: none !important;
-  will-change: auto !important;
-}
-
-/* Keep generated preview spacing premium but not oversized. */
-.preview-frame section {
-  scroll-margin-top: 88px;
-}
-
-.preview-frame img,
-.preview-frame video {
-  max-width: 100%;
-  height: auto;
-}
-
-/* -------------------------------------------------------
-   2. Feed layout repair
-   ------------------------------------------------------- */
-
-/* Keep the builder feed layout from the reference. */
-.feed-list {
-  display: grid;
-  gap: 18px;
-  align-content: start;
-}
-
-/* Neutralise the previous forced messenger layout. */
-.feed-list article,
-.activity-feed article {
-  max-width: none;
-  word-break: normal;
-  overflow-wrap: anywhere;
-}
-
-/* User prompt bubble: soft, wide, calm, reference-style.
-   This overrides the accidental oversized blue bubble.
- */
-.feed-list [data-role="user"],
-.feed-list article[class*="user"],
-.feed-list .user-message,
-.feed-list .feed-message-user,
-.activity-feed [data-role="user"],
-.activity-feed article[class*="user"],
-.activity-feed .user-message,
-.activity-feed .feed-message-user {
-  width: fit-content !important;
-  max-width: min(720px, calc(100% - 56px)) !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
-  border: 1px solid rgba(238, 235, 228, 0.96) !important;
-  border-radius: 26px !important;
-  background:
-    linear-gradient(180deg, rgba(250, 247, 241, 0.98), rgba(247, 244, 238, 0.96)) !important;
-  color: #3f3f46 !important;
-  box-shadow:
-    0 12px 28px rgba(15, 23, 42, 0.045),
-    0 1px 0 rgba(255, 255, 255, 0.78) inset !important;
-}
-
-/* User prompt text should not inherit the blue bubble white text. */
-.feed-list [data-role="user"] *,
-.feed-list article[class*="user"] *,
-.feed-list .user-message *,
-.feed-list .feed-message-user *,
-.activity-feed [data-role="user"] *,
-.activity-feed article[class*="user"] *,
-.activity-feed .user-message *,
-.activity-feed .feed-message-user * {
-  color: #3f3f46 !important;
-}
-
-/* Assistant prose: natural transcript layout, not a chat bubble. */
-.feed-list [data-role="assistant"],
-.feed-list article[class*="assistant"],
-.feed-list .assistant-message,
-.feed-list .feed-message-assistant,
-.activity-feed [data-role="assistant"],
-.activity-feed article[class*="assistant"],
-.activity-feed .assistant-message,
-.activity-feed .feed-message-assistant {
-  max-width: min(820px, calc(100% - 32px)) !important;
-  margin-left: 0 !important;
-  margin-right: auto !important;
-  border-color: transparent !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  color: #3f3f46 !important;
-}
-
-/* Assistant paragraph rhythm like the reference. */
-.feed-list [data-role="assistant"] p,
-.feed-list article[class*="assistant"] p,
-.feed-list .assistant-message p,
-.feed-list .feed-message-assistant p,
-.activity-feed [data-role="assistant"] p,
-.activity-feed article[class*="assistant"] p,
-.activity-feed .assistant-message p,
-.activity-feed .feed-message-assistant p {
-  color: #3f3f46 !important;
-  font-size: clamp(15px, 1.48vw, 17px);
-  line-height: 1.72;
-  letter-spacing: -0.012em;
-}
-
-/* -------------------------------------------------------
-   3. Compact background working card
-   ------------------------------------------------------- */
-
-/* The running build card should be compact, not a giant blue billboard. */
-.assistant-build-card,
-.background-working-card,
-[data-background-working="true"] {
-  max-width: min(560px, calc(100% - 36px)) !important;
-  margin-left: 0 !important;
-  margin-right: auto !important;
-  border: 1px solid rgba(226, 232, 240, 0.95) !important;
-  border-radius: 22px !important;
-  background:
-    radial-gradient(circle at 82% 18%, rgba(37, 99, 235, 0.08), transparent 34%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(250, 248, 244, 0.94)) !important;
-  box-shadow:
-    0 14px 34px rgba(15, 23, 42, 0.06),
-    0 1px 0 rgba(255, 255, 255, 0.82) inset !important;
-  overflow: hidden;
-}
-
-/* Remove the oversized blue/bright treatment from running card internals. */
-.assistant-build-card *,
-.background-working-card *,
-[data-background-working="true"] * {
-  text-shadow: none !important;
-}
-
-/* Small uppercase status. */
-.assistant-build-status {
-  display: inline-flex;
-  align-items: center;
-  width: fit-content;
-  min-height: 24px;
-  border-radius: 999px;
-  padding: 0 10px;
-  background: rgba(37, 99, 235, 0.09) !important;
-  color: #1d4ed8 !important;
-  font-size: 11px !important;
-  font-weight: 900 !important;
-  letter-spacing: 0.12em !important;
-  text-transform: uppercase;
-}
-
-/* Pulse dot, subtle enough not to beg for attention. */
-.assistant-build-status::before {
-  content: "";
-  width: 7px;
-  height: 7px;
-  margin-right: 7px;
-  border-radius: 999px;
-  background: currentColor;
-  animation: founderAiRepairWorkingPulse 1100ms ease-in-out infinite;
-}
-
-/* Working card heading and copy. */
-.assistant-build-heading {
-  margin: 10px 0 6px !important;
-  color: #111827 !important;
-  font-size: clamp(17px, 1.5vw, 21px) !important;
-  font-weight: 850 !important;
-  line-height: 1.15 !important;
-  letter-spacing: -0.035em !important;
-}
-
-.assistant-build-summary {
-  margin: 0 !important;
-  color: #4b5563 !important;
-  font-size: 14px !important;
-  line-height: 1.56 !important;
-}
-
-/* Progress area should be compact. */
-.assistant-build-card ul,
-.background-working-card ul,
-[data-background-working="true"] ul {
-  max-height: 90px;
-  overflow: hidden;
-  mask-image: linear-gradient(to bottom, black 68%, transparent 100%);
-}
-
-.assistant-build-card li,
-.background-working-card li,
-[data-background-working="true"] li {
-  color: #4b5563 !important;
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-/* -------------------------------------------------------
-   4. Build/update cards
-   ------------------------------------------------------- */
-
-.feed-list article:has(button),
-.activity-feed article:has(button) {
-  border: 1px solid rgba(226, 232, 240, 0.92);
-  border-radius: 24px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(250, 248, 244, 0.94));
-  box-shadow:
-    0 14px 34px rgba(15, 23, 42, 0.055),
-    0 1px 0 rgba(255, 255, 255, 0.82) inset;
-}
-
-.feed-list article button,
-.activity-feed article button {
-  min-height: 40px;
-  border-radius: 14px;
-  border: 1px solid rgba(215, 219, 227, 0.94);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94));
-  color: #111827;
-  font-size: 14px;
-  font-weight: 800;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-  transition:
-    transform 140ms ease,
-    box-shadow 140ms ease,
-    border-color 140ms ease,
-    background-color 140ms ease,
-    color 140ms ease;
-}
-
-.feed-list article button:hover:not(:disabled),
-.activity-feed article button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  border-color: rgba(37, 99, 235, 0.32);
-  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
-}
-
-.feed-list article button:active:not(:disabled),
-.activity-feed article button:active:not(:disabled) {
-  transform: translateY(0) scale(0.99);
-}
-
-/* Keep fades soft like the reference. */
-.activity-fade-top {
-  background: linear-gradient(180deg, rgba(255, 250, 242, 0.96), transparent) !important;
-}
-
-.activity-fade-bottom {
-  background: linear-gradient(0deg, rgba(255, 250, 242, 0.96), transparent) !important;
-}
-
-/* Mobile tightening. */
-@media (max-width: 760px) {
-  .feed-list {
-    gap: 14px;
-  }
-
-  .feed-list [data-role="user"],
-  .feed-list article[class*="user"],
-  .feed-list .user-message,
-  .feed-list .feed-message-user,
-  .activity-feed [data-role="user"],
-  .activity-feed article[class*="user"],
-  .activity-feed .user-message,
-  .activity-feed .feed-message-user {
-    max-width: calc(100% - 28px) !important;
-    border-radius: 22px !important;
-  }
-
-  .assistant-build-card,
-  .background-working-card,
-  [data-background-working="true"] {
-    max-width: calc(100% - 24px) !important;
-    border-radius: 20px !important;
-  }
-
-  .feed-list [data-role="assistant"] p,
-  .feed-list article[class*="assistant"] p,
-  .feed-list .assistant-message p,
-  .feed-list .feed-message-assistant p,
-  .activity-feed [data-role="assistant"] p,
-  .activity-feed article[class*="assistant"] p,
-  .activity-feed .assistant-message p,
-  .activity-feed .feed-message-assistant p {
-    font-size: 15px;
-    line-height: 1.62;
-  }
-}
-
-@keyframes founderAiRepairWorkingPulse {
-  0%,
-  100% {
-    opacity: 0.34;
-    transform: scale(0.92);
-  }
-
-  50% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .assistant-build-status::before {
-    animation: none;
-  }
-
-  .feed-list article button,
-  .activity-feed article button {
-    transition: none;
-  }
-
-  .feed-list article button:hover:not(:disabled),
-  .activity-feed article button:hover:not(:disabled),
-  .feed-list article button:active:not(:disabled),
-  .activity-feed article button:active:not(:disabled) {
     transform: none;
   }
 }

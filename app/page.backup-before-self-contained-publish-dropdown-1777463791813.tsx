@@ -4768,772 +4768,66 @@ function getCompactPublishSecurityCount(files?: ChangedFile[]) {
   ].filter((filePath) => currentFiles.some((file) => file.path === filePath)).length;
 }
 
-function PublishRevealPanel({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  // Shared wrapper for compact dropdown panels.
-  // It gives inline publish panels a gentle entrance animation.
-  return <div className="publish-reveal-panel">{children}</div>;
-}
-
-function PublishDropdownSummaryRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: React.ReactNode;
-}) {
-  // Compact label/value row used inside publish dropdown details.
-  return (
-    <div>
-      <strong style={{ color: "#111827" }}>{label}:</strong> {value}
-    </div>
-  );
-}
-
-function PublishDropdownChecklistRow({
-  label,
-  done,
-}: {
-  label: string;
-  done: boolean;
-}) {
-  // Compact checklist row used in publish security/settings panels.
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: "10px",
-        color: "#374151",
-        fontSize: "12px",
-        lineHeight: 1.35,
-      }}
-    >
-      <span>{label}</span>
-      <strong style={{ color: done ? "#166534" : "#9a3412" }}>
-        {done ? "Ready" : "Missing"}
-      </strong>
-    </div>
-  );
-}
-
 function PublishDropdownPopover({
   previewState,
   files,
-  onClose,
   onOpenReadiness,
+  onClose,
 }: {
   previewState?: PreviewState;
   files?: ChangedFile[];
-  onClose: () => void;
   onOpenReadiness: () => void;
+  onClose: () => void;
 }) {
-  // Compact publish control surface.
-  // Primary publish controls stay visible. Deeper diagnostics remain behind explicit actions.
-  const currentFiles = files ?? [];
-  const hasFiles = currentFiles.length > 0;
-
-  const gateReport =
-    previewState && hasFiles
-      ? getPublishGateReport({
-          previewState,
-          files: currentFiles,
-        })
-      : null;
-
-  const generatedUrl = previewState
-    ? getGeneratedPreviewUrl(previewState)
-    : "https://founder-ai-build.founder-ai.app";
-
-  const publishStorageKey = `founder-ai:publish:${
-    previewState?.title
-      ?.toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "") || "default-project"
-  }`;
-
-  const [customDomain, setCustomDomain] = useState("");
   const [visibility, setVisibility] = useState<"public" | "private">("public");
+  const [customDomain, setCustomDomain] = useState("");
   const [message, setMessage] = useState("");
-  const [toastMessage, setToastMessage] = useState("");
   const [lastUpdatedLabel, setLastUpdatedLabel] = useState("Not updated yet");
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [isDnsSettingsOpen, setIsDnsSettingsOpen] = useState(false);
-  const [isSecurityPanelOpen, setIsSecurityPanelOpen] = useState(false);
-  const [isSettingsPanelOpen, setIsSettingsPanelOpen] = useState(false);
-  const [domainStatus, setDomainStatus] = useState<
-    "none" | "needs-dns" | "verifying" | "verified"
-  >("none");
-  const [hasLoadedPublishState, setHasLoadedPublishState] = useState(false);
-  const [hasPublishedSnapshot, setHasPublishedSnapshot] = useState(false);
-  const [publishVersion, setPublishVersion] = useState(0);
-  const [lastPublishedLabel, setLastPublishedLabel] = useState("Never");
-  const [publishedFileCount, setPublishedFileCount] = useState(0);
-  const [publishActionFeedback, setPublishActionFeedback] = useState("");
-  const [isPublishingAction, setIsPublishingAction] = useState(false);
 
-  useEffect(() => {
-    // Load saved publish dropdown state for this project.
+  const generatedUrl = getCompactPublishUrl(previewState);
+  const activeUrl = customDomain.trim()
+    ? `https://${customDomain.trim().replace(/^https?:\/\//, "")}`
+    : generatedUrl;
+
+  const securityCount = getCompactPublishSecurityCount(files);
+  const hasFiles = (files ?? []).length > 0;
+
+  async function copyUrl() {
+    // Copies the currently active publish URL.
     try {
-      const savedState = window.localStorage.getItem(publishStorageKey);
-
-      if (!savedState) {
-        setHasLoadedPublishState(true);
-        return;
-      }
-
-      const parsed = JSON.parse(savedState) as {
-        customDomain?: string;
-        visibility?: "public" | "private";
-        domainStatus?: "none" | "needs-dns" | "verifying" | "verified";
-        lastUpdatedLabel?: string;
-        hasPublishedSnapshot?: boolean;
-        publishVersion?: number;
-        lastPublishedLabel?: string;
-        publishedFileCount?: number;
-      };
-
-      setCustomDomain(parsed.customDomain ?? "");
-      setVisibility(parsed.visibility === "private" ? "private" : "public");
-      setDomainStatus(parsed.domainStatus ?? "none");
-      setLastUpdatedLabel(parsed.lastUpdatedLabel ?? "Not updated yet");
-      setHasPublishedSnapshot(Boolean(parsed.hasPublishedSnapshot));
-      setPublishVersion(parsed.publishVersion ?? 0);
-      setLastPublishedLabel(parsed.lastPublishedLabel ?? "Never");
-      setPublishedFileCount(parsed.publishedFileCount ?? 0);
-      setHasLoadedPublishState(true);
+      await navigator.clipboard.writeText(activeUrl);
+      setMessage("Website URL copied.");
     } catch {
-      setHasLoadedPublishState(true);
+      setMessage("Could not copy URL. Copy it manually.");
     }
-  }, [publishStorageKey]);
-
-  useEffect(() => {
-    // Persist publish dropdown state for this project.
-    if (!hasLoadedPublishState) return;
-
-    const stateToSave = {
-      customDomain,
-      visibility,
-      domainStatus,
-      lastUpdatedLabel,
-      hasPublishedSnapshot,
-      publishVersion,
-      lastPublishedLabel,
-      publishedFileCount,
-    };
-
-    try {
-      window.localStorage.setItem(publishStorageKey, JSON.stringify(stateToSave));
-    } catch {
-      // Ignore storage failures. Some browsers block storage because joy is apparently optional.
-    }
-  }, [
-    customDomain,
-    visibility,
-    domainStatus,
-    lastUpdatedLabel,
-    hasPublishedSnapshot,
-    publishVersion,
-    lastPublishedLabel,
-    publishedFileCount,
-    hasLoadedPublishState,
-    publishStorageKey,
-  ]);
-
-  const cleanCustomDomain = customDomain
-    .trim()
-    .replace(/^https?:\/\//, "")
-    .replace(/\/$/, "");
-
-  const dnsRecordName = cleanCustomDomain || "app.yourdomain.com";
-  const dnsRecordValue = "cname.founder-ai.app";
-
-  const securityCount = [
-    "config/security-review.md",
-    "config/security-rules.md",
-    "config/publish-gate-report.md",
-  ].filter((filePath) => currentFiles.some((file) => file.path === filePath)).length;
-
-  const settingsCount = [
-    "config/env.example",
-    "config/deploy-checklist.md",
-    "config/developer-instructions.md",
-    "config/launch-readiness-report.md",
-  ].filter((filePath) => currentFiles.some((file) => file.path === filePath)).length;
-
-  const activeUrl = cleanCustomDomain ? `https://${cleanCustomDomain}` : generatedUrl;
-
-  const hasUnpublishedChanges =
-    hasPublishedSnapshot && currentFiles.length !== publishedFileCount;
-
-  const deploymentStage =
-    hasPublishedSnapshot && !hasUnpublishedChanges
-      ? "published"
-      : !hasFiles || !gateReport
-        ? "draft"
-        : gateReport.decision === "can-publish" || gateReport.decision === "can-stage"
-          ? "staging"
-          : gateReport.decision === "can-preview"
-            ? "preview"
-            : "draft";
-
-  const deploymentTimeline = [
-    {
-      id: "draft",
-      label: "Draft",
-      detail: "Build generated",
-    },
-    {
-      id: "preview",
-      label: "Preview",
-      detail: "Internal review",
-    },
-    {
-      id: "staging",
-      label: "Staging",
-      detail: "Ready to test",
-    },
-    {
-      id: "published",
-      label: "Published",
-      detail: "Live snapshot",
-    },
-  ] as const;
-
-  const deploymentStageIndex = deploymentTimeline.findIndex(
-    (item) => item.id === deploymentStage
-  );
-
-  const publishStage =
-    !hasFiles || !gateReport
-      ? {
-          label: "Draft",
-          description: "Build something first before publishing.",
-        }
-      : gateReport.decision === "can-publish"
-        ? {
-            label: hasPublishedSnapshot
-              ? hasUnpublishedChanges
-                ? "Changes ready"
-                : "Published"
-              : "Ready",
-            description: hasPublishedSnapshot
-              ? hasUnpublishedChanges
-                ? "New changes are ready to republish after final review."
-                : "This snapshot is already published locally."
-              : "Checks look healthy. Final human review still matters.",
-          }
-        : gateReport.decision === "can-stage"
-          ? {
-              label: "Review",
-              description: "Good enough for staging, not production-perfect yet.",
-            }
-          : gateReport.decision === "can-preview"
-            ? {
-                label: "Preview",
-                description: "Internal preview is fine. More setup is still required.",
-              }
-            : {
-                label: "Blocked",
-                description: "Fix blockers before pretending this should go live.",
-              };
-
-  const tone =
-    !hasFiles || !gateReport
-      ? {
-          background: "#fff7ed",
-          border: "#fdba74",
-          badgeBackground: "#ffedd5",
-          badgeColor: "#9a3412",
-        }
-      : gateReport.decision === "can-publish"
-        ? {
-            background: "#ecfdf5",
-            border: "#86efac",
-            badgeBackground: "#dcfce7",
-            badgeColor: "#166534",
-          }
-        : gateReport.decision === "can-stage"
-          ? {
-              background: "#eff6ff",
-              border: "#93c5fd",
-              badgeBackground: "#dbeafe",
-              badgeColor: "#1d4ed8",
-            }
-          : gateReport.decision === "can-preview"
-            ? {
-                background: "#f5f3ff",
-                border: "#c4b5fd",
-                badgeBackground: "#ede9fe",
-                badgeColor: "#6d28d9",
-              }
-            : {
-                background: "#fef2f2",
-                border: "#fca5a5",
-                badgeBackground: "#fee2e2",
-                badgeColor: "#991b1b",
-              };
-
-  const domainTone =
-    domainStatus === "verified"
-      ? {
-          label: "Verified",
-          background: "#ecfdf5",
-          color: "#166534",
-          border: "#bbf7d0",
-        }
-      : domainStatus === "verifying"
-        ? {
-            label: "Verifying",
-            background: "#eff6ff",
-            color: "#1d4ed8",
-            border: "#bfdbfe",
-          }
-        : domainStatus === "needs-dns"
-          ? {
-              label: "Needs DNS",
-              background: "#fff7ed",
-              color: "#9a3412",
-              border: "#fed7aa",
-            }
-          : {
-              label: "No domain",
-              background: "#f9fafb",
-              color: "#4b5563",
-              border: "#e5e7eb",
-            };
-
-  const securityTone =
-    securityCount >= 3
-      ? {
-          label: "Ready",
-          background: "#ecfdf5",
-          color: "#166534",
-          border: "#bbf7d0",
-        }
-      : securityCount > 0
-        ? {
-            label: "Partial",
-            background: "#fff7ed",
-            color: "#9a3412",
-            border: "#fed7aa",
-          }
-        : {
-            label: "Missing",
-            background: "#fef2f2",
-            color: "#991b1b",
-            border: "#fecaca",
-          };
-
-  const settingsTone =
-    settingsCount >= 4
-      ? {
-          label: "Ready",
-          background: "#ecfdf5",
-          color: "#166534",
-          border: "#bbf7d0",
-        }
-      : settingsCount > 0
-        ? {
-            label: "Partial",
-            background: "#fff7ed",
-            color: "#9a3412",
-            border: "#fed7aa",
-          }
-        : {
-            label: "Missing",
-            background: "#fef2f2",
-            color: "#991b1b",
-            border: "#fecaca",
-          };
-
-  const mainPublishActionLabel =
-    !hasFiles || !gateReport
-      ? "Update snapshot"
-      : gateReport.decision === "blocked"
-        ? "Update snapshot"
-        : !hasPublishedSnapshot
-          ? "Publish"
-          : hasUnpublishedChanges
-            ? "Republish"
-            : "Update";
-
-  const securityChecklist = [
-    {
-      label: "Security review exported",
-      done: currentFiles.some((file) => file.path === "config/security-review.md"),
-    },
-    {
-      label: "Security rules exported",
-      done: currentFiles.some((file) => file.path === "config/security-rules.md"),
-    },
-    {
-      label: "Publish gate report exported",
-      done: currentFiles.some((file) => file.path === "config/publish-gate-report.md"),
-    },
-  ];
-
-  const settingsChecklist = [
-    {
-      label: "Environment example exported",
-      done: currentFiles.some((file) => file.path === "config/env.example"),
-    },
-    {
-      label: "Deployment checklist exported",
-      done: currentFiles.some((file) => file.path === "config/deploy-checklist.md"),
-    },
-    {
-      label: "Developer instructions exported",
-      done: currentFiles.some((file) => file.path === "config/developer-instructions.md"),
-    },
-    {
-      label: "Launch readiness report exported",
-      done: currentFiles.some((file) => file.path === "config/launch-readiness-report.md"),
-    },
-  ];
-
-  const secondaryButtonStyle: React.CSSProperties = {
-    minHeight: "38px",
-    borderRadius: "13px",
-    border: "1px solid #d7dbe3",
-    background: "#ffffff",
-    color: "#111827",
-    fontSize: "13px",
-    fontWeight: 750,
-    padding: "0 12px",
-    cursor: "pointer",
-    boxShadow: "0 1px 2px rgba(15, 23, 42, 0.06)",
-  };
-
-  function getPublishBadgeStyle(toneValue: {
-    background: string;
-    color: string;
-    border: string;
-  }): React.CSSProperties {
-    // Shared badge style for domain, security, and settings status pills.
-    return {
-      borderRadius: "999px",
-      border: `1px solid ${toneValue.border}`,
-      background: toneValue.background,
-      color: toneValue.color,
-      fontSize: "11px",
-      fontWeight: 850,
-      padding: "6px 9px",
-      whiteSpace: "nowrap",
-    };
-  }
-
-  function getPublishCardStyle(): React.CSSProperties {
-    // Shared compact card shell for grouped publish controls.
-    return {
-      border: "1px solid #eef1f4",
-      borderRadius: "17px",
-      padding: "12px",
-      display: "grid",
-      gap: "9px",
-    };
-  }
-
-  function getPublishPanelStyle(): React.CSSProperties {
-    // Shared inset panel shell for expanded dropdown panels.
-    return {
-      border: "1px solid #eef1f4",
-      borderRadius: "16px",
-      background: "#f9fafb",
-      padding: "12px",
-      display: "grid",
-      gap: "10px",
-    };
-  }
-
-  function getPublishChecklistStatusStyle(done: boolean): React.CSSProperties {
-    // Shared status text for readiness checklist rows.
-    return {
-      color: done ? "#166534" : "#9a3412",
-    };
-  }
-
-  function getPublishTinyLabelStyle(): React.CSSProperties {
-    // Shared tiny uppercase label style.
-    return {
-      color: "#6b7280",
-      fontSize: "10px",
-      fontWeight: 900,
-      letterSpacing: "0.14em",
-      textTransform: "uppercase",
-      marginBottom: "5px",
-    };
-  }
-
-  function getPublishSectionHeadingStyle(): React.CSSProperties {
-    // Shared compact section heading style.
-    return {
-      color: "#111827",
-      fontSize: "14px",
-      fontWeight: 850,
-    };
-  }
-
-  function getPublishMetaTextStyle(): React.CSSProperties {
-    // Shared muted helper text style.
-    return {
-      color: "#4b5563",
-      fontSize: "12px",
-      lineHeight: 1.35,
-    };
-  }
-
-  function getPublishChecklistRowStyle(): React.CSSProperties {
-    // Shared checklist row layout style.
-    return {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: "10px",
-      color: "#374151",
-      fontSize: "12px",
-      lineHeight: 1.35,
-    };
-  }
-
-  function showPublishToast(value: string) {
-    // Show compact feedback without increasing dropdown height.
-    setMessage(value);
-    setToastMessage(value);
-
-    window.setTimeout(() => {
-      setToastMessage((current) => (current === value ? "" : current));
-    }, 2600);
-  }
-
-  function closeOtherPublishPanels(panel: "dns" | "security" | "settings" | "details") {
-    // Keep only one compact publish panel open at a time.
-    if (panel !== "dns") setIsDnsSettingsOpen(false);
-    if (panel !== "security") setIsSecurityPanelOpen(false);
-    if (panel !== "settings") setIsSettingsPanelOpen(false);
-    if (panel !== "details") setIsDetailsOpen(false);
-  }
-
-  function runPublishActionFeedback({
-    loadingLabel,
-    successLabel,
-  }: {
-    loadingLabel: string;
-    successLabel: string;
-  }) {
-    // Briefly show action feedback on the main publish button.
-    setIsPublishingAction(true);
-    setPublishActionFeedback(loadingLabel);
-
-    window.setTimeout(() => {
-      setPublishActionFeedback(successLabel);
-
-      window.setTimeout(() => {
-        setIsPublishingAction(false);
-        setPublishActionFeedback("");
-      }, 700);
-    }, 450);
-  }
-
-  async function copyText(value: string, successMessage: string) {
-    // Generic clipboard helper for URL and DNS records.
-    try {
-      await navigator.clipboard.writeText(value);
-      showPublishToast(successMessage);
-    } catch {
-      showPublishToast("Could not copy. Select the value and copy it manually.");
-    }
-  }
-
-  async function copyPublishUrl() {
-    // Copy the currently visible publish URL.
-    await copyText(activeUrl, "Website URL copied.");
   }
 
   function updateSnapshot() {
-    // Main publish action. It simulates publish/update/republish locally for now.
+    // Refreshes the local publish snapshot state.
     const now = new Date();
-    const timestamp = now.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
 
-    setLastUpdatedLabel(timestamp);
+    setLastUpdatedLabel(
+      now.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    );
 
-    if (!hasFiles || !gateReport) {
-      runPublishActionFeedback({
-        loadingLabel: "Checking...",
-        successLabel: "Not ready",
-      });
-      showPublishToast("No generated files yet. Build something first.");
-      return;
-    }
-
-    if (gateReport.decision === "blocked") {
-      runPublishActionFeedback({
-        loadingLabel: "Checking...",
-        successLabel: "Blocked",
-      });
-      showPublishToast("Snapshot updated. Publishing is still blocked.");
-      return;
-    }
-
-    if (gateReport.decision === "can-preview") {
-      runPublishActionFeedback({
-        loadingLabel: "Updating...",
-        successLabel: "Preview updated",
-      });
-      showPublishToast("Preview snapshot updated. Review before staging.");
-      return;
-    }
-
-    if (gateReport.decision === "can-stage") {
-      runPublishActionFeedback({
-        loadingLabel: "Updating...",
-        successLabel: "Staging updated",
-      });
-      showPublishToast("Staging snapshot updated. Run tests before production.");
-      return;
-    }
-
-    setHasPublishedSnapshot(true);
-    setPublishedFileCount(currentFiles.length);
-    setPublishVersion((current) => current + 1);
-    setLastPublishedLabel(timestamp);
-
-    if (!hasPublishedSnapshot) {
-      runPublishActionFeedback({
-        loadingLabel: "Publishing...",
-        successLabel: "Published",
-      });
-      showPublishToast("Published locally. Wire real deployment provider next.");
-      return;
-    }
-
-    if (hasUnpublishedChanges) {
-      runPublishActionFeedback({
-        loadingLabel: "Republishing...",
-        successLabel: "Republished",
-      });
-      showPublishToast("Republished locally with the latest generated files.");
-      return;
-    }
-
-    runPublishActionFeedback({
-      loadingLabel: "Updating...",
-      successLabel: "Updated",
-    });
-
-    showPublishToast("Published snapshot updated.");
+    setMessage(
+      hasFiles
+        ? "Publish snapshot updated."
+        : "No generated files yet. Build something first."
+    );
   }
 
   function reviewSecurity() {
-    // Toggle the compact security panel and close the other compact panels.
-    closeOtherPublishPanels("security");
-    setIsSecurityPanelOpen((current) => !current);
-
-    if (securityCount >= 3) {
-      showPublishToast("Security checks are ready for manual review.");
-      return;
-    }
-
-    showPublishToast("Security checks are incomplete. Open full publish center for exports.");
+    // Sends users to the deeper readiness view for the full security checks.
+    onOpenReadiness();
+    onClose();
   }
 
   function editSettings() {
-    // Toggle the compact settings panel and close the other compact panels.
-    closeOtherPublishPanels("settings");
-    setIsSettingsPanelOpen((current) => !current);
-
-    if (settingsCount >= 4) {
-      showPublishToast("Core publish settings are present.");
-      return;
-    }
-
-    showPublishToast("Publish settings are incomplete. Open full publish center for setup exports.");
-  }
-
-  function handleCustomDomainChange(value: string) {
-    // Reset domain verification whenever the entered domain changes.
-    setCustomDomain(value);
-
-    const nextDomain = value.trim().replace(/^https?:\/\//, "").replace(/\/$/, "");
-
-    if (!nextDomain) {
-      setDomainStatus("none");
-      return;
-    }
-
-    setDomainStatus("needs-dns");
-  }
-
-  function openDnsSettings() {
-    // Open compact DNS verification instructions inside this dropdown.
-    closeOtherPublishPanels("dns");
-    setIsDnsSettingsOpen((current) => !current);
-
-    if (!cleanCustomDomain) {
-      showPublishToast("Enter a custom domain first.");
-      setDomainStatus("none");
-      return;
-    }
-
-    if (domainStatus === "none") {
-      setDomainStatus("needs-dns");
-    }
-
-    showPublishToast("Add the DNS record shown below, then verify the domain.");
-  }
-
-  function verifyDomain() {
-    // Simulated verification. Real DNS lookup/provider verification comes later.
-    if (!cleanCustomDomain) {
-      showPublishToast("Enter a custom domain first.");
-      setDomainStatus("none");
-      return;
-    }
-
-    setDomainStatus("verifying");
-    showPublishToast("Checking DNS record...");
-
-    window.setTimeout(() => {
-      setDomainStatus("verified");
-      showPublishToast("Domain verified locally. Wire real DNS verification next.");
-    }, 650);
-  }
-
-  function resetPublishState() {
-    // Reset saved local publish state for this project.
-    setCustomDomain("");
-    setVisibility("public");
-    setDomainStatus("none");
-    setLastUpdatedLabel("Not updated yet");
-    setHasPublishedSnapshot(false);
-    setPublishVersion(0);
-    setLastPublishedLabel("Never");
-    setPublishedFileCount(0);
-    setPublishActionFeedback("");
-    setIsPublishingAction(false);
-    showPublishToast("Publish settings reset.");
-    setIsDnsSettingsOpen(false);
-    setIsDetailsOpen(false);
-    setIsSecurityPanelOpen(false);
-    setIsSettingsPanelOpen(false);
-
-    try {
-      window.localStorage.removeItem(publishStorageKey);
-    } catch {
-      // Ignore storage failures. The UI has already reset itself.
-    }
-  }
-
-  function openFullPublishCenter() {
-    // Open deeper publish diagnostics and close the dropdown.
+    // Opens deeper readiness settings/checklists without pretending DNS is already wired.
     onOpenReadiness();
     onClose();
   }
@@ -5542,841 +4836,350 @@ function PublishDropdownPopover({
     <div
       role="dialog"
       aria-label="Publish options"
-      className="publish-dropdown-shell"
       style={{
-        position: "fixed",
-        top: "58px",
-        right: "18px",
-        width: "min(420px, calc(100vw - 32px))",
-        maxHeight: "min(76vh, 620px)",
-        overflowY: "auto",
+        position: "absolute",
+        top: "calc(100% + 10px)",
+        right: 0,
+        width: "430px",
+        maxWidth: "calc(100vw - 28px)",
+        border: "1px solid #e5e7eb",
         borderRadius: "22px",
-        border: "1px solid #dde2ea",
         background: "#ffffff",
-        boxShadow: "0 26px 60px rgba(15, 23, 42, 0.16)",
-        zIndex: 9999,
+        boxShadow: "0 24px 70px rgba(15, 23, 42, 0.20)",
+        overflow: "hidden",
+        zIndex: 80,
       }}
     >
       <div
         style={{
-          padding: "16px 16px 13px",
-          borderBottom: "1px solid #eef1f4",
           display: "flex",
-          alignItems: "flex-start",
+          alignItems: "center",
           justifyContent: "space-between",
-          gap: "14px",
+          gap: "12px",
+          padding: "18px 20px",
+          borderBottom: "1px solid #eef0f3",
+          background:
+            "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(250,247,241,0.96))",
         }}
       >
         <div>
           <div
             style={{
               color: "#6b7280",
-              fontSize: "10px",
+              fontSize: "11px",
               fontWeight: 900,
-              letterSpacing: "0.18em",
+              letterSpacing: "0.14em",
               textTransform: "uppercase",
-              marginBottom: "7px",
+              marginBottom: "5px",
             }}
           >
             Publish
           </div>
 
-          <h2
+          <strong
             style={{
-              margin: 0,
+              display: "block",
               color: "#111827",
-              fontSize: "18px",
+              fontSize: "22px",
               lineHeight: 1.1,
               letterSpacing: "-0.04em",
             }}
           >
-            {publishStage.label}
-          </h2>
-
-          <p
-            style={{
-              margin: "7px 0 0",
-              color: "#4b5563",
-              fontSize: "12px",
-              lineHeight: 1.4,
-            }}
-          >
-            {publishStage.description}
-          </p>
+            Website snapshot
+          </strong>
         </div>
 
-        <button
-          type="button"
-          aria-label="Close publish panel"
-          onClick={onClose}
+        <span
           style={{
-            width: "36px",
-            height: "36px",
+            display: "inline-flex",
+            alignItems: "center",
+            minHeight: "28px",
+            padding: "0 11px",
             borderRadius: "999px",
-            border: "1px solid #d7dbe3",
-            background: "#f9fafb",
-            color: "#111827",
-            fontSize: "22px",
-            lineHeight: 1,
-            cursor: "pointer",
-            flexShrink: 0,
+            background: hasFiles ? "#ecfdf5" : "#fff7ed",
+            color: hasFiles ? "#166534" : "#9a3412",
+            fontSize: "12px",
+            fontWeight: 900,
+            whiteSpace: "nowrap",
           }}
         >
-          ×
-        </button>
+          {hasFiles ? "Ready to review" : "No build yet"}
+        </span>
       </div>
 
-      <div style={{ padding: "14px 16px 16px", display: "grid", gap: "12px" }}>
+      <div
+        style={{
+          padding: "18px 20px",
+          borderBottom: "1px solid #eef0f3",
+        }}
+      >
         <div
           style={{
-            border: `1px solid ${tone.border}`,
-            background: tone.background,
-            borderRadius: "17px",
-            padding: "12px",
-            display: "grid",
-            gap: "10px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "12px",
+            marginBottom: "10px",
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "flex-start",
-              justifyContent: "space-between",
-              gap: "12px",
-            }}
-          >
-            <div>
-              <div
-                style={getPublishTinyLabelStyle()}
-              >
-                Status
-              </div>
-
-              <div
-                style={{
-                  color: "#111827",
-                  fontSize: "14px",
-                  fontWeight: 850,
-                  lineHeight: 1.25,
-                }}
-              >
-                {gateReport ? `${gateReport.label} · ${gateReport.score}%` : "Draft · 0%"}
-              </div>
-
-              <div
-                style={{
-                  ...getPublishMetaTextStyle(),
-                  marginTop: "4px",
-                }}
-              >
-                Published: {hasPublishedSnapshot ? `v${publishVersion} · ${lastPublishedLabel}` : "Never"}
-              </div>
-            </div>
-
-            <div
-              style={{
-                alignSelf: "flex-start",
-                borderRadius: "999px",
-                background: tone.badgeBackground,
-                color: tone.badgeColor,
-                fontSize: "12px",
-                fontWeight: 850,
-                padding: "7px 11px",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {publishStage.label}
-            </div>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-              gap: "6px",
-              alignItems: "center",
-            }}
-          >
-            {deploymentTimeline.map((item, index) => {
-              const isCurrent = item.id === deploymentStage;
-              const isComplete = index < deploymentStageIndex;
-
-              return (
-                <div
-                  key={item.id}
-                  title={item.detail}
-                  style={{
-                    display: "grid",
-                    gap: "5px",
-                    minWidth: 0,
-                  }}
-                >
-                  <div
-                    style={{
-                      height: "5px",
-                      borderRadius: "999px",
-                      background: isCurrent
-                        ? "#2563eb"
-                        : isComplete
-                          ? "#16a34a"
-                          : "rgba(148, 163, 184, 0.45)",
-                    }}
-                  />
-                  <div
-                    style={{
-                      color: isCurrent ? "#111827" : "#6b7280",
-                      fontSize: "10px",
-                      fontWeight: isCurrent ? 900 : 750,
-                      lineHeight: 1.1,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {item.label}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div
-          style={getPublishCardStyle()}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "10px",
-            }}
-          >
-            <div
-              style={getPublishSectionHeadingStyle()}
-            >
-              Website URL
-            </div>
-
-            <button
-              type="button"
-              onClick={copyPublishUrl}
-              style={secondaryButtonStyle}
-            >
-              Copy
-            </button>
-          </div>
-
-          <div
-            style={{
-              minHeight: "46px",
-              borderRadius: "14px",
-              border: "1px solid #d7dbe3",
-              background: "#f9fafb",
-              padding: "0 13px",
-              display: "flex",
-              alignItems: "center",
-              color: "#111827",
-              fontSize: "13px",
-              fontWeight: 750,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-            title={activeUrl}
-          >
-            {activeUrl}
-          </div>
-        </div>
-
-        <div
-          style={getPublishCardStyle()}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "10px",
-            }}
-          >
-            <div
-              style={getPublishSectionHeadingStyle()}
-            >
-              Custom domain
-            </div>
-
-            <span
-              style={getPublishBadgeStyle(domainTone)}
-            >
-              {domainTone.label}
-            </span>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "minmax(0, 1fr) auto",
-              gap: "8px",
-            }}
-          >
-            <input
-              value={customDomain}
-              onChange={(event) => handleCustomDomainChange(event.target.value)}
-              placeholder="app.yourdomain.com"
-              suppressHydrationWarning
-              style={{
-                width: "100%",
-                minHeight: "44px",
-                borderRadius: "14px",
-                border: "1px solid #d7dbe3",
-                background: "#ffffff",
-                color: "#111827",
-                fontSize: "13px",
-                fontWeight: 650,
-                padding: "0 13px",
-                outline: "none",
-              }}
-            />
-
-            <button
-              type="button"
-              onClick={openDnsSettings}
-              style={{
-                ...secondaryButtonStyle,
-                minHeight: "44px",
-              }}
-            >
-              DNS
-            </button>
-          </div>
-
-          {isDnsSettingsOpen ? (
-            <PublishRevealPanel>
-              <div
-                style={{
-                  border: "1px solid #e5e7eb",
-                  borderRadius: "15px",
-                  background: "#f9fafb",
-                  padding: "11px",
-                  display: "grid",
-                  gap: "9px",
-                }}
-              >
-              <div
-                style={{
-                  color: "#374151",
-                  fontSize: "12px",
-                  lineHeight: 1.4,
-                }}
-              >
-                Add this CNAME record where your domain DNS is managed.
-              </div>
-
-              <div style={{ display: "grid", gap: "7px" }}>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "72px minmax(0, 1fr) auto",
-                    alignItems: "center",
-                    gap: "7px",
-                  }}
-                >
-                  <strong style={{ color: "#111827", fontSize: "12px" }}>Name</strong>
-                  <code
-                    style={{
-                      border: "1px solid #e5e7eb",
-                      borderRadius: "10px",
-                      background: "#ffffff",
-                      padding: "7px 8px",
-                      color: "#111827",
-                      fontSize: "12px",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {dnsRecordName}
-                  </code>
-                  <button
-                    type="button"
-                    onClick={() => copyText(dnsRecordName, "CNAME name copied.")}
-                    style={{
-                      ...secondaryButtonStyle,
-                      minHeight: "32px",
-                      fontSize: "12px",
-                      padding: "0 9px",
-                    }}
-                  >
-                    Copy
-                  </button>
-                </div>
-
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "72px minmax(0, 1fr) auto",
-                    alignItems: "center",
-                    gap: "7px",
-                  }}
-                >
-                  <strong style={{ color: "#111827", fontSize: "12px" }}>Value</strong>
-                  <code
-                    style={{
-                      border: "1px solid #e5e7eb",
-                      borderRadius: "10px",
-                      background: "#ffffff",
-                      padding: "7px 8px",
-                      color: "#111827",
-                      fontSize: "12px",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {dnsRecordValue}
-                  </code>
-                  <button
-                    type="button"
-                    onClick={() => copyText(dnsRecordValue, "CNAME value copied.")}
-                    style={{
-                      ...secondaryButtonStyle,
-                      minHeight: "32px",
-                      fontSize: "12px",
-                      padding: "0 9px",
-                    }}
-                  >
-                    Copy
-                  </button>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={verifyDomain}
-                style={{
-                  ...secondaryButtonStyle,
-                  width: "100%",
-                  minHeight: "38px",
-                  background: domainStatus === "verified" ? "#ecfdf5" : "#ffffff",
-                  color: domainStatus === "verified" ? "#166534" : "#111827",
-                }}
-              >
-                {domainStatus === "verified"
-                  ? "Domain verified"
-                  : domainStatus === "verifying"
-                    ? "Verifying..."
-                    : "Verify domain"}
-              </button>
-            </div>
-          </PublishRevealPanel>
-          ) : null}
-        </div>
-
-        <div
-          style={getPublishCardStyle()}
-        >
-          <div
+          <strong
             style={{
               color: "#111827",
               fontSize: "14px",
-              fontWeight: 850,
             }}
           >
-            Visibility
-          </div>
+            Website URL
+          </strong>
 
-          <div style={{ display: "flex", gap: "9px" }}>
-            {(["public", "private"] as const).map((option) => {
-              const isActive = visibility === option;
-
-              return (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => setVisibility(option)}
-                  style={{
-                    flex: 1,
-                    minHeight: "66px",
-                    borderRadius: "15px",
-                    border: isActive ? "1px solid #2563eb" : "1px solid #d7dbe3",
-                    background: isActive ? "#eff6ff" : "#ffffff",
-                    padding: "12px",
-                    textAlign: "left",
-                    cursor: "pointer",
-                  }}
-                >
-                  <div
-                    style={{
-                      color: "#111827",
-                      fontSize: "13px",
-                      fontWeight: 850,
-                      marginBottom: "4px",
-                      textTransform: "capitalize",
-                    }}
-                  >
-                    {option}
-                  </div>
-
-                  <div
-                    style={{
-                      color: "#6b7280",
-                      fontSize: "11px",
-                      lineHeight: 1.35,
-                    }}
-                  >
-                    {option === "public" ? "Anyone with URL." : "Internal only."}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+          <button
+            type="button"
+            className="pill-button"
+            onClick={copyUrl}
+          >
+            Copy
+          </button>
         </div>
+
+        <div
+          style={{
+            border: "1px solid #e5e7eb",
+            borderRadius: "16px",
+            background: "#f9fafb",
+            padding: "12px 14px",
+            color: "#111827",
+            fontSize: "14px",
+            fontWeight: 800,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+          title={activeUrl}
+        >
+          {activeUrl}
+        </div>
+      </div>
+
+      <div
+        style={{
+          padding: "18px 20px",
+          borderBottom: "1px solid #eef0f3",
+        }}
+      >
+        <label
+          style={{
+            display: "block",
+            color: "#111827",
+            fontSize: "14px",
+            fontWeight: 900,
+            marginBottom: "9px",
+          }}
+        >
+          Add custom domain
+        </label>
+
+        <input
+          value={customDomain}
+          onChange={(event) => setCustomDomain(event.target.value)}
+          placeholder="app.yourdomain.com"
+          suppressHydrationWarning
+          style={{
+            width: "100%",
+            minHeight: "44px",
+            border: "1px solid #e5e7eb",
+            borderRadius: "15px",
+            background: "#ffffff",
+            color: "#111827",
+            fontSize: "14px",
+            fontWeight: 700,
+            padding: "0 13px",
+            outline: "none",
+          }}
+        />
+
+        <p
+          style={{
+            margin: "8px 0 0",
+            color: "#6b7280",
+            fontSize: "12px",
+            lineHeight: 1.45,
+          }}
+        >
+          DNS verification can be wired next. This is the product UI layer.
+        </p>
+      </div>
+
+      <div
+        style={{
+          padding: "18px 20px",
+          borderBottom: "1px solid #eef0f3",
+        }}
+      >
+        <strong
+          style={{
+            display: "block",
+            color: "#111827",
+            fontSize: "14px",
+            marginBottom: "10px",
+          }}
+        >
+          Who can see this website?
+        </strong>
 
         <div
           style={{
             display: "grid",
             gridTemplateColumns: "1fr 1fr",
-            gap: "9px",
+            gap: "10px",
           }}
         >
           <button
             type="button"
-            onClick={reviewSecurity}
+            onClick={() => setVisibility("public")}
             style={{
-              ...secondaryButtonStyle,
-              border: isSecurityPanelOpen
-                ? "1px solid #2563eb"
-                : secondaryButtonStyle.border,
-              background: isSecurityPanelOpen ? "#eff6ff" : "#ffffff",
+              border:
+                visibility === "public"
+                  ? "1px solid #2563eb"
+                  : "1px solid #e5e7eb",
+              borderRadius: "16px",
+              background: visibility === "public" ? "#eff6ff" : "#ffffff",
+              padding: "13px",
+              textAlign: "left",
+              cursor: "pointer",
             }}
           >
-            Security · {securityCount}
-          </button>
-
-          <button
-            type="button"
-            onClick={editSettings}
-            style={{
-              ...secondaryButtonStyle,
-              border: isSettingsPanelOpen
-                ? "1px solid #2563eb"
-                : secondaryButtonStyle.border,
-              background: isSettingsPanelOpen ? "#eff6ff" : "#ffffff",
-            }}
-          >
-            Settings
-          </button>
-        </div>
-
-        {isSecurityPanelOpen ? (
-          <PublishRevealPanel>
-            <div
+            <strong
               style={{
-                border: "1px solid #eef1f4",
-                borderRadius: "16px",
-                background: "#f9fafb",
-                padding: "12px",
-                display: "grid",
-                gap: "10px",
+                display: "block",
+                color: "#111827",
+                fontSize: "14px",
+                marginBottom: "4px",
               }}
             >
-            <div
+              Public
+            </strong>
+            <span
               style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "10px",
-              }}
-            >
-              <strong
-                style={{
-                  color: "#111827",
-                  fontSize: "13px",
-                }}
-              >
-                Security readiness
-              </strong>
-
-              <span
-                style={getPublishBadgeStyle(securityTone)}
-              >
-                {securityTone.label}
-              </span>
-            </div>
-
-            <div style={{ display: "grid", gap: "7px" }}>
-              {securityChecklist.map((item) => (
-                <PublishDropdownChecklistRow
-                  key={item.label}
-                  label={item.label}
-                  done={item.done}
-                />
-              ))}
-            </div>
-
-            <button
-              type="button"
-              onClick={openFullPublishCenter}
-              style={{
-                ...secondaryButtonStyle,
-                width: "100%",
-              }}
-            >
-              Open security review
-            </button>
-          </div>
-        </PublishRevealPanel>
-        ) : null}
-
-        {isSettingsPanelOpen ? (
-          <PublishRevealPanel>
-            <div
-              style={{
-                border: "1px solid #eef1f4",
-                borderRadius: "16px",
-                background: "#f9fafb",
-                padding: "12px",
-                display: "grid",
-                gap: "10px",
-              }}
-            >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "10px",
-              }}
-            >
-              <strong
-                style={{
-                  color: "#111827",
-                  fontSize: "13px",
-                }}
-              >
-                Publish settings
-              </strong>
-
-              <span
-                style={getPublishBadgeStyle(settingsTone)}
-              >
-                {settingsTone.label}
-              </span>
-            </div>
-
-            <div style={{ display: "grid", gap: "7px" }}>
-              {settingsChecklist.map((item) => (
-                <PublishDropdownChecklistRow
-                  key={item.label}
-                  label={item.label}
-                  done={item.done}
-                />
-              ))}
-            </div>
-
-            <div
-              style={{
-                borderTop: "1px solid #e5e7eb",
-                paddingTop: "8px",
-                display: "grid",
-                gap: "6px",
-                color: "#4b5563",
+                color: "#6b7280",
                 fontSize: "12px",
                 lineHeight: 1.35,
               }}
             >
-              <div>Visibility: {visibility === "public" ? "Public" : "Private"}</div>
-              <div>Domain: {domainTone.label}</div>
-            </div>
+              Anyone with the URL.
+            </span>
+          </button>
 
-            <button
-              type="button"
-              onClick={openFullPublishCenter}
+          <button
+            type="button"
+            onClick={() => setVisibility("private")}
+            style={{
+              border:
+                visibility === "private"
+                  ? "1px solid #2563eb"
+                  : "1px solid #e5e7eb",
+              borderRadius: "16px",
+              background: visibility === "private" ? "#eff6ff" : "#ffffff",
+              padding: "13px",
+              textAlign: "left",
+              cursor: "pointer",
+            }}
+          >
+            <strong
               style={{
-                ...secondaryButtonStyle,
-                width: "100%",
+                display: "block",
+                color: "#111827",
+                fontSize: "14px",
+                marginBottom: "4px",
               }}
             >
-              Open publish settings
-            </button>
-          </div>
-        </PublishRevealPanel>
-        ) : null}
+              Private
+            </strong>
+            <span
+              style={{
+                color: "#6b7280",
+                fontSize: "12px",
+                lineHeight: 1.35,
+              }}
+            >
+              Internal review only.
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <div
+        style={{
+          padding: "18px 20px",
+          display: "grid",
+          gap: "10px",
+        }}
+      >
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "10px",
+          }}
+        >
+          <button
+            type="button"
+            className="pill-button"
+            onClick={reviewSecurity}
+          >
+            Review security
+            {securityCount < 3 ? ` · ${3 - securityCount}` : ""}
+          </button>
+
+          <button
+            type="button"
+            className="pill-button"
+            onClick={editSettings}
+          >
+            Edit settings
+          </button>
+        </div>
 
         <button
           type="button"
-          onClick={updateSnapshot}
-          disabled={isPublishingAction}
-          aria-busy={isPublishingAction}
           className="publish-button"
+          onClick={updateSnapshot}
           style={{
             width: "100%",
             minHeight: "44px",
-            borderRadius: "15px",
-            opacity: isPublishingAction ? 0.86 : 1,
-            cursor: isPublishingAction ? "wait" : "pointer",
           }}
         >
-          {publishActionFeedback || mainPublishActionLabel}
+          Update
         </button>
 
-        <div style={{ display: "flex", gap: "9px" }}>
-          <button
-            type="button"
-            onClick={openFullPublishCenter}
-            style={{
-              ...secondaryButtonStyle,
-              flex: 1,
-            }}
-          >
-            Full publish center
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              closeOtherPublishPanels("details");
-              setIsDetailsOpen((current) => !current);
-            }}
-            style={{
-              ...secondaryButtonStyle,
-              minWidth: "112px",
-            }}
-          >
-            {isDetailsOpen ? "Less" : "Details"}
-          </button>
-        </div>
-
-        {isDetailsOpen ? (
-          <PublishRevealPanel>
-            <div
-              style={{
-                border: "1px solid #eef1f4",
-                borderRadius: "16px",
-                background: "#f9fafb",
-                padding: "12px",
-                display: "grid",
-                gap: "10px",
-                color: "#4b5563",
-                fontSize: "12px",
-                lineHeight: 1.45,
-              }}
-            >
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-                gap: "8px",
-              }}
-            >
-              {deploymentTimeline.map((item, index) => {
-                const isCurrent = item.id === deploymentStage;
-                const isComplete = index < deploymentStageIndex;
-
-                return (
-                  <div
-                    key={item.id}
-                    style={{
-                      borderRadius: "13px",
-                      border: isCurrent
-                        ? "1px solid #2563eb"
-                        : isComplete
-                          ? "1px solid #bbf7d0"
-                          : "1px solid #e5e7eb",
-                      background: isCurrent
-                        ? "#eff6ff"
-                        : isComplete
-                          ? "#ecfdf5"
-                          : "#ffffff",
-                      padding: "9px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        color: "#111827",
-                        fontSize: "11px",
-                        fontWeight: 900,
-                        marginBottom: "3px",
-                      }}
-                    >
-                      {item.label}
-                    </div>
-
-                    <div
-                      style={{
-                        color: "#6b7280",
-                        fontSize: "10px",
-                        lineHeight: 1.25,
-                      }}
-                    >
-                      {item.detail}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div>
-              <strong style={{ color: "#111827" }}>Gate:</strong>{" "}
-              {gateReport ? gateReport.summary : "No publish gate available yet."}
-            </div>
-            <PublishDropdownSummaryRow
-              label="Security files"
-              value={`${securityCount}/3`}
-            />
-            <PublishDropdownSummaryRow
-              label="Settings files"
-              value={`${settingsCount}/4`}
-            />
-            <PublishDropdownSummaryRow
-              label="Visibility"
-              value={visibility === "public" ? "Public" : "Private"}
-            />
-            <PublishDropdownSummaryRow
-              label="Domain"
-              value={domainTone.label}
-            />
-            <PublishDropdownSummaryRow
-              label="Version"
-              value={hasPublishedSnapshot ? `v${publishVersion}` : "Not published"}
-            />
-            <PublishDropdownSummaryRow
-              label="Unpublished changes"
-              value={hasUnpublishedChanges ? "Yes" : "No"}
-            />
-          </div>
-        </PublishRevealPanel>
-        ) : null}
-
-        <button
-          type="button"
-          onClick={resetPublishState}
+        <div
           style={{
-            border: "none",
-            background: "transparent",
+            borderTop: "1px solid #eef0f3",
+            paddingTop: "10px",
             color: "#6b7280",
             fontSize: "12px",
-            fontWeight: 800,
-            cursor: "pointer",
-            padding: "2px 0",
+            lineHeight: 1.45,
           }}
         >
-          Reset publish settings
-        </button>
-
-
-      </div>
-
-      {toastMessage ? (
-        <div
-          className="publish-dropdown-toast"
-          role="status"
-          aria-live="polite"
-        >
-          {toastMessage}
+          <div>Visibility: {visibility === "public" ? "Public" : "Private"}</div>
+          <div>Security files: {securityCount}/3</div>
+          <div>Last update: {lastUpdatedLabel}</div>
         </div>
-      ) : null}
+
+        {message ? (
+          <p
+            style={{
+              margin: 0,
+              color: message.toLowerCase().includes("no generated")
+                ? "#9a3412"
+                : "#166534",
+              fontSize: "12px",
+              fontWeight: 800,
+              lineHeight: 1.45,
+            }}
+          >
+            {message}
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -6441,33 +5244,15 @@ function PreviewToolbar({
 
   return (
     <header className="preview-toolbar">
-      <div
-        ref={publishMenuRef}
-        style={{
-          position: "relative",
-          display: "inline-flex",
-        }}
+      <button suppressHydrationWarning
+        type="button"
+        className="preview-button"
+        onClick={() => setWorkspaceView("preview")}
+        aria-pressed={workspaceView === "preview"}
       >
-        <button suppressHydrationWarning
-          type="button"
-          className="publish-button"
-          data-state={isPublishMenuOpen ? "open" : "closed"}
-          aria-label="Open publish menu"
-          aria-expanded={isPublishMenuOpen}
-          onClick={() => setIsPublishMenuOpen((current) => !current)}
-        >
-          Publish
-        </button>
-
-        {isPublishMenuOpen ? (
-          <PublishDropdownPopover
-            previewState={previewState}
-            files={files}
-            onOpenReadiness={openPublishReadinessFromDropdown}
-            onClose={() => setIsPublishMenuOpen(false)}
-          />
-        ) : null}
-      </div>
+        <Globe2 className="icon" />
+        Preview
+      </button>
 
       <button suppressHydrationWarning
         type="button"

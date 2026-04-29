@@ -4778,49 +4778,6 @@ function PublishRevealPanel({
   return <div className="publish-reveal-panel">{children}</div>;
 }
 
-function PublishDropdownSummaryRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: React.ReactNode;
-}) {
-  // Compact label/value row used inside publish dropdown details.
-  return (
-    <div>
-      <strong style={{ color: "#111827" }}>{label}:</strong> {value}
-    </div>
-  );
-}
-
-function PublishDropdownChecklistRow({
-  label,
-  done,
-}: {
-  label: string;
-  done: boolean;
-}) {
-  // Compact checklist row used in publish security/settings panels.
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: "10px",
-        color: "#374151",
-        fontSize: "12px",
-        lineHeight: 1.35,
-      }}
-    >
-      <span>{label}</span>
-      <strong style={{ color: done ? "#166534" : "#9a3412" }}>
-        {done ? "Ready" : "Missing"}
-      </strong>
-    </div>
-  );
-}
-
 function PublishDropdownPopover({
   previewState,
   files,
@@ -5210,97 +5167,6 @@ function PublishDropdownPopover({
     boxShadow: "0 1px 2px rgba(15, 23, 42, 0.06)",
   };
 
-  function getPublishBadgeStyle(toneValue: {
-    background: string;
-    color: string;
-    border: string;
-  }): React.CSSProperties {
-    // Shared badge style for domain, security, and settings status pills.
-    return {
-      borderRadius: "999px",
-      border: `1px solid ${toneValue.border}`,
-      background: toneValue.background,
-      color: toneValue.color,
-      fontSize: "11px",
-      fontWeight: 850,
-      padding: "6px 9px",
-      whiteSpace: "nowrap",
-    };
-  }
-
-  function getPublishCardStyle(): React.CSSProperties {
-    // Shared compact card shell for grouped publish controls.
-    return {
-      border: "1px solid #eef1f4",
-      borderRadius: "17px",
-      padding: "12px",
-      display: "grid",
-      gap: "9px",
-    };
-  }
-
-  function getPublishPanelStyle(): React.CSSProperties {
-    // Shared inset panel shell for expanded dropdown panels.
-    return {
-      border: "1px solid #eef1f4",
-      borderRadius: "16px",
-      background: "#f9fafb",
-      padding: "12px",
-      display: "grid",
-      gap: "10px",
-    };
-  }
-
-  function getPublishChecklistStatusStyle(done: boolean): React.CSSProperties {
-    // Shared status text for readiness checklist rows.
-    return {
-      color: done ? "#166534" : "#9a3412",
-    };
-  }
-
-  function getPublishTinyLabelStyle(): React.CSSProperties {
-    // Shared tiny uppercase label style.
-    return {
-      color: "#6b7280",
-      fontSize: "10px",
-      fontWeight: 900,
-      letterSpacing: "0.14em",
-      textTransform: "uppercase",
-      marginBottom: "5px",
-    };
-  }
-
-  function getPublishSectionHeadingStyle(): React.CSSProperties {
-    // Shared compact section heading style.
-    return {
-      color: "#111827",
-      fontSize: "14px",
-      fontWeight: 850,
-    };
-  }
-
-  function getPublishMetaTextStyle(): React.CSSProperties {
-    // Shared muted helper text style.
-    return {
-      color: "#4b5563",
-      fontSize: "12px",
-      lineHeight: 1.35,
-    };
-  }
-
-  function getPublishChecklistRowStyle(): React.CSSProperties {
-    // Shared checklist row layout style.
-    return {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: "10px",
-      color: "#374151",
-      fontSize: "12px",
-      lineHeight: 1.35,
-    };
-  }
-
   function showPublishToast(value: string) {
     // Show compact feedback without increasing dropdown height.
     setMessage(value);
@@ -5647,7 +5513,14 @@ function PublishDropdownPopover({
           >
             <div>
               <div
-                style={getPublishTinyLabelStyle()}
+                style={{
+                  color: "#6b7280",
+                  fontSize: "10px",
+                  fontWeight: 900,
+                  letterSpacing: "0.14em",
+                  textTransform: "uppercase",
+                  marginBottom: "5px",
+                }}
               >
                 Status
               </div>
@@ -5665,7 +5538,9 @@ function PublishDropdownPopover({
 
               <div
                 style={{
-                  ...getPublishMetaTextStyle(),
+                  color: "#4b5563",
+                  fontSize: "12px",
+                  lineHeight: 1.35,
                   marginTop: "4px",
                 }}
               >
@@ -5742,7 +5617,13 @@ function PublishDropdownPopover({
         </div>
 
         <div
-          style={getPublishCardStyle()}
+          style={{
+            border: "1px solid #eef1f4",
+            borderRadius: "17px",
+            padding: "12px",
+            display: "grid",
+            gap: "9px",
+          }}
         >
           <div
             style={{
@@ -5753,7 +5634,11 @@ function PublishDropdownPopover({
             }}
           >
             <div
-              style={getPublishSectionHeadingStyle()}
+              style={{
+                color: "#111827",
+                fontSize: "14px",
+                fontWeight: 850,
+              }}
             >
               Website URL
             </div>
@@ -5790,7 +5675,13 @@ function PublishDropdownPopover({
         </div>
 
         <div
-          style={getPublishCardStyle()}
+          style={{
+            border: "1px solid #eef1f4",
+            borderRadius: "17px",
+            padding: "12px",
+            display: "grid",
+            gap: "9px",
+          }}
         >
           <div
             style={{
@@ -5801,13 +5692,26 @@ function PublishDropdownPopover({
             }}
           >
             <div
-              style={getPublishSectionHeadingStyle()}
+              style={{
+                color: "#111827",
+                fontSize: "14px",
+                fontWeight: 850,
+              }}
             >
               Custom domain
             </div>
 
             <span
-              style={getPublishBadgeStyle(domainTone)}
+              style={{
+                borderRadius: "999px",
+                border: `1px solid ${domainTone.border}`,
+                background: domainTone.background,
+                color: domainTone.color,
+                fontSize: "11px",
+                fontWeight: 850,
+                padding: "6px 9px",
+                whiteSpace: "nowrap",
+              }}
             >
               {domainTone.label}
             </span>
@@ -5974,7 +5878,13 @@ function PublishDropdownPopover({
         </div>
 
         <div
-          style={getPublishCardStyle()}
+          style={{
+            border: "1px solid #eef1f4",
+            borderRadius: "17px",
+            padding: "12px",
+            display: "grid",
+            gap: "9px",
+          }}
         >
           <div
             style={{
@@ -6099,7 +6009,16 @@ function PublishDropdownPopover({
               </strong>
 
               <span
-                style={getPublishBadgeStyle(securityTone)}
+                style={{
+                  borderRadius: "999px",
+                  border: `1px solid ${securityTone.border}`,
+                  background: securityTone.background,
+                  color: securityTone.color,
+                  fontSize: "11px",
+                  fontWeight: 850,
+                  padding: "6px 9px",
+                  whiteSpace: "nowrap",
+                }}
               >
                 {securityTone.label}
               </span>
@@ -6107,11 +6026,23 @@ function PublishDropdownPopover({
 
             <div style={{ display: "grid", gap: "7px" }}>
               {securityChecklist.map((item) => (
-                <PublishDropdownChecklistRow
+                <div
                   key={item.label}
-                  label={item.label}
-                  done={item.done}
-                />
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: "10px",
+                    color: "#374151",
+                    fontSize: "12px",
+                    lineHeight: 1.35,
+                  }}
+                >
+                  <span>{item.label}</span>
+                  <strong style={{ color: item.done ? "#166534" : "#9a3412" }}>
+                    {item.done ? "Ready" : "Missing"}
+                  </strong>
+                </div>
               ))}
             </div>
 
@@ -6159,7 +6090,16 @@ function PublishDropdownPopover({
               </strong>
 
               <span
-                style={getPublishBadgeStyle(settingsTone)}
+                style={{
+                  borderRadius: "999px",
+                  border: `1px solid ${settingsTone.border}`,
+                  background: settingsTone.background,
+                  color: settingsTone.color,
+                  fontSize: "11px",
+                  fontWeight: 850,
+                  padding: "6px 9px",
+                  whiteSpace: "nowrap",
+                }}
               >
                 {settingsTone.label}
               </span>
@@ -6167,11 +6107,23 @@ function PublishDropdownPopover({
 
             <div style={{ display: "grid", gap: "7px" }}>
               {settingsChecklist.map((item) => (
-                <PublishDropdownChecklistRow
+                <div
                   key={item.label}
-                  label={item.label}
-                  done={item.done}
-                />
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: "10px",
+                    color: "#374151",
+                    fontSize: "12px",
+                    lineHeight: 1.35,
+                  }}
+                >
+                  <span>{item.label}</span>
+                  <strong style={{ color: item.done ? "#166534" : "#9a3412" }}>
+                    {item.done ? "Ready" : "Missing"}
+                  </strong>
+                </div>
               ))}
             </div>
 
@@ -6321,30 +6273,29 @@ function PublishDropdownPopover({
               <strong style={{ color: "#111827" }}>Gate:</strong>{" "}
               {gateReport ? gateReport.summary : "No publish gate available yet."}
             </div>
-            <PublishDropdownSummaryRow
-              label="Security files"
-              value={`${securityCount}/3`}
-            />
-            <PublishDropdownSummaryRow
-              label="Settings files"
-              value={`${settingsCount}/4`}
-            />
-            <PublishDropdownSummaryRow
-              label="Visibility"
-              value={visibility === "public" ? "Public" : "Private"}
-            />
-            <PublishDropdownSummaryRow
-              label="Domain"
-              value={domainTone.label}
-            />
-            <PublishDropdownSummaryRow
-              label="Version"
-              value={hasPublishedSnapshot ? `v${publishVersion}` : "Not published"}
-            />
-            <PublishDropdownSummaryRow
-              label="Unpublished changes"
-              value={hasUnpublishedChanges ? "Yes" : "No"}
-            />
+            <div>
+              <strong style={{ color: "#111827" }}>Security files:</strong>{" "}
+              {securityCount}/3
+            </div>
+            <div>
+              <strong style={{ color: "#111827" }}>Settings files:</strong>{" "}
+              {settingsCount}/4
+            </div>
+            <div>
+              <strong style={{ color: "#111827" }}>Visibility:</strong>{" "}
+              {visibility === "public" ? "Public" : "Private"}
+            </div>
+            <div>
+              <strong style={{ color: "#111827" }}>Domain:</strong> {domainTone.label}
+            </div>
+            <div>
+              <strong style={{ color: "#111827" }}>Version:</strong>{" "}
+              {hasPublishedSnapshot ? `v${publishVersion}` : "Not published"}
+            </div>
+            <div>
+              <strong style={{ color: "#111827" }}>Unpublished changes:</strong>{" "}
+              {hasUnpublishedChanges ? "Yes" : "No"}
+            </div>
           </div>
         </PublishRevealPanel>
         ) : null}

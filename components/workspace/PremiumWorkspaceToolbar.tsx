@@ -130,6 +130,7 @@ export function PremiumWorkspaceToolbar({
   const [publishPanelPosition, setPublishPanelPosition] = useState({
     top: 0,
     left: 0,
+    maxHeight: 640,
   });
 
   const publishButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -166,9 +167,17 @@ export function PremiumWorkspaceToolbar({
         left = window.innerWidth - panelWidth - viewportPadding;
       }
 
-      const top = rect.bottom + 12;
+      const preferredTop = rect.bottom + 12;
+      const availableBelow = window.innerHeight - preferredTop - viewportPadding;
+      const preferredMaxHeight = Math.min(640, window.innerHeight - viewportPadding * 2);
 
-      setPublishPanelPosition({ top, left });
+      const shouldOpenFromTop = availableBelow < 520;
+      const top = shouldOpenFromTop ? viewportPadding : preferredTop;
+      const maxHeight = shouldOpenFromTop
+        ? window.innerHeight - viewportPadding * 2
+        : Math.max(420, Math.min(preferredMaxHeight, availableBelow));
+
+      setPublishPanelPosition({ top, left, maxHeight });
     }
 
     updatePosition();
@@ -313,6 +322,7 @@ export function PremiumWorkspaceToolbar({
               {
                 top: `${publishPanelPosition.top}px`,
                 left: `${publishPanelPosition.left}px`,
+                maxHeight: `${publishPanelPosition.maxHeight}px`,
               } as CSSProperties
             }
           >
@@ -330,31 +340,32 @@ export function PremiumWorkspaceToolbar({
               </span>
             </div>
 
-            <div className={styles.publishPopoverSection}>
-              <div className={styles.publishSectionHeader}>
-                <div>
-                  <h4>Website URL</h4>
+            <div className={styles.publishPopoverBody}>
+              <div className={styles.publishPopoverSection}>
+                <div className={styles.publishSectionHeader}>
+                  <div>
+                    <h4>Website URL</h4>
                   <p>Generated staging domain for this workspace.</p>
+                  </div>
+
+                  <button
+                    suppressHydrationWarning
+                    type="button"
+                    className={styles.publishMiniAction}
+                    onClick={handleCopyUrl}
+                  >
+                    <Copy size={13} strokeWidth={2.2} />
+                    {copied ? "Copied" : "Copy"}
+                  </button>
                 </div>
 
-                <button
-                  suppressHydrationWarning
-                  type="button"
-                  className={styles.publishMiniAction}
-                  onClick={handleCopyUrl}
-                >
-                  <Copy size={13} strokeWidth={2.2} />
-                  {copied ? "Copied" : "Copy"}
-                </button>
+                <div className={styles.publishUrlCard}>
+                  <span className={styles.publishUrlText}>{projectUrl}</span>
+                </div>
               </div>
 
-              <div className={styles.publishUrlCard}>
-                <span className={styles.publishUrlText}>{projectUrl}</span>
-              </div>
-            </div>
-
-            <div className={styles.publishPopoverSection}>
-              <div className={styles.publishSectionHeader}>
+              <div className={styles.publishPopoverSection}>
+                <div className={styles.publishSectionHeader}>
                 <div>
                   <h4>Visibility</h4>
                   <p>Who can access the published project.</p>
@@ -434,6 +445,8 @@ export function PremiumWorkspaceToolbar({
                   <ChevronRight size={16} strokeWidth={2.3} />
                 </button>
               </div>
+            </div>
+
             </div>
 
             <div className={styles.publishPopoverFooter}>

@@ -11,3 +11,15 @@ __pycache__
 models
 model
 runs
+
+# Generated preview worker sandboxes
+preview-worker/tmp/
+preview-worker/.next/
+preview-worker/out/
+
+# Local backup files
+*.bak
+*.bak-*
+*.backup*.ts
+*.backup*.tsx
+# Generated preview/temp sandboxes

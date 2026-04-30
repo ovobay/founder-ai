@@ -57,6 +57,8 @@ type WorkspaceView =
   | "architecture"
   | "integrations"
   | "publish-readiness"
+  | "security"
+  | "analytics"
   | "history";
 
 type ProjectType = string;
@@ -250,6 +252,7 @@ type PublishReadinessReport = {
 type IntegrationReadiness = {
   id: string;
   label: string;
+  description?: string;
   provider: string;
   required: boolean;
   status: "ready" | "needs-setup" | "optional";
@@ -301,6 +304,7 @@ type PreviewState = {
   title: string;
   subtitle: string;
   projectType: string;
+  classification?: BuildClassification;
   fileCount: number;
   status: string;
   lastUpdatedLabel: string;
@@ -663,6 +667,13 @@ function parsePreviewState(value: unknown): PreviewState | null {
     title: value.title,
     subtitle: value.subtitle,
     projectType: value.projectType,
+    classification: {
+      primaryCategory: getProjectTypeLabel(value.projectType),
+      secondaryCategories: [],
+      industry: null,
+      platformTargets: ["web"],
+      complexity: "standard",
+    },
     fileCount: value.fileCount,
     status: value.status,
     lastUpdatedLabel: value.lastUpdatedLabel,
@@ -3861,8 +3872,6 @@ export default function Page() {
     scheduleScrollUpdate();
   }
 
-  async function handleSendPrompt()
-
   async function handleSendPrompt() {
     const value = prompt.trim();
     if (!value || isBuilding || isLoadingWorkspace) return;
@@ -4146,6 +4155,9 @@ export default function Page() {
             fileCountLabel={fileCountLabel}
             workspaceView={workspaceView}
             setWorkspaceView={setWorkspaceView}
+            onOpenPublishCenter={openPublishCenter}
+            previewState={previewState}
+            files={changedFiles}
           />
           <PreviewContent
             filesOpen={filesOpen}
@@ -4830,6 +4842,159 @@ function PublishDropdownChecklistRow({
     </div>
   );
 }
+
+
+
+function getGeneratedPreviewUrl(previewState: PreviewState): string {
+  const rawProjectType =
+    typeof previewState.projectType === "string" && previewState.projectType.trim()
+      ? previewState.projectType
+      : "founder-ai-build";
+
+  const slug = rawProjectType
+    .toLowerCase()
+    .trim()
+    .replace(/['"]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 52);
+
+  return `https://${slug || "founder-ai-build"}.founder-ai.app`;
+}
+
+
+function getPublishGateReport({
+  previewState,
+  files,
+}: {
+  previewState: PreviewState;
+  files: ChangedFile[];
+}): PublishGateReport {
+  const createdOrUpdatedFiles = files.filter(
+    (file) => file.status === "created" || file.status === "updated"
+  );
+
+  const hasFiles = files.length > 0;
+  const hasGeneratedChanges = createdOrUpdatedFiles.length > 0;
+  const hasArchitecture = previewState.architecture.endpoints.length > 0;
+  const hasSecurityRules = previewState.architecture.securityRules.length > 0;
+  const hasDatabasePlan = previewState.architecture.tables.length > 0;
+  const hasModules = previewState.modules.length > 0;
+
+  const requirements: PublishGateRequirement[] = [
+    {
+      id: "files",
+      label: "Generated files",
+      passed: hasFiles,
+      detail: hasFiles
+        ? `${files.length} file${files.length === 1 ? "" : "s"} available for review.`
+        : "Generate or load files before publishing.",
+    },
+    {
+      id: "changes",
+      label: "Build changes",
+      passed: hasGeneratedChanges,
+      detail: hasGeneratedChanges
+        ? `${createdOrUpdatedFiles.length} changed file${
+            createdOrUpdatedFiles.length === 1 ? "" : "s"
+          } detected.`
+        : "No created or updated files detected yet.",
+    },
+    {
+      id: "modules",
+      label: "Detected modules",
+      passed: hasModules,
+      detail: hasModules
+        ? `${previewState.modules.length} module${
+            previewState.modules.length === 1 ? "" : "s"
+          } detected from the prompt.`
+        : "No modules detected yet.",
+    },
+    {
+      id: "architecture",
+      label: "Architecture plan",
+      passed: hasArchitecture || hasDatabasePlan,
+      detail:
+        hasArchitecture || hasDatabasePlan
+          ? `${previewState.architecture.endpoints.length} API route${
+              previewState.architecture.endpoints.length === 1 ? "" : "s"
+            } and ${previewState.architecture.tables.length} table${
+              previewState.architecture.tables.length === 1 ? "" : "s"
+            } planned.`
+          : "No API routes or database tables detected yet.",
+    },
+    {
+      id: "security",
+      label: "Security review",
+      passed: hasSecurityRules,
+      detail: hasSecurityRules
+        ? `${previewState.architecture.securityRules.length} security rule${
+            previewState.architecture.securityRules.length === 1 ? "" : "s"
+          } generated for review.`
+        : "No generated security rules found yet.",
+    },
+  ];
+
+  const passedCount = requirements.filter((requirement) => requirement.passed).length;
+  const score = Math.round((passedCount / requirements.length) * 100);
+
+  const nextActions = requirements
+    .filter((requirement) => !requirement.passed)
+    .map((requirement) => requirement.detail);
+
+  if (!hasFiles || !hasGeneratedChanges) {
+    return {
+      decision: "blocked",
+      label: "Blocked",
+      score,
+      summary:
+        "This build needs generated files and changed output before it can be prepared for publish.",
+      requirements,
+      nextActions:
+        nextActions.length > 0
+          ? nextActions
+          : ["Generate a build before opening publish readiness."],
+    };
+  }
+
+  if (score >= 90) {
+    return {
+      decision: "can-publish",
+      label: "Ready to publish",
+      score,
+      summary:
+        "The build has files, generated changes, architecture coverage, and security review items ready.",
+      requirements,
+      nextActions:
+        nextActions.length > 0
+          ? nextActions
+          : ["Run a final manual review before production deployment."],
+    };
+  }
+
+  if (score >= 70) {
+    return {
+      decision: "can-stage",
+      label: "Ready for staging",
+      score,
+      summary:
+        "The build is suitable for staging, but still needs a final production review.",
+      requirements,
+      nextActions,
+    };
+  }
+
+  return {
+    decision: "can-preview",
+    label: "Preview only",
+    score,
+    summary:
+      "The build can be previewed, but more readiness checks are needed before staging or publish.",
+    requirements,
+    nextActions,
+  };
+}
+
 
 function PublishDropdownPopover({
   previewState,
@@ -6425,37 +6590,93 @@ function PreviewToolbar({
   );
 }
 
-function isAssistantBuildWorking(item: FeedItem) {
-  // A build card is considered "working" when it belongs to the assistant and is not completed yet.
-  return item.role === "assistant" && item.status !== "completed";
+
+function isBuildStepLike(value: unknown): value is BuildStep {
+  if (!value || typeof value !== "object") return false;
+
+  const step = value as {
+    label?: unknown;
+    status?: unknown;
+  };
+
+  return (
+    typeof step.label === "string" &&
+    (step.status === "pending" ||
+      step.status === "active" ||
+      step.status === "complete")
+  );
 }
 
+function getFeedItemBuildSteps(item: FeedItem): BuildStep[] {
+  const steps = (item as { steps?: unknown }).steps;
+
+  return Array.isArray(steps) ? steps.filter(isBuildStepLike) : [];
+}
+
+function getFeedItemBuildStatus(item: FeedItem): string | null {
+  const status = (item as { status?: unknown }).status;
+
+  return typeof status === "string" ? status : null;
+}
+
+
+function isAssistantBuildWorking(item: FeedItem) {
+  const itemStatus = getFeedItemBuildStatus(item);
+
+  return item.role === "assistant" && itemStatus !== "completed";
+}
+
+
+
+
 function getBackgroundBuildPhase(item: FeedItem) {
-  // Use the last active/incomplete step as the visible current phase.
+  const itemSteps = getFeedItemBuildSteps(item);
+  const itemStatus = getFeedItemBuildStatus(item);
+
   const activeStep =
-    item.steps?.find((step) => step.status === "active") ??
-    [...(item.steps ?? [])].reverse().find((step) => step.status !== "complete");
+    itemSteps.find((step) => step.status === "active") ??
+    [...itemSteps].reverse().find((step) => step.status !== "complete");
 
   if (activeStep) return activeStep.label;
 
-  if (item.status === "building") return "Building project";
-  if (item.status === "thinking") return "Planning build";
-  if (item.status === "queued") return "Queued";
+  if (itemStatus === "building") return "Building project";
+  if (itemStatus === "thinking") return "Planning build";
+  if (itemStatus === "queued") return "Queued";
 
   return "Working";
 }
 
+
+
+
 function getBackgroundBuildProgress(item: FeedItem) {
-  // Calculate a rough progress percentage from completed build steps.
-  const steps = item.steps ?? [];
+  const itemSteps = getFeedItemBuildSteps(item);
+  const itemStatus = getFeedItemBuildStatus(item);
 
-  if (steps.length === 0) return 12;
+  if (itemStatus === "completed") return 100;
 
-  const completeCount = steps.filter((step) => step.status === "complete").length;
-  const progress = Math.round((completeCount / steps.length) * 100);
+  if (itemSteps.length === 0) {
+    if (itemStatus === "queued") return 8;
+    if (itemStatus === "thinking") return 16;
+    if (itemStatus === "building") return 42;
 
-  return Math.max(12, Math.min(progress, 92));
+    return item.role === "assistant" ? 12 : 0;
+  }
+
+  const completedSteps = itemSteps.filter(
+    (step) => step.status === "complete"
+  ).length;
+  const hasActiveStep = itemSteps.some((step) => step.status === "active");
+  const activeBonus = hasActiveStep ? 0.5 : 0;
+
+  const progress = Math.round(
+    ((completedSteps + activeBonus) / itemSteps.length) * 100
+  );
+
+  return Math.max(8, Math.min(100, progress));
 }
+
+
 
 function BackgroundWorkingCard({
   item,
@@ -6527,7 +6748,7 @@ function BackgroundWorkingCard({
               letterSpacing: "-0.03em",
             }}
           >
-            {item.title || "Building your project"}
+            {"Building your project"}
           </h3>
         </div>
 
@@ -7097,7 +7318,7 @@ function PublishToolWorkspace({
 
 ## Project
 - Type: ${previewState.projectType}
-- Complexity: ${previewState.classification.complexity}
+- Complexity: ${previewState.classification?.complexity ?? "unknown"}
 - Modules: ${previewState.modules.length}
 - Files: ${files.length}
 - Tables: ${tableCount}
@@ -8214,6 +8435,132 @@ function MigrationInstructionStep({
 }
 
 
+
+function createSqlIdentifier(value: string): string {
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .replace(/_{2,}/g, "_");
+
+  const fallback = normalized || "generated_table";
+
+  return `"${fallback.replace(/"/g, '""')}"`;
+}
+
+function inferSqlColumnType(fieldName: string): string {
+  const normalized = fieldName.toLowerCase();
+
+  if (
+    normalized.endsWith("_at") ||
+    normalized.includes("created") ||
+    normalized.includes("updated") ||
+    normalized.includes("date") ||
+    normalized.includes("time")
+  ) {
+    return "timestamptz";
+  }
+
+  if (
+    normalized.startsWith("is_") ||
+    normalized.startsWith("has_") ||
+    normalized.includes("enabled") ||
+    normalized.includes("active")
+  ) {
+    return "boolean";
+  }
+
+  if (
+    normalized.includes("count") ||
+    normalized.includes("quantity") ||
+    normalized.includes("number")
+  ) {
+    return "integer";
+  }
+
+  if (
+    normalized.includes("amount") ||
+    normalized.includes("price") ||
+    normalized.includes("total") ||
+    normalized.includes("balance")
+  ) {
+    return "numeric(12, 2)";
+  }
+
+  return "text";
+}
+
+function createSqlMigrationContents(architecture: ArchitecturePlan): string {
+  const tables = architecture.tables ?? [];
+
+  if (tables.length === 0) {
+    return `-- Generated architecture migration
+-- No database tables were detected for this build yet.
+
+-- Generate a build with database-backed features, then export again.
+`;
+  }
+
+  const tableStatements = tables
+    .map((table) => {
+      const tableName = createSqlIdentifier(table.name || table.id || "generated_table");
+      const uniqueFields = Array.from(
+        new Set(
+          (table.fields ?? [])
+            .map((field) => field.trim())
+            .filter(Boolean)
+        )
+      );
+
+      const columnLines = uniqueFields.map((field) => {
+        const columnName = createSqlIdentifier(field);
+        const columnType = inferSqlColumnType(field);
+
+        return `  ${columnName} ${columnType}`;
+      });
+
+      const columns =
+        columnLines.length > 0
+          ? ["  id uuid primary key default gen_random_uuid()", ...columnLines]
+          : ["  id uuid primary key default gen_random_uuid()"];
+
+      const timestampColumns = [
+        "  created_at timestamptz not null default now()",
+        "  updated_at timestamptz not null default now()",
+      ];
+
+      return `-- ${table.purpose || `Table for ${table.name}`}
+create table if not exists public.${tableName} (
+${[...columns, ...timestampColumns].join(",\n")}
+);
+
+alter table public.${tableName} enable row level security;
+
+create policy "${(table.name || "generated_table").replace(/"/g, "")}_owner_select"
+on public.${tableName}
+for select
+using (auth.uid() is not null);
+
+create policy "${(table.name || "generated_table").replace(/"/g, "")}_owner_insert"
+on public.${tableName}
+for insert
+with check (auth.uid() is not null);
+`;
+    })
+    .join("\n");
+
+  return `-- Generated architecture migration
+-- Review before running in Supabase SQL Editor.
+-- This is starter scaffolding, not a sacred production tablet.
+
+create extension if not exists "pgcrypto";
+
+${tableStatements}
+`;
+}
+
+
 function ArchitectureWorkspace({
   previewState,
   files,
@@ -8259,7 +8606,9 @@ function ArchitectureWorkspace({
     setWorkspaceError("");
 
     const filePath = "supabase/migrations/generated_architecture.sql";
-    const contents = createSqlMigrationContents(architecture);
+    const contents = `-- Generated migration
+-- Architecture: ${JSON.stringify(architecture, null, 2)}
+`;
     const existingFile = files.find((file) => file.path === filePath);
 
     try {
@@ -8816,7 +9165,7 @@ function IntegrationCard({
       </div>
 
       <h4>{integration.label}</h4>
-      <p>{integration.description}</p>
+      <p>{integration.description ?? "Integration setup details and production readiness."}</p>
 
       <div className="premium-integration-footer">
         <span>{integration.required ? "Required" : "Optional"}</span>

@@ -1,0 +1,31 @@
+
+> founder-ai-app@0.1.0 build
+> next build
+
+⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /Users/user/package-lock.json as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * /Users/user/Projects/founder-ai-app/package-lock.json
+
+▲ Next.js 16.2.4 (Turbopack)
+- Environments: .env.local
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+✓ Compiled successfully in 4.6s
+  Running TypeScript ...
+Failed to type check.
+
+./app/page.tsx:3872:18
+Type error: 'handleSendPrompt', which lacks return-type annotation, implicitly has an 'any' return type.
+
+  [90m3870 |[0m   }
+  [90m3871 |[0m
+[31m[1m>[0m [90m3872 |[0m   [36masync[0m [36mfunction[0m handleSendPrompt()
+  [90m     |[0m                  [31m[1m^[0m
+  [90m3873 |[0m
+  [90m3874 |[0m   [36masync[0m [36mfunction[0m handleSendPrompt() {
+  [90m3875 |[0m     [36mconst[0m value = prompt.trim();
+Next.js build worker exited with code: 1 and signal: null

@@ -10,7 +10,6 @@ import {
   Cloud,
   Code2,
   File,
-  FileText,
   GitBranch,
   Globe2,
   History,
@@ -30,7 +29,6 @@ import {
   Sparkles,
   Square,
   Trash2,
-  Upload,
   X,
 } from "lucide-react";
 import {
@@ -4149,7 +4147,6 @@ export default function Page() {
           />
           <PreviewContent
             filesOpen={filesOpen}
-            setFilesOpen={setFilesOpen}
             files={changedFiles}
             projectFiles={projectFiles}
             previewState={previewState}
@@ -6625,10 +6622,8 @@ function BackgroundWorkingCard({
   );
 }
 
-
 function PreviewContent({
   filesOpen,
-  setFilesOpen,
   files,
   projectFiles,
   previewState,
@@ -6647,7 +6642,6 @@ function PreviewContent({
   publishCenterRef,
 }: {
   filesOpen: boolean;
-  setFilesOpen: (value: boolean) => void;
   files: ChangedFile[];
   projectFiles: DatabaseProjectFile[];
   previewState: PreviewState;
@@ -6674,28 +6668,26 @@ function PreviewContent({
 }) {
   return (
     <div className="preview-content">
+      {filesOpen ? (
+        <FilesDrawer
+          files={files}
+          projectFiles={projectFiles}
+          selectedFileId={selectedFileId}
+          setSelectedFileId={setSelectedFileId}
+          onCreateFile={onCreateFile}
+          setWorkspaceError={setWorkspaceError}
+        />
+      ) : null}
+
       <div className="preview-frame-wrap">
         <div className="preview-frame">
           {isLoadingWorkspace ? <LoadingWorkspace /> : null}
 
-          {!isLoadingWorkspace && filesOpen ? (
-            <FilesWorkspace
-              files={files}
-              projectFiles={projectFiles}
-              selectedFile={selectedFile}
-              selectedFileId={selectedFileId}
-              setSelectedFileId={setSelectedFileId}
-              onCreateFile={onCreateFile}
-              setWorkspaceError={setWorkspaceError}
-              onClose={() => setFilesOpen(false)}
-            />
+          {!isLoadingWorkspace && workspaceView === "preview" ? (
+            <PreviewWebsite previewState={previewState} />
           ) : null}
 
-          {!isLoadingWorkspace && !filesOpen && workspaceView === "preview" ? (
-            <PreviewToolWorkspace previewState={previewState} />
-          ) : null}
-
-          {!isLoadingWorkspace && !filesOpen && workspaceView === "code" ? (
+          {!isLoadingWorkspace && workspaceView === "code" ? (
             <CodeWorkspace
               selectedFile={selectedFile}
               projectFiles={projectFiles}
@@ -6706,7 +6698,7 @@ function PreviewContent({
             />
           ) : null}
 
-          {!isLoadingWorkspace && !filesOpen && workspaceView === "architecture" ? (
+          {!isLoadingWorkspace && workspaceView === "architecture" ? (
             <ArchitectureWorkspace
               previewState={previewState}
               files={files}
@@ -6717,15 +6709,15 @@ function PreviewContent({
             />
           ) : null}
 
-          {!isLoadingWorkspace && !filesOpen && workspaceView === "integrations" ? (
+          {!isLoadingWorkspace && workspaceView === "integrations" ? (
             <IntegrationsWorkspace
               previewState={previewState}
               onClose={() => setWorkspaceView("preview")}
             />
           ) : null}
 
-          {!isLoadingWorkspace && !filesOpen && workspaceView === "publish-readiness" ? (
-            <PublishToolWorkspace
+          {!isLoadingWorkspace && workspaceView === "publish-readiness" ? (
+            <PublishReadinessWorkspace
               previewState={previewState}
               files={files}
               onCreateFile={onCreateFile}
@@ -6734,15 +6726,13 @@ function PreviewContent({
               setWorkspaceView={setWorkspaceView}
               setWorkspaceError={setWorkspaceError}
               publishCenterRef={publishCenterRef}
-              onClose={() => setWorkspaceView("preview")}
             />
           ) : null}
 
-          {!isLoadingWorkspace && !filesOpen && workspaceView === "history" ? (
-            <HistoryToolWorkspace
+          {!isLoadingWorkspace && workspaceView === "history" ? (
+            <HistoryWorkspace
               buildHistory={buildHistory}
               onRestoreBuild={onRestoreBuild}
-              onClose={() => setWorkspaceView("preview")}
             />
           ) : null}
         </div>
@@ -6750,590 +6740,6 @@ function PreviewContent({
     </div>
   );
 }
-
-
-function HistoryToolWorkspace({
-  buildHistory,
-  onRestoreBuild,
-  onClose,
-}: {
-  buildHistory: BuildHistoryItem[];
-  onRestoreBuild: (historyItem: BuildHistoryItem) => void;
-  onClose?: () => void;
-}) {
-  const [activeHistoryFilter, setActiveHistoryFilter] = useState("all");
-
-  const completedCount = buildHistory.filter(
-    (item) => item.status === "completed"
-  ).length;
-  const restoredCount = buildHistory.filter(
-    (item) => item.status === "restored"
-  ).length;
-  const failedCount = buildHistory.filter(
-    (item) => item.status === "failed"
-  ).length;
-
-  const filteredBuildHistory = buildHistory.filter((item) => {
-    if (activeHistoryFilter === "all") return true;
-    return item.status === activeHistoryFilter;
-  });
-
-  const historyNavItems = [
-    {
-      id: "all",
-      label: "All builds",
-      icon: <History className="icon" />,
-      badge: <span className="workspace-tool-pill">{buildHistory.length}</span>,
-    },
-    {
-      id: "completed",
-      label: "Completed",
-      icon: <Clock3 className="icon" />,
-      badge: <span className="workspace-tool-pill green">{completedCount}</span>,
-    },
-    {
-      id: "restored",
-      label: "Restored",
-      icon: <RefreshCcw className="icon" />,
-      badge: <span className="workspace-tool-pill blue">{restoredCount}</span>,
-    },
-    {
-      id: "failed",
-      label: "Failed",
-      icon: <X className="icon" />,
-      badge: <span className="workspace-tool-pill red">{failedCount}</span>,
-    },
-  ];
-
-  const historyActions = (
-    <>
-      <span className="workspace-tool-pill blue">
-        {buildHistory.length} build{buildHistory.length === 1 ? "" : "s"}
-      </span>
-
-      <button
-        suppressHydrationWarning
-        type="button"
-        className="workspace-tool-action-button"
-      >
-        <RefreshCcw className="icon" />
-        Refresh
-      </button>
-    </>
-  );
-
-  return (
-    <WorkspaceToolShell
-      title="History"
-      sidebar={
-        <WorkspaceToolNav
-          items={historyNavItems}
-          activeItemId={activeHistoryFilter}
-          onSelectItem={setActiveHistoryFilter}
-        />
-      }
-      actions={historyActions}
-      onClose={onClose}
-    >
-      <div className="history-tool-workspace">
-        <section className="history-tool-hero">
-          <div>
-            <span>Build history</span>
-            <h2>Previous generated workspaces</h2>
-            <p>
-              Restore previous builds, review what changed, and keep track of
-              project direction without trusting memory, humanity’s most
-              unreliable storage layer.
-            </p>
-          </div>
-
-          <div className="history-tool-summary">
-            <span>Total</span>
-            <strong>{buildHistory.length}</strong>
-          </div>
-        </section>
-
-        <section className="history-tool-metrics" aria-label="Build history metrics">
-          <article>
-            <span>Completed</span>
-            <strong>{completedCount}</strong>
-          </article>
-
-          <article>
-            <span>Restored</span>
-            <strong>{restoredCount}</strong>
-          </article>
-
-          <article>
-            <span>Failed</span>
-            <strong>{failedCount}</strong>
-          </article>
-
-          <article>
-            <span>Viewing</span>
-            <strong>{filteredBuildHistory.length}</strong>
-          </article>
-        </section>
-
-        <WorkspaceToolCard
-          title="Builds"
-          description="Select a previous build to restore it into the current workspace."
-          action={<span className="workspace-tool-pill">{activeHistoryFilter}</span>}
-        >
-          {filteredBuildHistory.length > 0 ? (
-            <div className="history-tool-list">
-              {filteredBuildHistory.map((historyItem) => {
-                const createdDate = new Date(historyItem.createdAt);
-                const isValidDate = !Number.isNaN(createdDate.getTime());
-
-                return (
-                  <article key={historyItem.id} className="history-tool-row">
-                    <div className="history-tool-row-main">
-                      <span className="history-tool-row-icon" aria-hidden="true">
-                        <History className="icon" />
-                      </span>
-
-                      <div>
-                        <h4>{historyItem.projectType || "Generated project"}</h4>
-                        <p>{historyItem.prompt}</p>
-
-                        <small>
-                          {isValidDate
-                            ? createdDate.toLocaleString()
-                            : "Date unavailable"}
-                        </small>
-                      </div>
-                    </div>
-
-                    <div className="history-tool-row-actions">
-                      <span
-                        className={[
-                          "workspace-tool-pill",
-                          historyItem.status === "completed" ? "green" : "",
-                          historyItem.status === "restored" ? "blue" : "",
-                          historyItem.status === "failed" ? "red" : "",
-                        ].join(" ")}
-                      >
-                        {historyItem.status}
-                      </span>
-
-                      <button
-                        suppressHydrationWarning
-                        type="button"
-                        className="history-tool-restore-button"
-                        onClick={() => onRestoreBuild(historyItem)}
-                      >
-                        <RefreshCcw className="icon" />
-                        Restore
-                      </button>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          ) : (
-            <WorkspaceToolEmpty
-              icon={<History className="icon-large" />}
-              title="No builds found"
-              body={
-                activeHistoryFilter === "all"
-                  ? "Generated builds will appear here after you run prompts."
-                  : "There are no builds matching this filter."
-              }
-            />
-          )}
-        </WorkspaceToolCard>
-      </div>
-    </WorkspaceToolShell>
-  );
-}
-
-
-
-function PreviewToolWorkspace({
-  previewState,
-}: {
-  previewState: PreviewState;
-}) {
-  const previewActions = (
-    <>
-      <span className="workspace-tool-pill blue">
-        {previewState.projectType}
-      </span>
-
-      <button
-        suppressHydrationWarning
-        type="button"
-        className="workspace-tool-action-button"
-      >
-        <RefreshCcw className="icon" />
-        Refresh
-      </button>
-    </>
-  );
-
-  return (
-    <WorkspaceToolShell title="Preview" actions={previewActions}>
-      <div className="preview-tool-workspace">
-        <section className="preview-tool-hero">
-          <div>
-            <span>Live preview</span>
-            <h2>{previewState.projectType} workspace preview</h2>
-            <p>
-              This is the generated product preview for the current build. Use
-              the toolbar to inspect files, code, cloud setup, security, and
-              analytics.
-            </p>
-          </div>
-
-          <div className="preview-tool-summary">
-            <span>Modules</span>
-            <strong>{previewState.modules.length}</strong>
-          </div>
-        </section>
-
-        <section className="preview-tool-frame-card">
-          <PreviewWebsite previewState={previewState} />
-        </section>
-      </div>
-    </WorkspaceToolShell>
-  );
-}
-
-
-
-
-function PublishToolWorkspace({
-  previewState,
-  files,
-  onCreateFile,
-  onSaveFile,
-  setSelectedFileId,
-  setWorkspaceView,
-  setWorkspaceError,
-  publishCenterRef,
-  onClose,
-}: {
-  previewState: PreviewState;
-  files: ChangedFile[];
-  onCreateFile: (
-    path: string,
-    contents?: string
-  ) => Promise<DatabaseProjectFile | undefined>;
-  onSaveFile: (
-    fileId: string,
-    path: string,
-    contents: string
-  ) => Promise<DatabaseProjectFile>;
-  setSelectedFileId: (fileId: string) => void;
-  setWorkspaceView: (value: WorkspaceView) => void;
-  setWorkspaceError: (value: string) => void;
-  publishCenterRef?: React.RefObject<HTMLDivElement | null>;
-  onClose?: () => void;
-}) {
-  const [isCreatingChecklist, setIsCreatingChecklist] = useState(false);
-  const [publishMessage, setPublishMessage] = useState("");
-
-  const requiredEnvironmentVariables = getRequiredEnvironmentVariables({
-    projectType: previewState.projectType,
-    modules: previewState.modules,
-    architecture: previewState.architecture,
-    classification: previewState.classification,
-  });
-
-  const integrationReadiness = getIntegrationReadiness({
-    projectType: previewState.projectType,
-    modules: previewState.modules,
-    architecture: previewState.architecture,
-    classification: previewState.classification,
-  });
-
-  const requiredIntegrations = integrationReadiness.filter(
-    (integration) => integration.required
-  );
-  const setupRequiredCount = integrationReadiness.filter(
-    (integration) => integration.status === "needs-setup"
-  ).length;
-  const securityRuleCount = previewState.architecture.securityRules.length;
-  const tableCount = previewState.architecture.tables.length;
-  const apiRouteCount = previewState.architecture.endpoints.length;
-
-  const readinessIssues = [
-    requiredEnvironmentVariables.length > 0
-      ? `${requiredEnvironmentVariables.length} environment variable${
-          requiredEnvironmentVariables.length === 1 ? "" : "s"
-        } required`
-      : "",
-    setupRequiredCount > 0
-      ? `${setupRequiredCount} integration${setupRequiredCount === 1 ? "" : "s"} need setup`
-      : "",
-    securityRuleCount > 0
-      ? `${securityRuleCount} security rule${securityRuleCount === 1 ? "" : "s"} need review`
-      : "",
-    tableCount > 0 ? `${tableCount} database table${tableCount === 1 ? "" : "s"} planned` : "",
-  ].filter(Boolean);
-
-  const readinessStatus =
-    readinessIssues.length === 0
-      ? "ready"
-      : setupRequiredCount > 0 || requiredEnvironmentVariables.length > 0
-        ? "blocked"
-        : "review";
-
-  const readinessLabel =
-    readinessStatus === "ready"
-      ? "Ready"
-      : readinessStatus === "blocked"
-        ? "Needs setup"
-        : "Review";
-
-  async function handleCreatePublishChecklist() {
-    setIsCreatingChecklist(true);
-    setPublishMessage("");
-    setWorkspaceError("");
-
-    const filePath = "docs/publish-readiness.md";
-    const contents = `# Publish readiness
-
-## Project
-- Type: ${previewState.projectType}
-- Complexity: ${previewState.classification.complexity}
-- Modules: ${previewState.modules.length}
-- Files: ${files.length}
-- Tables: ${tableCount}
-- API routes: ${apiRouteCount}
-- Security rules: ${securityRuleCount}
-
-## Required environment variables
-${
-  requiredEnvironmentVariables.length > 0
-    ? requiredEnvironmentVariables
-        .map((variable) => `- \`${variable.key}\` (${variable.scope}) — ${variable.reason}`)
-        .join("\n")
-    : "- None detected"
-}
-
-## Required integrations
-${
-  requiredIntegrations.length > 0
-    ? requiredIntegrations
-        .map((integration) => `- ${integration.label}: ${integration.status}`)
-        .join("\n")
-    : "- None detected"
-}
-
-## Security review
-${
-  previewState.architecture.securityRules.length > 0
-    ? previewState.architecture.securityRules
-        .map((rule) => `- ${rule.label}: ${rule.description}`)
-        .join("\n")
-    : "- No generated security rules detected"
-}
-
-## Final checks
-- Review generated SQL before running it.
-- Confirm RLS and policies.
-- Confirm server-only secrets are not exposed to the browser.
-- Confirm integrations are configured in production.
-- Run a final deployment smoke test.
-`;
-
-    const existingFile = files.find((file) => file.path === filePath);
-
-    try {
-      const savedFile = existingFile
-        ? await onSaveFile(existingFile.id, filePath, contents)
-        : await onCreateFile(filePath, contents);
-
-      if (savedFile?.id) {
-        setSelectedFileId(savedFile.id);
-      } else if (existingFile?.id) {
-        setSelectedFileId(existingFile.id);
-      }
-
-      setPublishMessage(existingFile ? "Publish checklist updated." : "Publish checklist created.");
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to create publish checklist.";
-
-      setWorkspaceError(message);
-      setPublishMessage(message);
-    } finally {
-      setIsCreatingChecklist(false);
-    }
-  }
-
-  const publishActions = (
-    <>
-      <span
-        className={[
-          "workspace-tool-pill",
-          readinessStatus === "ready" ? "green" : "",
-          readinessStatus === "blocked" ? "red" : "",
-          readinessStatus === "review" ? "orange" : "",
-        ].join(" ")}
-      >
-        {readinessLabel}
-      </span>
-
-      <button
-        suppressHydrationWarning
-        type="button"
-        className="workspace-tool-action-button"
-        onClick={handleCreatePublishChecklist}
-        disabled={isCreatingChecklist}
-      >
-        {isCreatingChecklist ? <Loader2 className="icon" /> : <FileText className="icon" />}
-        {isCreatingChecklist ? "Creating" : "Checklist"}
-      </button>
-    </>
-  );
-
-  return (
-    <WorkspaceToolShell title="Publish" actions={publishActions} onClose={onClose}>
-      <div className="publish-tool-workspace" ref={publishCenterRef}>
-        <section className="publish-tool-hero">
-          <div>
-            <span>Publish readiness</span>
-            <h2>Prepare this build for launch</h2>
-            <p>
-              Review generated files, environment requirements, integrations,
-              database plans, and security checks before shipping this into the
-              internet’s cheerful wood chipper.
-            </p>
-          </div>
-
-          <div className="publish-tool-summary">
-            <span>Status</span>
-            <strong>{readinessLabel}</strong>
-          </div>
-        </section>
-
-        {publishMessage ? (
-          <div
-            className={[
-              "workspace-tool-alert",
-              publishMessage.toLowerCase().includes("failed") ? "danger" : "",
-            ].join(" ")}
-          >
-            <span>{publishMessage}</span>
-          </div>
-        ) : null}
-
-        <section className="publish-tool-metrics" aria-label="Publish metrics">
-          <article>
-            <span>Files</span>
-            <strong>{files.length}</strong>
-          </article>
-
-          <article>
-            <span>Env vars</span>
-            <strong>{requiredEnvironmentVariables.length}</strong>
-          </article>
-
-          <article>
-            <span>Integrations</span>
-            <strong>{requiredIntegrations.length}</strong>
-          </article>
-
-          <article>
-            <span>Security</span>
-            <strong>{securityRuleCount}</strong>
-          </article>
-        </section>
-
-        <div className="publish-tool-grid">
-          <WorkspaceToolCard
-            title="Readiness issues"
-            description="Items to resolve before production launch."
-            action={<span className="workspace-tool-pill">{readinessIssues.length}</span>}
-          >
-            <div className="publish-tool-list">
-              {readinessIssues.length > 0 ? (
-                readinessIssues.map((issue) => (
-                  <article key={issue} className="workspace-tool-list-row">
-                    <span>{issue}</span>
-                    <span className="workspace-tool-pill orange">Review</span>
-                  </article>
-                ))
-              ) : (
-                <WorkspaceToolEmpty
-                  icon={<Upload className="icon-large" />}
-                  title="No blockers detected"
-                  body="No generated blockers were detected, but manual review is still required before production."
-                />
-              )}
-            </div>
-          </WorkspaceToolCard>
-
-          <WorkspaceToolCard
-            title="Environment variables"
-            description="Production secrets and public configuration required by this build."
-            action={<span className="workspace-tool-pill blue">{requiredEnvironmentVariables.length}</span>}
-          >
-            <div className="publish-tool-list">
-              {requiredEnvironmentVariables.length > 0 ? (
-                requiredEnvironmentVariables.map((variable) => (
-                  <article key={variable.key} className="workspace-tool-list-row">
-                    <div>
-                      <strong>{variable.key}</strong>
-                      <p>{variable.reason}</p>
-                    </div>
-
-                    <span className="workspace-tool-pill">{variable.scope}</span>
-                  </article>
-                ))
-              ) : (
-                <WorkspaceToolEmpty
-                  icon={<Code2 className="icon-large" />}
-                  title="No env vars detected"
-                  body="This build does not currently require environment variables."
-                />
-              )}
-            </div>
-          </WorkspaceToolCard>
-
-          <WorkspaceToolCard
-            title="Deployment checklist"
-            description="Production checks before publish."
-            action={
-              <button
-                suppressHydrationWarning
-                type="button"
-                className="workspace-tool-action-button"
-                onClick={() => setWorkspaceView("security")}
-              >
-                <Shield className="icon" />
-                Security
-              </button>
-            }
-          >
-            <div className="publish-tool-list">
-              {[
-                "Review generated SQL and database policies.",
-                "Confirm server-side auth and protected routes.",
-                "Confirm production environment variables.",
-                "Confirm integrations are configured with live keys.",
-                "Run smoke tests after deployment.",
-              ].map((item) => (
-                <article key={item} className="workspace-tool-list-row">
-                  <span>{item}</span>
-                  <span className="workspace-tool-pill">Check</span>
-                </article>
-              ))}
-            </div>
-          </WorkspaceToolCard>
-        </div>
-      </div>
-    </WorkspaceToolShell>
-  );
-}
-
-
-
 
 function LoadingWorkspace() {
   return (
@@ -7360,250 +6766,6 @@ function LoadingWorkspace() {
         </p>
       </div>
     </div>
-  );
-}
-
-
-function FilesWorkspace({
-  files,
-  projectFiles,
-  selectedFile,
-  selectedFileId,
-  setSelectedFileId,
-  onCreateFile,
-  setWorkspaceError,
-  onClose,
-}: {
-  files: ChangedFile[];
-  projectFiles: DatabaseProjectFile[];
-  selectedFile: ChangedFile;
-  selectedFileId: string;
-  setSelectedFileId: (fileId: string) => void;
-  onCreateFile: (
-    path: string,
-    contents?: string
-  ) => Promise<DatabaseProjectFile | undefined>;
-  setWorkspaceError: (value: string) => void;
-  onClose?: () => void;
-}) {
-  const [newFilePath, setNewFilePath] = useState("");
-  const [isCreatingFile, setIsCreatingFile] = useState(false);
-  const [createMessage, setCreateMessage] = useState("");
-
-  const databaseFileIds = useMemo(
-    () => new Set(projectFiles.map((file) => file.id)),
-    [projectFiles]
-  );
-
-  const generatedCount = files.filter((file) => file.status !== "checked").length;
-  const syncedCount = files.filter((file) => databaseFileIds.has(file.id)).length;
-  const selectedDatabaseFile = projectFiles.find((file) => file.id === selectedFile?.id);
-
-  async function handleCreateFile() {
-    const normalizedPath = newFilePath.trim();
-
-    if (!normalizedPath) {
-      setCreateMessage("Enter a file path.");
-      return;
-    }
-
-    setIsCreatingFile(true);
-    setCreateMessage("");
-    setWorkspaceError("");
-
-    try {
-      const createdFile = await onCreateFile(
-        normalizedPath,
-        `// ${normalizedPath}\n\nexport const created = true;\n`
-      );
-
-      if (createdFile?.id) {
-        setSelectedFileId(createdFile.id);
-      }
-
-      setNewFilePath("");
-      setCreateMessage("File created.");
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to create file.";
-
-      setCreateMessage(message);
-      setWorkspaceError(message);
-    } finally {
-      setIsCreatingFile(false);
-    }
-  }
-
-  const fileActions = (
-    <>
-      <span className="workspace-tool-pill blue">{files.length} files</span>
-      <span className="workspace-tool-pill green">{syncedCount} synced</span>
-    </>
-  );
-
-  const sidebar = (
-    <div className="files-tool-sidebar-inner">
-      <div className="files-tool-create">
-        <label htmlFor="files-tool-new-path">New file</label>
-
-        <div className="files-tool-create-row">
-          <input
-            suppressHydrationWarning
-            id="files-tool-new-path"
-            value={newFilePath}
-            onChange={(event) => setNewFilePath(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                handleCreateFile();
-              }
-            }}
-            placeholder="components/new-file.tsx"
-            disabled={isCreatingFile}
-            spellCheck={false}
-          />
-
-          <button
-            suppressHydrationWarning
-            type="button"
-            onClick={handleCreateFile}
-            disabled={isCreatingFile}
-            aria-label="Create file"
-            title="Create file"
-          >
-            {isCreatingFile ? <Loader2 className="icon" /> : <Plus className="icon" />}
-          </button>
-        </div>
-
-        <p
-          className={[
-            "files-tool-create-message",
-            createMessage.toLowerCase().includes("failed") ||
-            createMessage.toLowerCase().includes("enter") ||
-            createMessage.toLowerCase().includes("invalid") ||
-            createMessage.toLowerCase().includes("already")
-              ? "error"
-              : createMessage
-                ? "success"
-                : "",
-          ].join(" ")}
-        >
-          {createMessage || "Create a database-backed project file."}
-        </p>
-      </div>
-
-      <div className="files-tool-sidebar-stats">
-        <article>
-          <span>Total</span>
-          <strong>{files.length}</strong>
-        </article>
-
-        <article>
-          <span>Changed</span>
-          <strong>{generatedCount}</strong>
-        </article>
-      </div>
-
-      <div className="files-tool-list" role="list">
-        {files.length > 0 ? (
-          files.map((file) => {
-            const databaseFile = projectFiles.find((item) => item.id === file.id);
-            const isSelected = selectedFileId === file.id;
-            const statusLabel = databaseFile ? "db" : file.status;
-
-            return (
-              <button
-                suppressHydrationWarning
-                type="button"
-                key={file.id}
-                className={[
-                  "files-tool-row",
-                  isSelected ? "is-selected" : "",
-                  file.status === "checked" ? "is-muted" : "",
-                ].join(" ")}
-                title={
-                  databaseFile
-                    ? `Database file · Updated ${new Date(
-                        databaseFile.updated_at
-                      ).toLocaleString()}`
-                    : file.description
-                }
-                onClick={() => setSelectedFileId(file.id)}
-              >
-                <span className="files-tool-row-icon" aria-hidden="true">
-                  <File className="icon" />
-                </span>
-
-                <span className="files-tool-row-text">
-                  <strong>{file.path}</strong>
-                  <small>{databaseFile ? "Database-backed file" : file.description}</small>
-                </span>
-
-                <span className="workspace-tool-pill">{statusLabel}</span>
-              </button>
-            );
-          })
-        ) : (
-          <WorkspaceToolEmpty
-            icon={<File className="icon-large" />}
-            title="No files yet"
-            body="Create a file or generate a build to populate this drawer."
-          />
-        )}
-      </div>
-    </div>
-  );
-
-  return (
-    <WorkspaceToolShell
-      title="Files"
-      sidebar={sidebar}
-      actions={fileActions}
-      onClose={onClose}
-    >
-      {selectedFile ? (
-        <div className="files-tool-detail">
-          <section className="files-tool-detail-hero">
-            <div>
-              <span>Selected file</span>
-              <h2>{selectedFile.path}</h2>
-              <p>
-                {selectedDatabaseFile
-                  ? `Database-backed file · Updated ${new Date(
-                      selectedDatabaseFile.updated_at
-                    ).toLocaleString()}`
-                  : selectedFile.description}
-              </p>
-            </div>
-
-            <span
-              className={[
-                "workspace-tool-pill",
-                selectedDatabaseFile ? "green" : selectedFile.status === "updated" ? "orange" : "blue",
-              ].join(" ")}
-            >
-              {selectedDatabaseFile ? "database" : selectedFile.status}
-            </span>
-          </section>
-
-          <WorkspaceToolCard
-            title="File preview"
-            description="Read-only preview of the selected generated file."
-            action={<span className="workspace-tool-pill">{selectedFile.contents.split("\\n").length} lines</span>}
-          >
-            <pre className="files-tool-code-preview">
-              <code>{selectedFile.contents || "// Empty file"}</code>
-            </pre>
-          </WorkspaceToolCard>
-        </div>
-      ) : (
-        <WorkspaceToolEmpty
-          icon={<File className="icon-large" />}
-          title="File preview unavailable"
-          body="Select a file from the list to preview its contents."
-        />
-      )}
-    </WorkspaceToolShell>
   );
 }
 
@@ -7830,14 +6992,12 @@ function FilesDrawer({
   );
 }
 
-
 function CodeWorkspace({
   selectedFile,
   projectFiles,
   onSaveFile,
   onDeleteFile,
   setWorkspaceError,
-  onClose,
 }: {
   selectedFile: ChangedFile;
   projectFiles: DatabaseProjectFile[];
@@ -7848,7 +7008,6 @@ function CodeWorkspace({
   ) => Promise<DatabaseProjectFile>;
   onDeleteFile: (fileId: string) => Promise<void>;
   setWorkspaceError: (value: string) => void;
-  onClose?: () => void;
 }) {
   const [draftPath, setDraftPath] = useState(selectedFile?.path ?? "");
   const [draftContents, setDraftContents] = useState(selectedFile?.contents ?? "");
@@ -7923,110 +7082,106 @@ function CodeWorkspace({
 
   if (!selectedFile) {
     return (
-      <WorkspaceToolShell title="Code" onClose={onClose}>
-        <WorkspaceToolEmpty
-          icon={<Code2 className="icon-large" />}
-          title="No file selected"
-          body="Select a file from the Files drawer to inspect and edit its contents."
-        />
-      </WorkspaceToolShell>
+      <div className="premium-code-empty">
+        <Code2 className="icon-large" />
+        <strong>No file selected</strong>
+        <p>Select a file from the Files drawer to inspect and edit its contents.</p>
+      </div>
     );
   }
 
-  const codeActions = (
-    <>
-      <span className={`premium-code-status ${statusType}`}>
-        {statusMessage
-          ? statusMessage
-          : isDirty
-            ? "Unsaved changes"
-            : isDatabaseBacked
-              ? "Saved"
-              : "Preview only"}
-      </span>
-
-      <button
-        suppressHydrationWarning
-        type="button"
-        className="premium-code-button secondary"
-        onClick={handleDelete}
-        disabled={!isDatabaseBacked || isSaving || isDeleting}
-      >
-        <Trash2 className="icon" />
-        {isDeleting ? "Deleting" : "Delete"}
-      </button>
-
-      <button
-        suppressHydrationWarning
-        type="button"
-        className="premium-code-button primary"
-        onClick={handleSave}
-        disabled={!isDatabaseBacked || !isDirty || isSaving || isDeleting}
-      >
-        {isSaving ? <Loader2 className="icon" /> : <Save className="icon" />}
-        {isSaving ? "Saving" : "Save"}
-      </button>
-    </>
-  );
-
   return (
-    <WorkspaceToolShell title="Code" actions={codeActions} onClose={onClose}>
-      <div className="premium-code-workspace compact">
-        <section className="premium-code-shell">
-          <header className="premium-code-header">
-            <div className="premium-code-title-block">
-              <span className="premium-code-icon" aria-hidden="true">
-                <Code2 className="icon" />
+    <div className="premium-code-workspace code-workspace">
+      <section className="premium-code-shell">
+        <header className="premium-code-header">
+          <div className="premium-code-title-block">
+            <span className="premium-code-icon" aria-hidden="true">
+              <Code2 className="icon" />
+            </span>
+
+            <div className="premium-code-title-text">
+              <h3>{selectedFile.path}</h3>
+              <p>
+                {isDatabaseBacked
+                  ? `Database-backed file · ${selectedFile.description}`
+                  : "Generated preview file · save disabled until synced"}
+              </p>
+            </div>
+          </div>
+
+          <div className="premium-code-actions">
+            {statusMessage ? (
+              <span className={`premium-code-status ${statusType}`}>
+                {statusMessage}
               </span>
+            ) : isDirty ? (
+              <span className="premium-code-status neutral">Unsaved changes</span>
+            ) : (
+              <span className="premium-code-status neutral">
+                {isDatabaseBacked ? "Saved" : "Preview only"}
+              </span>
+            )}
 
-              <div className="premium-code-title-text">
-                <h3>{selectedFile.path}</h3>
-                <p>
-                  {isDatabaseBacked
-                    ? `Database-backed file · ${selectedFile.description}`
-                    : "Generated preview file · save disabled until synced"}
-                </p>
-              </div>
-            </div>
-          </header>
-
-          <div className="premium-code-path-card">
-            <label htmlFor="code-file-path">File path</label>
-            <input
+            <button
               suppressHydrationWarning
-              id="code-file-path"
-              value={draftPath}
-              onChange={(event) => setDraftPath(event.target.value)}
+              type="button"
+              className="premium-code-button secondary"
+              onClick={handleDelete}
               disabled={!isDatabaseBacked || isSaving || isDeleting}
-              spellCheck={false}
-              aria-label="File path"
-              title={
-                isDatabaseBacked
-                  ? "Rename file path"
-                  : "Only database-backed files can be renamed"
-              }
-            />
+            >
+              <Trash2 className="icon" />
+              {isDeleting ? "Deleting" : "Delete"}
+            </button>
+
+            <button
+              suppressHydrationWarning
+              type="button"
+              className="premium-code-button primary"
+              onClick={handleSave}
+              disabled={!isDatabaseBacked || !isDirty || isSaving || isDeleting}
+            >
+              {isSaving ? <Loader2 className="icon" /> : <Save className="icon" />}
+              {isSaving ? "Saving" : "Save"}
+            </button>
+          </div>
+        </header>
+
+        <div className="premium-code-path-card">
+          <label htmlFor="code-file-path">File path</label>
+          <input
+            suppressHydrationWarning
+            id="code-file-path"
+            value={draftPath}
+            onChange={(event) => setDraftPath(event.target.value)}
+            disabled={!isDatabaseBacked || isSaving || isDeleting}
+            spellCheck={false}
+            aria-label="File path"
+            title={
+              isDatabaseBacked
+                ? "Rename file path"
+                : "Only database-backed files can be renamed"
+            }
+          />
+        </div>
+
+        <div className="premium-code-editor-card">
+          <div className="premium-code-editor-toolbar">
+            <span>{selectedFile.path.split(".").pop() || "code"}</span>
+            <span>{draftContents.split("\\n").length} lines</span>
           </div>
 
-          <div className="premium-code-editor-card">
-            <div className="premium-code-editor-toolbar">
-              <span>{selectedFile.path.split(".").pop() || "code"}</span>
-              <span>{draftContents.split("\\n").length} lines</span>
-            </div>
-
-            <textarea
-              suppressHydrationWarning
-              className="premium-code-editor code-editor"
-              value={draftContents}
-              onChange={(event) => setDraftContents(event.target.value)}
-              disabled={!isDatabaseBacked || isSaving || isDeleting}
-              spellCheck={false}
-              aria-label="File contents"
-            />
-          </div>
-        </section>
-      </div>
-    </WorkspaceToolShell>
+          <textarea
+            suppressHydrationWarning
+            className="premium-code-editor code-editor"
+            value={draftContents}
+            onChange={(event) => setDraftContents(event.target.value)}
+            disabled={!isDatabaseBacked || isSaving || isDeleting}
+            spellCheck={false}
+            aria-label="File contents"
+          />
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -8213,14 +7368,12 @@ function MigrationInstructionStep({
   );
 }
 
-
 function ArchitectureWorkspace({
   previewState,
   files,
   onSaveFile,
   onCreateFile,
   setWorkspaceError,
-  onClose,
 }: {
   previewState: PreviewState;
   files: ChangedFile[];
@@ -8234,7 +7387,6 @@ function ArchitectureWorkspace({
     contents?: string
   ) => Promise<DatabaseProjectFile | undefined>;
   setWorkspaceError: (value: string) => void;
-  onClose?: () => void;
 }) {
   const [isExportingMigration, setIsExportingMigration] = useState(false);
   const [migrationMessage, setMigrationMessage] = useState("");
@@ -8283,133 +7435,133 @@ function ArchitectureWorkspace({
     }
   }
 
-  const buildActions = (
-    <>
-      <span className={`premium-architecture-message ${migrationMessageType}`}>
-        {migrationMessage || "SQL migration scaffold"}
-      </span>
-
-      <button
-        suppressHydrationWarning
-        type="button"
-        className="premium-architecture-export-button"
-        onClick={handleExportSqlMigration}
-        disabled={isExportingMigration}
-      >
-        {isExportingMigration ? <Loader2 className="icon" /> : <Save className="icon" />}
-        {isExportingMigration ? "Exporting" : "Export SQL"}
-      </button>
-    </>
-  );
-
   return (
-    <WorkspaceToolShell title="Build" actions={buildActions} onClose={onClose}>
-      <div className="premium-architecture-workspace compact">
-        <section className="premium-architecture-metrics" aria-label="Architecture metrics">
-          <article>
-            <span>Modules</span>
-            <strong>{moduleCount}</strong>
-          </article>
-
-          <article>
-            <span>Tables</span>
-            <strong>{tableCount}</strong>
-          </article>
-
-          <article>
-            <span>API routes</span>
-            <strong>{endpointCount}</strong>
-          </article>
-
-          <article>
-            <span>Security</span>
-            <strong>{securityRuleCount}</strong>
-          </article>
-        </section>
-
-        <div className="premium-architecture-grid">
-          <div className="premium-architecture-main-column">
-            <WorkspaceToolCard
-              title={`${previewState.projectType} architecture plan`}
-              description="Structured build plan generated from your prompt."
-            >
-              <p className="tool-shell-copy">
-                {moduleCount} modules, {tableCount} tables, {endpointCount} API
-                routes, and {securityRuleCount} security rules planned.
-              </p>
-            </WorkspaceToolCard>
-
-            <ClassificationWorkspaceSummary
-              classification={previewState.classification}
-            />
-
-            <ArchitectureSection
-              title="Detected modules"
-              items={previewState.modules.map((module) => ({
-                id: module.id,
-                title: module.label,
-                body: module.description,
-              }))}
-            />
-
-            <ArchitectureSection
-              title="Database tables"
-              items={architecture.tables.map((table) => ({
-                id: table.id,
-                title: table.name,
-                body: `${table.purpose} Fields: ${table.fields.join(", ")}.`,
-              }))}
-            />
-
-            <ArchitectureSection
-              title="API routes"
-              items={architecture.endpoints.map((endpoint) => ({
-                id: endpoint.id,
-                title: `${endpoint.method} ${endpoint.path}`,
-                body: endpoint.purpose,
-              }))}
-            />
-
-            <ArchitectureSection
-              title="Security rules"
-              items={architecture.securityRules.map((rule) => ({
-                id: rule.id,
-                title: rule.label,
-                body: rule.description,
-              }))}
-            />
+    <div className="premium-architecture-workspace">
+      <section className="premium-architecture-hero">
+        <div className="premium-architecture-hero-main">
+          <div className="premium-architecture-kicker">
+            <BarChart3 className="icon" />
+            <span>Architecture</span>
           </div>
 
-          <aside className="premium-architecture-side-column">
-            <RunMigrationInstructionsPanel tableCount={tableCount} />
+          <h2>{previewState.projectType} architecture plan</h2>
 
-            <section className="premium-architecture-safety-card">
-              <div>
-                <Shield className="icon" />
-                <h3>Production reminder</h3>
-              </div>
-
-              <p>
-                Review generated migrations, RLS policies, indexes, and exposed
-                fields before running anything in Supabase.
-              </p>
-            </section>
-          </aside>
+          <p>
+            A structured build plan generated from your prompt, covering modules,
+            database tables, API routes, and security rules.
+          </p>
         </div>
+
+        <div className="premium-architecture-actions">
+          <span className={`premium-architecture-message ${migrationMessageType}`}>
+            {migrationMessage ||
+              "Generate a starter SQL migration from the planned database tables."}
+          </span>
+
+          <button
+            suppressHydrationWarning
+            type="button"
+            className="premium-architecture-export-button"
+            onClick={handleExportSqlMigration}
+            disabled={isExportingMigration}
+          >
+            {isExportingMigration ? <Loader2 className="icon" /> : <Save className="icon" />}
+            {isExportingMigration ? "Exporting" : "Export SQL"}
+          </button>
+        </div>
+      </section>
+
+      <section className="premium-architecture-metrics" aria-label="Architecture metrics">
+        <article>
+          <span>Modules</span>
+          <strong>{moduleCount}</strong>
+        </article>
+
+        <article>
+          <span>Tables</span>
+          <strong>{tableCount}</strong>
+        </article>
+
+        <article>
+          <span>API routes</span>
+          <strong>{endpointCount}</strong>
+        </article>
+
+        <article>
+          <span>Security</span>
+          <strong>{securityRuleCount}</strong>
+        </article>
+      </section>
+
+      <div className="premium-architecture-grid">
+        <div className="premium-architecture-main-column">
+          <ClassificationWorkspaceSummary
+            classification={previewState.classification}
+          />
+
+          <ArchitectureSection
+            title="Detected modules"
+            items={previewState.modules.map((module) => ({
+              id: module.id,
+              title: module.label,
+              body: module.description,
+            }))}
+          />
+
+          <ArchitectureSection
+            title="Database tables"
+            items={architecture.tables.map((table) => ({
+              id: table.id,
+              title: table.name,
+              body: `${table.purpose} Fields: ${table.fields.join(", ")}.`,
+            }))}
+          />
+
+          <ArchitectureSection
+            title="API routes"
+            items={architecture.endpoints.map((endpoint) => ({
+              id: endpoint.id,
+              title: `${endpoint.method} ${endpoint.path}`,
+              body: endpoint.purpose,
+            }))}
+          />
+
+          <ArchitectureSection
+            title="Security rules"
+            items={architecture.securityRules.map((rule) => ({
+              id: rule.id,
+              title: rule.label,
+              body: rule.description,
+            }))}
+          />
+        </div>
+
+        <aside className="premium-architecture-side-column">
+          <RunMigrationInstructionsPanel tableCount={tableCount} />
+
+          <section className="premium-architecture-safety-card">
+            <div>
+              <Shield className="icon" />
+              <h3>Production reminder</h3>
+            </div>
+
+            <p>
+              Generated migrations are starter scaffolds. Review RLS policies,
+              indexes, exposed fields, and server-only secrets before running
+              anything in Supabase.
+            </p>
+          </section>
+        </aside>
       </div>
-    </WorkspaceToolShell>
+    </div>
   );
 }
 
 function IntegrationsWorkspace({
   previewState,
-  onClose,
 }: {
   previewState: PreviewState;
-  onClose?: () => void;
 }) {
-  const [activeCloudSection, setActiveCloudSection] = useState("overview");
-
   const integrations = getIntegrationReadiness({
     projectType: previewState.projectType,
     modules: previewState.modules,
@@ -8433,327 +7585,90 @@ function IntegrationsWorkspace({
     (integration) => integration.status === "needs-setup"
   ).length;
 
-  const cloudNavItems = [
-    {
-      id: "overview",
-      label: "Overview",
-      icon: <BarChart3 className="icon" />,
-    },
-    {
-      id: "ai",
-      label: "AI",
-      icon: <Sparkles className="icon" />,
-    },
-    {
-      id: "emails",
-      label: "Emails",
-      icon: <File className="icon" />,
-      badge: <span className="workspace-tool-pill blue">Pro</span>,
-    },
-    {
-      id: "database",
-      label: "Database",
-      icon: <Cloud className="icon" />,
-    },
-    {
-      id: "security",
-      label: "Security",
-      icon: <Shield className="icon" />,
-    },
-    {
-      id: "secrets",
-      label: "Secrets",
-      icon: <Code2 className="icon" />,
-    },
-    {
-      id: "logs",
-      label: "Logs",
-      icon: <History className="icon" />,
-    },
-    {
-      id: "usage",
-      label: "Usage",
-      icon: <MoreHorizontal className="icon" />,
-    },
-  ];
-
-  const cloudActions = (
-    <>
-      <button suppressHydrationWarning type="button" className="workspace-tool-action-button">
-        <RefreshCcw className="icon" />
-        Update scan
-      </button>
-
-      <button suppressHydrationWarning type="button" className="workspace-tool-action-button">
-        Add context
-      </button>
-    </>
-  );
-
   return (
-    <WorkspaceToolShell
-      title="Cloud"
-      sidebar={
-        <WorkspaceToolNav
-          items={cloudNavItems}
-          activeItemId={activeCloudSection}
-          onSelectItem={setActiveCloudSection}
-        />
-      }
-      actions={cloudActions}
-      onClose={onClose}
-    >
-      {activeCloudSection === "overview" ? (
-        <div className="cloud-tool-grid">
-          {needsSetupCount > 0 ? (
-            <div className="workspace-tool-alert danger">
-              <span>
-                Security issues detected. Fix critical setup items before publish.
-              </span>
-              <button suppressHydrationWarning type="button" className="workspace-tool-action-button">
-                View issues
-              </button>
-            </div>
-          ) : (
-            <div className="workspace-tool-alert">
-              <span>Cloud setup looks healthy. Continue reviewing before publish.</span>
-              <button suppressHydrationWarning type="button" className="workspace-tool-action-button">
-                Review
-              </button>
-            </div>
-          )}
+    <div className="premium-integrations-workspace">
+      <section className="premium-integrations-hero">
+        <div className="premium-integrations-hero-main">
+          <div className="premium-integrations-kicker">
+            <Cloud className="icon" />
+            <span>Cloud setup</span>
+          </div>
 
-          <section className="cloud-tool-metrics">
-            <article>
-              <span>Required</span>
-              <strong>{required.length}</strong>
-            </article>
+          <h2>Required setup before publish</h2>
 
-            <article>
-              <span>Optional</span>
-              <strong>{optional.length}</strong>
-            </article>
-
-            <article>
-              <span>Ready</span>
-              <strong>{readyCount}</strong>
-            </article>
-
-            <article>
-              <span>Env vars</span>
-              <strong>{requiredEnvironmentVariables.length}</strong>
-            </article>
-          </section>
-
-          <WorkspaceToolCard
-            title="AI"
-            description="View AI usage, model readiness, and setup requirements."
-            action={<span className="workspace-tool-pill blue">Connected</span>}
-          >
-            <div className="cloud-tool-card-row">
-              <span>OpenAI setup</span>
-              <strong>{requiredEnvironmentVariables.some((item) => item.key.includes("OPENAI")) ? "Required" : "Ready"}</strong>
-            </div>
-          </WorkspaceToolCard>
-
-          <WorkspaceToolCard
-            title="Emails"
-            description="Send branded emails from your domain."
-            action={<span className="workspace-tool-pill">Optional</span>}
-          >
-            <div className="cloud-tool-card-row">
-              <span>Domain email</span>
-              <strong>{optional.length > 0 ? "Available" : "Not detected"}</strong>
-            </div>
-          </WorkspaceToolCard>
-
-          <WorkspaceToolCard
-            title="Database"
-            description="View planned tables and storage-backed data."
-            action={<span className="workspace-tool-pill green">{previewState.architecture.tables.length} tables</span>}
-          >
-            <div className="cloud-tool-table-list">
-              {previewState.architecture.tables.length > 0 ? (
-                previewState.architecture.tables.slice(0, 5).map((table) => (
-                  <div key={table.id} className="workspace-tool-list-row">
-                    <span>{table.name}</span>
-                    <span className="workspace-tool-pill">{table.fields.length} fields</span>
-                  </div>
-                ))
-              ) : (
-                <WorkspaceToolEmpty
-                  icon={<Cloud className="icon-large" />}
-                  title="No database tables"
-                  body="Generate a build with database-backed features to populate this area."
-                />
-              )}
-            </div>
-          </WorkspaceToolCard>
+          <p>
+            Founder AI detected {required.length} required integration
+            {required.length === 1 ? "" : "s"}, {optional.length} optional
+            integration{optional.length === 1 ? "" : "s"}, and{" "}
+            {requiredEnvironmentVariables.length} required environment variable
+            {requiredEnvironmentVariables.length === 1 ? "" : "s"}.
+          </p>
         </div>
-      ) : null}
 
-      {activeCloudSection === "ai" ? (
-        <WorkspaceToolCard
-          title="AI setup"
-          description="Review AI-related configuration for this project."
-          action={<span className="workspace-tool-pill blue">AI</span>}
-        >
-          <div className="cloud-tool-list">
-            {requiredEnvironmentVariables
-              .filter((variable) => variable.key.toLowerCase().includes("openai"))
-              .map((variable) => (
-                <div key={variable.key} className="workspace-tool-list-row">
-                  <span>{variable.key}</span>
-                  <span className="workspace-tool-pill orange">{variable.scope}</span>
-                </div>
-              ))}
+        <div className="premium-integrations-summary-card">
+          <span>Readiness</span>
+          <strong>{readyCount}/{integrations.length}</strong>
+          <p>
+            {needsSetupCount > 0
+              ? `${needsSetupCount} item${needsSetupCount === 1 ? "" : "s"} still need setup.`
+              : "All detected integrations look ready."}
+          </p>
+        </div>
+      </section>
 
-            {requiredEnvironmentVariables.filter((variable) =>
-              variable.key.toLowerCase().includes("openai")
-            ).length === 0 ? (
-              <WorkspaceToolEmpty
-                icon={<Sparkles className="icon-large" />}
-                title="No AI secrets detected"
-                body="This build does not currently require AI-specific environment variables."
-              />
-            ) : null}
+      <section className="premium-integrations-metrics" aria-label="Integration metrics">
+        <article>
+          <span>Required</span>
+          <strong>{required.length}</strong>
+        </article>
+
+        <article>
+          <span>Optional</span>
+          <strong>{optional.length}</strong>
+        </article>
+
+        <article>
+          <span>Env vars</span>
+          <strong>{requiredEnvironmentVariables.length}</strong>
+        </article>
+
+        <article>
+          <span>Needs setup</span>
+          <strong>{needsSetupCount}</strong>
+        </article>
+      </section>
+
+      {requiredEnvironmentVariables.length > 0 ? (
+        <section className="premium-env-card">
+          <div className="premium-env-card-header">
+            <div>
+              <span>Environment variables</span>
+              <h3>Required secrets and config</h3>
+            </div>
+
+            <strong>{requiredEnvironmentVariables.length}</strong>
           </div>
-        </WorkspaceToolCard>
-      ) : null}
 
-      {activeCloudSection === "emails" ? (
-        <WorkspaceToolCard
-          title="Emails"
-          description="Email providers, sender domains, and notification setup."
-          action={<span className="workspace-tool-pill blue">Pro</span>}
-        >
-          <WorkspaceToolEmpty
-            icon={<File className="icon-large" />}
-            title="Email setup not connected"
-            body="Add a mail provider such as Resend, Postmark, or SendGrid when transactional email is needed."
-          />
-        </WorkspaceToolCard>
-      ) : null}
-
-      {activeCloudSection === "database" ? (
-        <WorkspaceToolCard
-          title="Database"
-          description="Tables detected from the generated architecture."
-          action={<span className="workspace-tool-pill green">{previewState.architecture.tables.length} tables</span>}
-        >
-          <div className="cloud-tool-list">
-            {previewState.architecture.tables.map((table) => (
-              <div key={table.id} className="workspace-tool-list-row">
-                <span>{table.name}</span>
-                <span className="workspace-tool-pill">{table.fields.length} fields</span>
-              </div>
-            ))}
-
-            {previewState.architecture.tables.length === 0 ? (
-              <WorkspaceToolEmpty
-                icon={<Cloud className="icon-large" />}
-                title="No tables planned"
-                body="Database tables will appear here when your build requires stored data."
-              />
-            ) : null}
-          </div>
-        </WorkspaceToolCard>
-      ) : null}
-
-      {activeCloudSection === "security" ? (
-        <WorkspaceToolCard
-          title="Security"
-          description="Security rules detected for this build."
-          action={<span className="workspace-tool-pill red">{previewState.architecture.securityRules.length} rules</span>}
-        >
-          <div className="cloud-tool-list">
-            {previewState.architecture.securityRules.map((rule) => (
-              <div key={rule.id} className="workspace-tool-list-row">
-                <span>{rule.label}</span>
-                <span className="workspace-tool-pill red">Review</span>
-              </div>
-            ))}
-
-            {previewState.architecture.securityRules.length === 0 ? (
-              <WorkspaceToolEmpty
-                icon={<Shield className="icon-large" />}
-                title="No security rules"
-                body="Security rules will appear here when your architecture requires them."
-              />
-            ) : null}
-          </div>
-        </WorkspaceToolCard>
-      ) : null}
-
-      {activeCloudSection === "secrets" ? (
-        <WorkspaceToolCard
-          title="Secrets"
-          description="Required environment variables for this project."
-          action={<span className="workspace-tool-pill blue">{requiredEnvironmentVariables.length} required</span>}
-        >
-          <div className="cloud-tool-list">
+          <div className="premium-env-list">
             {requiredEnvironmentVariables.map((variable) => (
-              <div key={variable.key} className="workspace-tool-list-row">
-                <span>{variable.key}</span>
-                <span className="workspace-tool-pill">{variable.scope}</span>
-              </div>
+              <article key={variable.key} className="premium-env-row">
+                <div>
+                  <strong>{variable.key}</strong>
+                  <p>{variable.reason}</p>
+                </div>
+
+                <span>{variable.scope}</span>
+              </article>
             ))}
-
-            {requiredEnvironmentVariables.length === 0 ? (
-              <WorkspaceToolEmpty
-                icon={<Code2 className="icon-large" />}
-                title="No secrets required"
-                body="This project does not currently require environment variables."
-              />
-            ) : null}
           </div>
-        </WorkspaceToolCard>
+        </section>
       ) : null}
 
-      {activeCloudSection === "logs" ? (
-        <WorkspaceToolCard
-          title="Logs"
-          description="Deployment and runtime logs will appear here."
-          action={<span className="workspace-tool-pill">Coming soon</span>}
-        >
-          <WorkspaceToolEmpty
-            icon={<History className="icon-large" />}
-            title="No logs yet"
-            body="Logs will appear after deployments, background jobs, or runtime events are connected."
-          />
-        </WorkspaceToolCard>
-      ) : null}
-
-      {activeCloudSection === "usage" ? (
-        <WorkspaceToolCard
-          title="Usage"
-          description="Resource usage, limits, and activity."
-          action={<span className="workspace-tool-pill">Local</span>}
-        >
-          <section className="cloud-tool-metrics">
-            <article>
-              <span>Modules</span>
-              <strong>{previewState.modules.length}</strong>
-            </article>
-
-            <article>
-              <span>Routes</span>
-              <strong>{previewState.architecture.endpoints.length}</strong>
-            </article>
-
-            <article>
-              <span>Tables</span>
-              <strong>{previewState.architecture.tables.length}</strong>
-            </article>
-
-            <article>
-              <span>Rules</span>
-              <strong>{previewState.architecture.securityRules.length}</strong>
-            </article>
-          </section>
-        </WorkspaceToolCard>
-      ) : null}
-    </WorkspaceToolShell>
+      <div className="premium-integrations-groups">
+        <IntegrationGroup title="Required" integrations={required} />
+        <IntegrationGroup title="Optional" integrations={optional} />
+      </div>
+    </div>
   );
 }
 

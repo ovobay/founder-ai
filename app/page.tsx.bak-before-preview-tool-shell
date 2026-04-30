@@ -10,7 +10,6 @@ import {
   Cloud,
   Code2,
   File,
-  FileText,
   GitBranch,
   Globe2,
   History,
@@ -30,7 +29,6 @@ import {
   Sparkles,
   Square,
   Trash2,
-  Upload,
   X,
 } from "lucide-react";
 import {
@@ -6692,7 +6690,7 @@ function PreviewContent({
           ) : null}
 
           {!isLoadingWorkspace && !filesOpen && workspaceView === "preview" ? (
-            <PreviewToolWorkspace previewState={previewState} />
+            <PreviewWebsite previewState={previewState} />
           ) : null}
 
           {!isLoadingWorkspace && !filesOpen && workspaceView === "code" ? (
@@ -6725,7 +6723,7 @@ function PreviewContent({
           ) : null}
 
           {!isLoadingWorkspace && !filesOpen && workspaceView === "publish-readiness" ? (
-            <PublishToolWorkspace
+            <PublishReadinessWorkspace
               previewState={previewState}
               files={files}
               onCreateFile={onCreateFile}
@@ -6734,7 +6732,6 @@ function PreviewContent({
               setWorkspaceView={setWorkspaceView}
               setWorkspaceError={setWorkspaceError}
               publishCenterRef={publishCenterRef}
-              onClose={() => setWorkspaceView("preview")}
             />
           ) : null}
 
@@ -6947,392 +6944,6 @@ function HistoryToolWorkspace({
     </WorkspaceToolShell>
   );
 }
-
-
-
-function PreviewToolWorkspace({
-  previewState,
-}: {
-  previewState: PreviewState;
-}) {
-  const previewActions = (
-    <>
-      <span className="workspace-tool-pill blue">
-        {previewState.projectType}
-      </span>
-
-      <button
-        suppressHydrationWarning
-        type="button"
-        className="workspace-tool-action-button"
-      >
-        <RefreshCcw className="icon" />
-        Refresh
-      </button>
-    </>
-  );
-
-  return (
-    <WorkspaceToolShell title="Preview" actions={previewActions}>
-      <div className="preview-tool-workspace">
-        <section className="preview-tool-hero">
-          <div>
-            <span>Live preview</span>
-            <h2>{previewState.projectType} workspace preview</h2>
-            <p>
-              This is the generated product preview for the current build. Use
-              the toolbar to inspect files, code, cloud setup, security, and
-              analytics.
-            </p>
-          </div>
-
-          <div className="preview-tool-summary">
-            <span>Modules</span>
-            <strong>{previewState.modules.length}</strong>
-          </div>
-        </section>
-
-        <section className="preview-tool-frame-card">
-          <PreviewWebsite previewState={previewState} />
-        </section>
-      </div>
-    </WorkspaceToolShell>
-  );
-}
-
-
-
-
-function PublishToolWorkspace({
-  previewState,
-  files,
-  onCreateFile,
-  onSaveFile,
-  setSelectedFileId,
-  setWorkspaceView,
-  setWorkspaceError,
-  publishCenterRef,
-  onClose,
-}: {
-  previewState: PreviewState;
-  files: ChangedFile[];
-  onCreateFile: (
-    path: string,
-    contents?: string
-  ) => Promise<DatabaseProjectFile | undefined>;
-  onSaveFile: (
-    fileId: string,
-    path: string,
-    contents: string
-  ) => Promise<DatabaseProjectFile>;
-  setSelectedFileId: (fileId: string) => void;
-  setWorkspaceView: (value: WorkspaceView) => void;
-  setWorkspaceError: (value: string) => void;
-  publishCenterRef?: React.RefObject<HTMLDivElement | null>;
-  onClose?: () => void;
-}) {
-  const [isCreatingChecklist, setIsCreatingChecklist] = useState(false);
-  const [publishMessage, setPublishMessage] = useState("");
-
-  const requiredEnvironmentVariables = getRequiredEnvironmentVariables({
-    projectType: previewState.projectType,
-    modules: previewState.modules,
-    architecture: previewState.architecture,
-    classification: previewState.classification,
-  });
-
-  const integrationReadiness = getIntegrationReadiness({
-    projectType: previewState.projectType,
-    modules: previewState.modules,
-    architecture: previewState.architecture,
-    classification: previewState.classification,
-  });
-
-  const requiredIntegrations = integrationReadiness.filter(
-    (integration) => integration.required
-  );
-  const setupRequiredCount = integrationReadiness.filter(
-    (integration) => integration.status === "needs-setup"
-  ).length;
-  const securityRuleCount = previewState.architecture.securityRules.length;
-  const tableCount = previewState.architecture.tables.length;
-  const apiRouteCount = previewState.architecture.endpoints.length;
-
-  const readinessIssues = [
-    requiredEnvironmentVariables.length > 0
-      ? `${requiredEnvironmentVariables.length} environment variable${
-          requiredEnvironmentVariables.length === 1 ? "" : "s"
-        } required`
-      : "",
-    setupRequiredCount > 0
-      ? `${setupRequiredCount} integration${setupRequiredCount === 1 ? "" : "s"} need setup`
-      : "",
-    securityRuleCount > 0
-      ? `${securityRuleCount} security rule${securityRuleCount === 1 ? "" : "s"} need review`
-      : "",
-    tableCount > 0 ? `${tableCount} database table${tableCount === 1 ? "" : "s"} planned` : "",
-  ].filter(Boolean);
-
-  const readinessStatus =
-    readinessIssues.length === 0
-      ? "ready"
-      : setupRequiredCount > 0 || requiredEnvironmentVariables.length > 0
-        ? "blocked"
-        : "review";
-
-  const readinessLabel =
-    readinessStatus === "ready"
-      ? "Ready"
-      : readinessStatus === "blocked"
-        ? "Needs setup"
-        : "Review";
-
-  async function handleCreatePublishChecklist() {
-    setIsCreatingChecklist(true);
-    setPublishMessage("");
-    setWorkspaceError("");
-
-    const filePath = "docs/publish-readiness.md";
-    const contents = `# Publish readiness
-
-## Project
-- Type: ${previewState.projectType}
-- Complexity: ${previewState.classification.complexity}
-- Modules: ${previewState.modules.length}
-- Files: ${files.length}
-- Tables: ${tableCount}
-- API routes: ${apiRouteCount}
-- Security rules: ${securityRuleCount}
-
-## Required environment variables
-${
-  requiredEnvironmentVariables.length > 0
-    ? requiredEnvironmentVariables
-        .map((variable) => `- \`${variable.key}\` (${variable.scope}) — ${variable.reason}`)
-        .join("\n")
-    : "- None detected"
-}
-
-## Required integrations
-${
-  requiredIntegrations.length > 0
-    ? requiredIntegrations
-        .map((integration) => `- ${integration.label}: ${integration.status}`)
-        .join("\n")
-    : "- None detected"
-}
-
-## Security review
-${
-  previewState.architecture.securityRules.length > 0
-    ? previewState.architecture.securityRules
-        .map((rule) => `- ${rule.label}: ${rule.description}`)
-        .join("\n")
-    : "- No generated security rules detected"
-}
-
-## Final checks
-- Review generated SQL before running it.
-- Confirm RLS and policies.
-- Confirm server-only secrets are not exposed to the browser.
-- Confirm integrations are configured in production.
-- Run a final deployment smoke test.
-`;
-
-    const existingFile = files.find((file) => file.path === filePath);
-
-    try {
-      const savedFile = existingFile
-        ? await onSaveFile(existingFile.id, filePath, contents)
-        : await onCreateFile(filePath, contents);
-
-      if (savedFile?.id) {
-        setSelectedFileId(savedFile.id);
-      } else if (existingFile?.id) {
-        setSelectedFileId(existingFile.id);
-      }
-
-      setPublishMessage(existingFile ? "Publish checklist updated." : "Publish checklist created.");
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to create publish checklist.";
-
-      setWorkspaceError(message);
-      setPublishMessage(message);
-    } finally {
-      setIsCreatingChecklist(false);
-    }
-  }
-
-  const publishActions = (
-    <>
-      <span
-        className={[
-          "workspace-tool-pill",
-          readinessStatus === "ready" ? "green" : "",
-          readinessStatus === "blocked" ? "red" : "",
-          readinessStatus === "review" ? "orange" : "",
-        ].join(" ")}
-      >
-        {readinessLabel}
-      </span>
-
-      <button
-        suppressHydrationWarning
-        type="button"
-        className="workspace-tool-action-button"
-        onClick={handleCreatePublishChecklist}
-        disabled={isCreatingChecklist}
-      >
-        {isCreatingChecklist ? <Loader2 className="icon" /> : <FileText className="icon" />}
-        {isCreatingChecklist ? "Creating" : "Checklist"}
-      </button>
-    </>
-  );
-
-  return (
-    <WorkspaceToolShell title="Publish" actions={publishActions} onClose={onClose}>
-      <div className="publish-tool-workspace" ref={publishCenterRef}>
-        <section className="publish-tool-hero">
-          <div>
-            <span>Publish readiness</span>
-            <h2>Prepare this build for launch</h2>
-            <p>
-              Review generated files, environment requirements, integrations,
-              database plans, and security checks before shipping this into the
-              internet’s cheerful wood chipper.
-            </p>
-          </div>
-
-          <div className="publish-tool-summary">
-            <span>Status</span>
-            <strong>{readinessLabel}</strong>
-          </div>
-        </section>
-
-        {publishMessage ? (
-          <div
-            className={[
-              "workspace-tool-alert",
-              publishMessage.toLowerCase().includes("failed") ? "danger" : "",
-            ].join(" ")}
-          >
-            <span>{publishMessage}</span>
-          </div>
-        ) : null}
-
-        <section className="publish-tool-metrics" aria-label="Publish metrics">
-          <article>
-            <span>Files</span>
-            <strong>{files.length}</strong>
-          </article>
-
-          <article>
-            <span>Env vars</span>
-            <strong>{requiredEnvironmentVariables.length}</strong>
-          </article>
-
-          <article>
-            <span>Integrations</span>
-            <strong>{requiredIntegrations.length}</strong>
-          </article>
-
-          <article>
-            <span>Security</span>
-            <strong>{securityRuleCount}</strong>
-          </article>
-        </section>
-
-        <div className="publish-tool-grid">
-          <WorkspaceToolCard
-            title="Readiness issues"
-            description="Items to resolve before production launch."
-            action={<span className="workspace-tool-pill">{readinessIssues.length}</span>}
-          >
-            <div className="publish-tool-list">
-              {readinessIssues.length > 0 ? (
-                readinessIssues.map((issue) => (
-                  <article key={issue} className="workspace-tool-list-row">
-                    <span>{issue}</span>
-                    <span className="workspace-tool-pill orange">Review</span>
-                  </article>
-                ))
-              ) : (
-                <WorkspaceToolEmpty
-                  icon={<Upload className="icon-large" />}
-                  title="No blockers detected"
-                  body="No generated blockers were detected, but manual review is still required before production."
-                />
-              )}
-            </div>
-          </WorkspaceToolCard>
-
-          <WorkspaceToolCard
-            title="Environment variables"
-            description="Production secrets and public configuration required by this build."
-            action={<span className="workspace-tool-pill blue">{requiredEnvironmentVariables.length}</span>}
-          >
-            <div className="publish-tool-list">
-              {requiredEnvironmentVariables.length > 0 ? (
-                requiredEnvironmentVariables.map((variable) => (
-                  <article key={variable.key} className="workspace-tool-list-row">
-                    <div>
-                      <strong>{variable.key}</strong>
-                      <p>{variable.reason}</p>
-                    </div>
-
-                    <span className="workspace-tool-pill">{variable.scope}</span>
-                  </article>
-                ))
-              ) : (
-                <WorkspaceToolEmpty
-                  icon={<Code2 className="icon-large" />}
-                  title="No env vars detected"
-                  body="This build does not currently require environment variables."
-                />
-              )}
-            </div>
-          </WorkspaceToolCard>
-
-          <WorkspaceToolCard
-            title="Deployment checklist"
-            description="Production checks before publish."
-            action={
-              <button
-                suppressHydrationWarning
-                type="button"
-                className="workspace-tool-action-button"
-                onClick={() => setWorkspaceView("security")}
-              >
-                <Shield className="icon" />
-                Security
-              </button>
-            }
-          >
-            <div className="publish-tool-list">
-              {[
-                "Review generated SQL and database policies.",
-                "Confirm server-side auth and protected routes.",
-                "Confirm production environment variables.",
-                "Confirm integrations are configured with live keys.",
-                "Run smoke tests after deployment.",
-              ].map((item) => (
-                <article key={item} className="workspace-tool-list-row">
-                  <span>{item}</span>
-                  <span className="workspace-tool-pill">Check</span>
-                </article>
-              ))}
-            </div>
-          </WorkspaceToolCard>
-        </div>
-      </div>
-    </WorkspaceToolShell>
-  );
-}
-
-
 
 
 function LoadingWorkspace() {

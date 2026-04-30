@@ -7220,7 +7220,7 @@ pre[class*="language-"] {
 }
 
 .publish-tool-summary {
-  width: 130px;
+  width: 120px;
   min-height: 82px;
   padding: 12px;
   border-radius: 15px;
@@ -7233,88 +7233,34 @@ pre[class*="language-"] {
 
 .publish-tool-summary strong {
   color: #111827;
-  font-size: 20px;
+  font-size: 30px;
   line-height: 1;
   font-weight: 900;
   letter-spacing: -0.05em;
 }
 
-.publish-tool-metrics {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.publish-tool-metrics article {
-  min-height: 74px;
-  padding: 12px;
+.publish-tool-content {
   border-radius: 18px;
   border: 1px solid rgba(17, 24, 39, 0.08);
   background: #ffffff;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.045);
-  display: grid;
-  align-content: space-between;
-  gap: 8px;
+  overflow: hidden;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.88),
+    0 10px 26px rgba(15, 23, 42, 0.045);
 }
 
-.publish-tool-metrics span {
-  color: #6b7280;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+/* Reduce double-padding if the existing publish workspace already has its own shell. */
+.publish-tool-content > div {
+  min-height: auto;
 }
 
-.publish-tool-metrics strong {
-  color: #111827;
-  font-size: 28px;
-  line-height: 1;
-  font-weight: 900;
-  letter-spacing: -0.05em;
-}
-
-.publish-tool-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.publish-tool-grid .workspace-tool-card:last-child {
-  grid-column: 1 / -1;
-}
-
-.publish-tool-list {
-  display: grid;
-  gap: 8px;
-}
-
-.publish-tool-list strong {
-  color: #111827;
-  font-size: 12.5px;
-  font-weight: 850;
-  letter-spacing: -0.02em;
-}
-
-.publish-tool-list p {
-  margin: 4px 0 0;
-  color: #6b7280;
-  font-size: 11.5px;
-  line-height: 1.45;
-  font-weight: 650;
-}
-
-@media (max-width: 1000px) {
+@media (max-width: 900px) {
   .publish-tool-hero {
     flex-direction: column;
   }
 
   .publish-tool-summary {
     width: 100%;
-  }
-
-  .publish-tool-grid,
-  .publish-tool-metrics {
-    grid-template-columns: 1fr;
   }
 }
 /* End Founder AI publish tool workspace */

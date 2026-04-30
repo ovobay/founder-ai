@@ -525,7 +525,7 @@ textarea:focus-visible {
   margin: 0 10px 10px;
   border: 1px solid var(--line);
   border-radius: 26px;
-  background: #fff9e5;
+  background: #ffffff;
   box-shadow: 0 -6px 22px rgba(15, 23, 42, 0.04);
   padding: 11px;
 }
@@ -558,7 +558,7 @@ textarea:focus-visible {
 }
 
 .composer textarea::placeholder {
-  color: #fffbe8;
+  color: #6b7280;
 }
 
 .composer-row {
@@ -581,12 +581,6 @@ textarea:focus-visible {
   display: grid;
   place-items: center;
   flex: 0 0 auto;
-  border-radius: 999px;
-background: linear-gradient(180deg, #ffffff 0%, #f2f3f5 100%);
-box-shadow:
-  inset 0 1px 0 rgba(255, 255, 255, 0.95),
-  inset 0 -1px 0 rgba(17, 24, 39, 0.06),
-  0 4px 10px rgba(17, 24, 39, 0.08);
 }
 
 .composer-plus-button:hover,
@@ -611,12 +605,6 @@ box-shadow:
   font-weight: 750;
   white-space: nowrap;
   flex: 0 0 auto;
-  border-radius: 999px;
-background: linear-gradient(180deg, #ffffff 0%, #f2f3f5 100%);
-box-shadow:
-  inset 0 1px 0 rgba(255, 255, 255, 0.95),
-  inset 0 -1px 0 rgba(17, 24, 39, 0.06),
-  0 4px 10px rgba(17, 24, 39, 0.08);
 }
 
 .visual-button span {
@@ -3095,6 +3083,9 @@ pre[class*="language-"] {
   }
 }
 
+
+/* Founder AI feed and preview clarity repair */
+
 /* -------------------------------------------------------
    1. Preview clarity repair
    ------------------------------------------------------- */
@@ -3964,110 +3955,4 @@ pre[class*="language-"] {
   .toolbar-route-display {
     display: none;
   }
-}
-
-
-/* Founder AI preview blur hard fix */
-.preview-frame,
-.preview-frame-wrap,
-.preview-content {
-  filter: none !important;
-  backdrop-filter: none !important;
-  transform: none !important;
-  will-change: auto !important;
-}
-
-.preview-frame *,
-.preview-frame-wrap *,
-.preview-content * {
-  text-shadow: none !important;
-  filter: none !important;
-  backdrop-filter: none !important;
-}
-
-/* Remove fake chrome/overlay layers that can sit above generated output. */
-.preview-frame::before,
-.preview-frame::after,
-.preview-frame-wrap::before,
-.preview-frame-wrap::after {
-  content: none !important;
-  display: none !important;
-}
-
-/* Keep the preview container clean and crisp. */
-.preview-frame-wrap {
-  background: #fbf7ef !important;
-  border-radius: 24px;
-  padding: 12px;
-}
-
-.preview-frame {
-  background: #ffffff !important;
-  overflow: auto;
-  border: 1px solid rgba(226, 232, 240, 0.96);
-  border-radius: 22px;
-  box-shadow: 0 20px 54px rgba(15, 23, 42, 0.08);
-}
-
-/* Text rendering clarity. */
-.preview-frame,
-.preview-frame * {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: geometricPrecision;
-}
-
-/* Prevent generated hero text from being washed out. */
-.preview-frame h1,
-.preview-frame h2,
-.preview-frame h3,
-.preview-frame p,
-.preview-frame span,
-.preview-frame a,
-.preview-frame button {
-  opacity: 1 !important;
-}
-
-/* Dark generated sections need readable text. */
-.preview-frame [style*="#020617"] h1,
-.preview-frame [style*="#030712"] h1,
-.preview-frame [style*="#0f172a"] h1,
-.preview-frame [style*="rgb(2, 6, 23)"] h1,
-.preview-frame [style*="rgb(3, 7, 18)"] h1,
-.preview-frame [style*="rgb(15, 23, 42)"] h1,
-.preview-frame [style*="#020617"] h2,
-.preview-frame [style*="#030712"] h2,
-.preview-frame [style*="#0f172a"] h2,
-.preview-frame [style*="rgb(2, 6, 23)"] h2,
-.preview-frame [style*="rgb(3, 7, 18)"] h2,
-.preview-frame [style*="rgb(15, 23, 42)"] h2,
-.preview-frame [style*="#020617"] h3,
-.preview-frame [style*="#030712"] h3,
-.preview-frame [style*="#0f172a"] h3,
-.preview-frame [style*="rgb(2, 6, 23)"] h3,
-.preview-frame [style*="rgb(3, 7, 18)"] h3,
-.preview-frame [style*="rgb(15, 23, 42)"] h3 {
-  color: #ffffff !important;
-}
-
-.preview-frame [style*="#020617"] p,
-.preview-frame [style*="#030712"] p,
-.preview-frame [style*="#0f172a"] p,
-.preview-frame [style*="rgb(2, 6, 23)"] p,
-.preview-frame [style*="rgb(3, 7, 18)"] p,
-.preview-frame [style*="rgb(15, 23, 42)"] p,
-.preview-frame [style*="#020617"] span,
-.preview-frame [style*="#030712"] span,
-.preview-frame [style*="#0f172a"] span,
-.preview-frame [style*="rgb(2, 6, 23)"] span,
-.preview-frame [style*="rgb(3, 7, 18)"] span,
-.preview-frame [style*="rgb(15, 23, 42)"] span {
-  color: rgba(255, 255, 255, 0.82) !important;
-}
-
-/* Generated preview images/videos should not cause layout blur by scaling weirdly. */
-.preview-frame img,
-.preview-frame video {
-  max-width: 100%;
-  height: auto;
 }

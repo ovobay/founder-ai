@@ -40,7 +40,6 @@ import {
   useState,
 } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { PremiumWorkspaceToolbar } from "@/components/workspace/PremiumWorkspaceToolbar";
 
 type Mode = "build" | "visual-edits";
 type WorkspaceView =
@@ -6401,18 +6400,1093 @@ function PreviewToolbar({
   previewState?: PreviewState;
   files?: ChangedFile[];
 }) {
-  void previewState;
-  void files;
+  const [isPublishMenuOpen, setIsPublishMenuOpen] = useState(false);
+  const publishMenuRef = useRef<HTMLDivElement | null>(null);
+
+
+  useEffect(() => {
+    // Close Publish dropdown on outside click or Escape.
+    if (!isPublishMenuOpen) return;
+
+    function handlePointerDown(event: MouseEvent) {
+      const target = event.target;
+
+      if (!(target instanceof Node)) return;
+
+      if (publishMenuRef.current?.contains(target)) return;
+
+      setIsPublishMenuOpen(false);
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsPublishMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isPublishMenuOpen]);
+
+  function PreviewToolbar({
+  filesOpen,
+  setFilesOpen,
+  fileCountLabel,
+  workspaceView,
+  setWorkspaceView,
+  onOpenPublishCenter,
+  previewState,
+  files,
+}: {
+  filesOpen: boolean;
+  setFilesOpen: (value: boolean) => void;
+  fileCountLabel: string;
+  workspaceView: WorkspaceView;
+  setWorkspaceView: (view: WorkspaceView) => void;
+  onOpenPublishCenter: () => void;
+  previewState?: PreviewState;
+  files?: ChangedFile[];
+}) {
+  const [isPublishMenuOpen, setIsPublishMenuOpen] = useState(false);
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+
+  const publishMenuRef = useRef<HTMLDivElement | null>(null);
+  const accountMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    function handlePointerDown(event: MouseEvent) {
+      const target = event.target;
+
+      if (!(target instanceof Node)) return;
+
+      if (publishMenuRef.current?.contains(target)) return;
+      if (accountMenuRef.current?.contains(target)) return;
+
+      setIsPublishMenuOpen(false);
+      setIsAccountMenuOpen(false);
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsPublishMenuOpen(false);
+        setIsAccountMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  function PreviewToolbar({
+  filesOpen,
+  setFilesOpen,
+  fileCountLabel,
+  workspaceView,
+  setWorkspaceView,
+  onOpenPublishCenter,
+  previewState,
+  files,
+}: {
+  filesOpen: boolean;
+  setFilesOpen: (value: boolean) => void;
+  fileCountLabel: string;
+  workspaceView: WorkspaceView;
+  setWorkspaceView: (view: WorkspaceView) => void;
+  onOpenPublishCenter: () => void;
+  previewState?: PreviewState;
+  files?: ChangedFile[];
+}) {
+  const [isPublishMenuOpen, setIsPublishMenuOpen] = useState(false);
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+
+  const publishMenuRef = useRef<HTMLDivElement | null>(null);
+  const accountMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    function handlePointerDown(event: MouseEvent) {
+      const target = event.target;
+
+      if (!(target instanceof Node)) return;
+
+      if (publishMenuRef.current?.contains(target)) return;
+      if (accountMenuRef.current?.contains(target)) return;
+
+      setIsPublishMenuOpen(false);
+      setIsAccountMenuOpen(false);
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsPublishMenuOpen(false);
+        setIsAccountMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  function PreviewToolbar({
+  filesOpen,
+  setFilesOpen,
+  fileCountLabel,
+  workspaceView,
+  setWorkspaceView,
+  onOpenPublishCenter,
+  previewState,
+  files,
+}: {
+  filesOpen: boolean;
+  setFilesOpen: (value: boolean) => void;
+  fileCountLabel: string;
+  workspaceView: WorkspaceView;
+  setWorkspaceView: (view: WorkspaceView) => void;
+  onOpenPublishCenter: () => void;
+  previewState?: PreviewState;
+  files?: ChangedFile[];
+}) {
+  const [isPublishMenuOpen, setIsPublishMenuOpen] = useState(false);
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+
+  const publishMenuRef = useRef<HTMLDivElement | null>(null);
+  const accountMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    function handlePointerDown(event: MouseEvent) {
+      const target = event.target;
+
+      if (!(target instanceof Node)) return;
+
+      if (publishMenuRef.current?.contains(target)) return;
+      if (accountMenuRef.current?.contains(target)) return;
+
+      setIsPublishMenuOpen(false);
+      setIsAccountMenuOpen(false);
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsPublishMenuOpen(false);
+        setIsAccountMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  function getToolButtonClass(active: boolean) {
+    return ["tool-button", active ? "tool-button-active" : ""].join(" ");
+  }
 
   return (
-    <PremiumWorkspaceToolbar
-      filesOpen={filesOpen}
-      setFilesOpen={setFilesOpen}
-      fileCountLabel={fileCountLabel}
-      workspaceView={workspaceView}
-      setWorkspaceView={setWorkspaceView}
-      onOpenPublishCenter={onOpenPublishCenter}
-    />
+    <header className="preview-toolbar repaired-preview-toolbar">
+      <div className="repaired-preview-toolbar-left">
+        <button
+          suppressHydrationWarning
+          type="button"
+          className="preview-button"
+          onClick={() => setWorkspaceView("preview")}
+          aria-pressed={workspaceView === "preview"}
+        >
+          <Globe2 className="icon" />
+          Preview
+        </button>
+
+        <button
+          suppressHydrationWarning
+          type="button"
+          className={getToolButtonClass(filesOpen)}
+          aria-label={`Files: ${fileCountLabel}`}
+          title={fileCountLabel}
+          onClick={() => setFilesOpen(!filesOpen)}
+        >
+          <File className="icon" />
+        </button>
+
+        <button suppressHydrationWarning type="button" className="tool-button" aria-label="Cloud">
+          <Cloud className="icon" />
+        </button>
+
+        <button
+          suppressHydrationWarning
+          type="button"
+          className={getToolButtonClass(workspaceView === "code")}
+          aria-label="Code"
+          aria-pressed={workspaceView === "code"}
+          onClick={() => setWorkspaceView("code")}
+        >
+          <Code2 className="icon" />
+        </button>
+
+        <button
+          suppressHydrationWarning
+          type="button"
+          className={getToolButtonClass(workspaceView === "architecture")}
+          aria-label="Architecture"
+          aria-pressed={workspaceView === "architecture"}
+          onClick={() => setWorkspaceView("architecture")}
+        >
+          <BarChart3 className="icon" />
+        </button>
+
+        <button
+          suppressHydrationWarning
+          type="button"
+          className={getToolButtonClass(workspaceView === "integrations")}
+          aria-label="Integrations"
+          aria-pressed={workspaceView === "integrations"}
+          onClick={() => setWorkspaceView("integrations")}
+        >
+          <Cloud className="icon" />
+        </button>
+
+        <button
+          suppressHydrationWarning
+          type="button"
+          className={getToolButtonClass(workspaceView === "publish-readiness")}
+          aria-label="Publish readiness"
+          aria-pressed={workspaceView === "publish-readiness"}
+          onClick={onOpenPublishCenter}
+        >
+          <Play className="icon" />
+        </button>
+
+        <button
+          suppressHydrationWarning
+          type="button"
+          className={getToolButtonClass(workspaceView === "history")}
+          aria-label="History"
+          aria-pressed={workspaceView === "history"}
+          onClick={() => setWorkspaceView("history")}
+        >
+          <Clock3 className="icon" />
+        </button>
+
+        <button suppressHydrationWarning type="button" className="tool-button" aria-label="Security">
+          <Shield className="icon" />
+        </button>
+
+        <button suppressHydrationWarning type="button" className="tool-button" aria-label="More">
+          <MoreHorizontal className="icon" />
+        </button>
+
+        <div className="toolbar-route-display" aria-label="Current preview route">
+          <span className="toolbar-route-screen" aria-hidden="true">▭</span>
+          <span>/</span>
+        </div>
+      </div>
+
+      <div className="repaired-preview-toolbar-right">
+        <button suppressHydrationWarning type="button" className="tool-button toolbar-text-button" aria-label="Share">
+          Share
+        </button>
+
+        <button suppressHydrationWarning type="button" className="tool-button toolbar-text-button" aria-label="Git">
+          Git
+        </button>
+
+        <button suppressHydrationWarning type="button" className="upgrade-button">
+          Upgrade
+        </button>
+
+        <div ref={accountMenuRef} className="toolbar-dropdown-anchor">
+          <button
+            suppressHydrationWarning
+            type="button"
+            className="toolbar-account-button"
+            aria-label="Open account menu"
+            aria-expanded={isAccountMenuOpen}
+            onClick={() => {
+              setIsPublishMenuOpen(false);
+              setIsAccountMenuOpen((current) => !current);
+            }}
+          >
+            A
+          </button>
+
+          {isAccountMenuOpen ? (
+            <ToolbarAccountMenu onClose={() => setIsAccountMenuOpen(false)} />
+          ) : null}
+        </div>
+
+        <div ref={publishMenuRef} className="toolbar-dropdown-anchor">
+          <button
+            suppressHydrationWarning
+            type="button"
+            className="publish-button"
+            aria-label="Open publish menu"
+            aria-expanded={isPublishMenuOpen}
+            onClick={() => {
+              setIsAccountMenuOpen(false);
+              setIsPublishMenuOpen((current) => !current);
+            }}
+          >
+            Publish
+          </button>
+
+          {isPublishMenuOpen ? (
+            <PublishToolbarDropdown
+              previewState={previewState}
+              files={files ?? []}
+              onOpenReadiness={() => {
+                setIsPublishMenuOpen(false);
+                onOpenPublishCenter();
+              }}
+              onClose={() => setIsPublishMenuOpen(false)}
+            />
+          ) : null}
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function ToolbarAccountMenu({
+  onClose,
+}: {
+  onClose: () => void;
+}) {
+  return (
+    <div className="toolbar-account-menu" role="menu" aria-label="Account menu">
+      <div className="toolbar-account-menu-header">
+        <strong>Account</strong>
+        <span>Session and sign-out controls.</span>
+      </div>
+
+      <a href="/auth/session" onClick={onClose} role="menuitem">
+        Account
+      </a>
+
+      <a href="/auth/session" onClick={onClose} role="menuitem">
+        Session
+      </a>
+
+      <a href="/auth/signout" onClick={onClose} role="menuitem" className="toolbar-account-menu-danger">
+        Sign out
+      </a>
+    </div>
+  );
+}
+
+function PublishToolbarDropdown({
+  previewState,
+  files,
+  onOpenReadiness,
+  onClose,
+}: {
+  previewState?: PreviewState;
+  files: ChangedFile[];
+  onOpenReadiness: () => void;
+  onClose: () => void;
+}) {
+  const [customDomain, setCustomDomain] = useState("");
+  const [visibility, setVisibility] = useState<"public" | "private">("public");
+  const [message, setMessage] = useState("");
+  const [lastUpdatedLabel, setLastUpdatedLabel] = useState("Not updated yet");
+
+  const hasPreview = Boolean(previewState);
+
+  const generatedUrl = hasPreview
+    ? getGeneratedPreviewUrl(previewState as PreviewState)
+    : "No preview URL yet";
+
+  const gateReport = hasPreview
+    ? getPublishGateReport({
+        previewState: previewState as PreviewState,
+        files,
+      })
+    : null;
+
+  const securityCount = getPublishCenterSecurityCount(files);
+  const settingsCount = getPublishCenterSettingsCount(files);
+
+  const activeUrl = customDomain.trim()
+    ? `https://${customDomain.trim().replace(/^https?:\/\//, "")}`
+    : generatedUrl;
+
+  const statusLabel = !hasPreview
+    ? "Draft"
+    : gateReport?.decision === "can-publish"
+      ? "Ready"
+      : gateReport?.decision === "can-stage"
+        ? "Stage"
+        : gateReport?.decision === "can-preview"
+          ? "Preview"
+          : "Blocked";
+
+  async function copyUrl() {
+    try {
+      await navigator.clipboard.writeText(activeUrl);
+      setMessage("Publish URL copied.");
+    } catch {
+      setMessage("Could not copy URL. Copy it manually.");
+    }
+  }
+
+  function updateSnapshot() {
+    const now = new Date();
+
+    setLastUpdatedLabel(
+      now.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    );
+
+    if (!hasPreview) {
+      setMessage("Build something first before publishing.");
+      return;
+    }
+
+    if (gateReport?.decision === "blocked") {
+      setMessage("Snapshot updated. Publishing is still blocked.");
+      return;
+    }
+
+    if (gateReport?.decision === "can-preview") {
+      setMessage("Snapshot updated. Internal preview is ready.");
+      return;
+    }
+
+    if (gateReport?.decision === "can-stage") {
+      setMessage("Snapshot updated. This build can move to staging.");
+      return;
+    }
+
+    setMessage("Snapshot updated. This build is close to publish-ready.");
+  }
+
+  return (
+    <div className="toolbar-publish-dropdown" role="dialog" aria-label="Publish menu">
+      <div className="toolbar-publish-dropdown-header">
+        <div>
+          <span className="toolbar-publish-eyebrow">Publish</span>
+          <div className="toolbar-publish-title-row">
+            <strong>{statusLabel}</strong>
+            <span>{statusLabel}</span>
+          </div>
+          <p>
+            {!hasPreview
+              ? "Build something first before publishing."
+              : gateReport?.summary ?? "Review the current snapshot before publishing."}
+          </p>
+          <small>Last update: {lastUpdatedLabel}</small>
+        </div>
+
+        <button type="button" onClick={onClose} aria-label="Close publish menu">
+          ×
+        </button>
+      </div>
+
+      <div className="toolbar-publish-dropdown-body">
+        <section>
+          <div className="toolbar-publish-row-heading">
+            <strong>Website URL</strong>
+            <button type="button" onClick={copyUrl}>Copy</button>
+          </div>
+
+          <div className="toolbar-publish-url" title={activeUrl}>
+            {activeUrl}
+          </div>
+        </section>
+
+        <section>
+          <div className="toolbar-publish-row-heading">
+            <strong>Custom domain</strong>
+            <button type="button" onClick={onOpenReadiness}>DNS settings</button>
+          </div>
+
+          <input
+            value={customDomain}
+            onChange={(event) => setCustomDomain(event.target.value)}
+            placeholder="app.yourdomain.com"
+          />
+        </section>
+
+        <section>
+          <strong className="toolbar-publish-section-title">Visibility</strong>
+
+          <div className="toolbar-publish-visibility-grid">
+            <button
+              type="button"
+              onClick={() => setVisibility("public")}
+              className={visibility === "public" ? "is-selected" : ""}
+            >
+              <strong>Public</strong>
+              <span>Anyone with the URL.</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setVisibility("private")}
+              className={visibility === "private" ? "is-selected" : ""}
+            >
+              <strong>Private</strong>
+              <span>Internal review only.</span>
+            </button>
+          </div>
+        </section>
+
+        <div className="toolbar-publish-action-grid">
+          <button type="button" onClick={onOpenReadiness}>
+            Review security · {securityCount}
+          </button>
+
+          <button type="button" onClick={onOpenReadiness}>
+            Edit settings
+          </button>
+        </div>
+
+        <button type="button" className="toolbar-publish-update" onClick={updateSnapshot}>
+          Update
+        </button>
+
+        <div className="toolbar-publish-meta">
+          <div>Visibility: {visibility === "public" ? "Public" : "Private"}</div>
+          <div>Security files: {securityCount}/3</div>
+          <div>Settings files: {settingsCount}/4</div>
+        </div>
+
+        {message ? <div className="toolbar-publish-message">{message}</div> : null}
+      </div>
+    </div>
+  );
+}
+
+  return (
+    <header className="preview-toolbar repaired-preview-toolbar">
+      <div className="repaired-preview-toolbar-left">
+        <button
+          suppressHydrationWarning
+          type="button"
+          className="preview-button"
+          onClick={() => setWorkspaceView("preview")}
+          aria-pressed={workspaceView === "preview"}
+        >
+          <Globe2 className="icon" />
+          Preview
+        </button>
+
+        <button
+          suppressHydrationWarning
+          type="button"
+          className={getToolButtonClass(filesOpen)}
+          aria-label={`Files: ${fileCountLabel}`}
+          title={fileCountLabel}
+          onClick={() => setFilesOpen(!filesOpen)}
+        >
+          <File className="icon" />
+        </button>
+
+        <button suppressHydrationWarning type="button" className="tool-button" aria-label="Cloud">
+          <Cloud className="icon" />
+        </button>
+
+        <button
+          suppressHydrationWarning
+          type="button"
+          className={getToolButtonClass(workspaceView === "code")}
+          aria-label="Code"
+          aria-pressed={workspaceView === "code"}
+          onClick={() => setWorkspaceView("code")}
+        >
+          <Code2 className="icon" />
+        </button>
+
+        <button
+          suppressHydrationWarning
+          type="button"
+          className={getToolButtonClass(workspaceView === "architecture")}
+          aria-label="Architecture"
+          aria-pressed={workspaceView === "architecture"}
+          onClick={() => setWorkspaceView("architecture")}
+        >
+          <BarChart3 className="icon" />
+        </button>
+
+        <button
+          suppressHydrationWarning
+          type="button"
+          className={getToolButtonClass(workspaceView === "integrations")}
+          aria-label="Integrations"
+          aria-pressed={workspaceView === "integrations"}
+          onClick={() => setWorkspaceView("integrations")}
+        >
+          <Cloud className="icon" />
+        </button>
+
+        <button
+          suppressHydrationWarning
+          type="button"
+          className={getToolButtonClass(workspaceView === "publish-readiness")}
+          aria-label="Publish readiness"
+          aria-pressed={workspaceView === "publish-readiness"}
+          onClick={onOpenPublishCenter}
+        >
+          <Play className="icon" />
+        </button>
+
+        <button
+          suppressHydrationWarning
+          type="button"
+          className={getToolButtonClass(workspaceView === "history")}
+          aria-label="History"
+          aria-pressed={workspaceView === "history"}
+          onClick={() => setWorkspaceView("history")}
+        >
+          <Clock3 className="icon" />
+        </button>
+
+        <button suppressHydrationWarning type="button" className="tool-button" aria-label="Security">
+          <Shield className="icon" />
+        </button>
+
+        <button suppressHydrationWarning type="button" className="tool-button" aria-label="More">
+          <MoreHorizontal className="icon" />
+        </button>
+
+        <div className="toolbar-route-display" aria-label="Current preview route">
+          <span className="toolbar-route-screen" aria-hidden="true">▭</span>
+          <span>/</span>
+        </div>
+      </div>
+
+      <div className="repaired-preview-toolbar-right">
+        <button suppressHydrationWarning type="button" className="tool-button toolbar-text-button" aria-label="Share">
+          Share
+        </button>
+
+        <button suppressHydrationWarning type="button" className="tool-button toolbar-text-button" aria-label="Git">
+          Git
+        </button>
+
+        <button suppressHydrationWarning type="button" className="upgrade-button">
+          Upgrade
+        </button>
+
+        <div ref={accountMenuRef} className="toolbar-dropdown-anchor">
+          <button
+            suppressHydrationWarning
+            type="button"
+            className="toolbar-account-button"
+            aria-label="Open account menu"
+            aria-expanded={isAccountMenuOpen}
+            onClick={() => {
+              setIsPublishMenuOpen(false);
+              setIsAccountMenuOpen((current) => !current);
+            }}
+          >
+            A
+          </button>
+
+          {isAccountMenuOpen ? (
+            <ToolbarAccountMenu onClose={() => setIsAccountMenuOpen(false)} />
+          ) : null}
+        </div>
+
+        <div ref={publishMenuRef} className="toolbar-dropdown-anchor">
+          <button
+            suppressHydrationWarning
+            type="button"
+            className="publish-button"
+            aria-label="Open publish menu"
+            aria-expanded={isPublishMenuOpen}
+            onClick={() => {
+              setIsAccountMenuOpen(false);
+              setIsPublishMenuOpen((current) => !current);
+            }}
+          >
+            Publish
+          </button>
+
+          {isPublishMenuOpen ? (
+            <PublishToolbarDropdown
+              previewState={previewState}
+              files={files ?? []}
+              onOpenReadiness={() => {
+                setIsPublishMenuOpen(false);
+                onOpenPublishCenter();
+              }}
+              onClose={() => setIsPublishMenuOpen(false)}
+            />
+          ) : null}
+        </div>
+      </div>
+    </header>
+  );
+}
+
+return (
+    <header className="preview-toolbar repaired-preview-toolbar">
+      <div className="repaired-preview-toolbar-left">
+        <button
+          suppressHydrationWarning
+          type="button"
+          className="preview-button"
+          onClick={() => setWorkspaceView("preview")}
+          aria-pressed={workspaceView === "preview"}
+        >
+          <Globe2 className="icon" />
+          Preview
+        </button>
+
+        <button
+          suppressHydrationWarning
+          type="button"
+          className={getToolButtonClass(filesOpen)}
+          aria-label={`Files: ${fileCountLabel}`}
+          title={fileCountLabel}
+          onClick={() => setFilesOpen(!filesOpen)}
+        >
+          <File className="icon" />
+        </button>
+
+        <button suppressHydrationWarning type="button" className="tool-button" aria-label="Cloud">
+          <Cloud className="icon" />
+        </button>
+
+        <button
+          suppressHydrationWarning
+          type="button"
+          className={getToolButtonClass(workspaceView === "code")}
+          aria-label="Code"
+          aria-pressed={workspaceView === "code"}
+          onClick={() => setWorkspaceView("code")}
+        >
+          <Code2 className="icon" />
+        </button>
+
+        <button
+          suppressHydrationWarning
+          type="button"
+          className={getToolButtonClass(workspaceView === "architecture")}
+          aria-label="Architecture"
+          aria-pressed={workspaceView === "architecture"}
+          onClick={() => setWorkspaceView("architecture")}
+        >
+          <BarChart3 className="icon" />
+        </button>
+
+        <button
+          suppressHydrationWarning
+          type="button"
+          className={getToolButtonClass(workspaceView === "integrations")}
+          aria-label="Integrations"
+          aria-pressed={workspaceView === "integrations"}
+          onClick={() => setWorkspaceView("integrations")}
+        >
+          <Cloud className="icon" />
+        </button>
+
+        <button
+          suppressHydrationWarning
+          type="button"
+          className={getToolButtonClass(workspaceView === "publish-readiness")}
+          aria-label="Publish readiness"
+          aria-pressed={workspaceView === "publish-readiness"}
+          onClick={onOpenPublishCenter}
+        >
+          <Play className="icon" />
+        </button>
+
+        <button
+          suppressHydrationWarning
+          type="button"
+          className={getToolButtonClass(workspaceView === "history")}
+          aria-label="History"
+          aria-pressed={workspaceView === "history"}
+          onClick={() => setWorkspaceView("history")}
+        >
+          <Clock3 className="icon" />
+        </button>
+
+        <button suppressHydrationWarning type="button" className="tool-button" aria-label="Security">
+          <Shield className="icon" />
+        </button>
+
+        <button suppressHydrationWarning type="button" className="tool-button" aria-label="More">
+          <MoreHorizontal className="icon" />
+        </button>
+
+        <div className="toolbar-route-display" aria-label="Current preview route">
+          <span className="toolbar-route-screen" aria-hidden="true">▭</span>
+          <span>/</span>
+        </div>
+      </div>
+
+      <div className="repaired-preview-toolbar-right">
+        <button suppressHydrationWarning type="button" className="tool-button toolbar-text-button" aria-label="Share">
+          Share
+        </button>
+
+        <button suppressHydrationWarning type="button" className="tool-button toolbar-text-button" aria-label="Git">
+          Git
+        </button>
+
+        <button suppressHydrationWarning type="button" className="upgrade-button">
+          Upgrade
+        </button>
+
+        <div ref={accountMenuRef} className="toolbar-dropdown-anchor">
+          <button
+            suppressHydrationWarning
+            type="button"
+            className="toolbar-account-button"
+            aria-label="Open account menu"
+            aria-expanded={isAccountMenuOpen}
+            onClick={() => {
+              setIsPublishMenuOpen(false);
+              setIsAccountMenuOpen((current) => !current);
+            }}
+          >
+            A
+          </button>
+
+          {isAccountMenuOpen ? (
+            <ToolbarAccountMenu onClose={() => setIsAccountMenuOpen(false)} />
+          ) : null}
+        </div>
+
+        <div ref={publishMenuRef} className="toolbar-dropdown-anchor">
+          <button
+            suppressHydrationWarning
+            type="button"
+            className="publish-button"
+            aria-label="Open publish menu"
+            aria-expanded={isPublishMenuOpen}
+            onClick={() => {
+              setIsAccountMenuOpen(false);
+              setIsPublishMenuOpen((current) => !current);
+            }}
+          >
+            Publish
+          </button>
+
+          {isPublishMenuOpen ? (
+            <PublishToolbarDropdown
+              previewState={previewState}
+              files={files ?? []}
+              onOpenReadiness={() => {
+                setIsPublishMenuOpen(false);
+                onOpenPublishCenter();
+              }}
+              onClose={() => setIsPublishMenuOpen(false)}
+            />
+          ) : null}
+        </div>
+      </div>
+    </header>
+  );
+}
+
+return (
+    <header className="preview-toolbar">
+      
+      <div
+        ref={publishMenuRef}
+        style={{
+          position: "relative",
+          display: "inline-flex",
+        }}
+      >
+        <button suppressHydrationWarning
+          type="button"
+          className="publish-button"
+          data-state={isPublishMenuOpen ? "open" : "closed"}
+          aria-label="Open publish menu"
+          aria-expanded={isPublishMenuOpen}
+          onClick={() => setIsPublishMenuOpen((current) => !current)}
+        >
+          Publish
+        </button>
+
+        {isPublishMenuOpen ? (
+          <PublishDropdownPopover
+            previewState={previewState}
+            files={files}
+            onOpenReadiness={openPublishReadinessFromDropdown}
+            onClose={() => setIsPublishMenuOpen(false)}
+          />
+        ) : null}
+      </div>
+
+      <button suppressHydrationWarning
+        type="button"
+        className={["tool-button", filesOpen ? "tool-button-active" : ""].join(
+          " "
+        )}
+        aria-label={`Files: ${fileCountLabel}`}
+        title={fileCountLabel}
+        onClick={() => setFilesOpen(!filesOpen)}
+      >
+        <File className="icon" />
+      </button>
+
+      <button suppressHydrationWarning type="button" className="tool-button" aria-label="Cloud">
+        <Cloud className="icon" />
+      </button>
+
+      <button suppressHydrationWarning
+        type="button"
+        className={[
+          "tool-button",
+          workspaceView === "code" ? "tool-button-active" : "",
+        ].join(" ")}
+        aria-label="Code"
+        aria-pressed={workspaceView === "code"}
+        onClick={() => setWorkspaceView("code")}
+      >
+        <Code2 className="icon" />
+      </button>
+
+      <button suppressHydrationWarning
+        type="button"
+        className={[
+          "tool-button",
+          workspaceView === "architecture" ? "tool-button-active" : "",
+        ].join(" ")}
+        aria-label="Architecture"
+        aria-pressed={workspaceView === "architecture"}
+        onClick={() => setWorkspaceView("architecture")}
+      >
+        <BarChart3 className="icon" />
+      </button>
+
+      <button suppressHydrationWarning
+        type="button"
+        className={[
+          "tool-button",
+          workspaceView === "integrations" ? "tool-button-active" : "",
+        ].join(" ")}
+        aria-label="Integrations"
+        aria-pressed={workspaceView === "integrations"}
+        onClick={() => setWorkspaceView("integrations")}
+      >
+        <Cloud className="icon" />
+      </button>
+
+      <button suppressHydrationWarning
+        type="button"
+        className={[
+          "tool-button",
+          workspaceView === "publish-readiness" ? "tool-button-active" : "",
+        ].join(" ")}
+        aria-label="Publish center"
+        aria-pressed={workspaceView === "publish-readiness"}
+        onClick={() => setWorkspaceView("publish-readiness")}
+      >
+        <Play className="icon" />
+      </button>
+
+      <button suppressHydrationWarning
+        type="button"
+        className={[
+          "tool-button",
+          workspaceView === "history" ? "tool-button-active" : "",
+        ].join(" ")}
+        aria-label="Build history"
+        aria-pressed={workspaceView === "history"}
+        onClick={() => setWorkspaceView("history")}
+      >
+        <History className="icon" />
+      </button>
+
+      <button suppressHydrationWarning type="button" className="tool-button" aria-label="Security">
+        <Shield className="icon" />
+      </button>
+
+      <button suppressHydrationWarning type="button" className="tool-button" aria-label="More">
+        <MoreHorizontal className="icon" />
+      </button>
+
+      <div className="url-pill">
+        <Monitor className="icon" />
+        <span>
+          {workspaceView === "preview"
+            ? "/"
+            : workspaceView === "code"
+              ? "/code"
+              : workspaceView === "architecture"
+                ? "/architecture"
+                : workspaceView === "integrations"
+                  ? "/integrations"
+                  : workspaceView === "publish-readiness"
+                    ? "/publish-readiness"
+                    : "/history"}
+        </span>
+      </div>
+
+      <button suppressHydrationWarning type="button" className="tool-button" aria-label="Stop">
+        <Square className="icon" />
+      </button>
+
+      <button suppressHydrationWarning type="button" className="pill-button">
+        <Share className="icon" />
+        Share
+      </button>
+
+      <button suppressHydrationWarning type="button" className="pill-button">
+        <GitBranch className="icon" />
+        Git
+      </button>
+
+      <button suppressHydrationWarning
+        type="button"
+        className="upgrade-button"
+        aria-label="Open integration readiness"
+        onClick={() => setWorkspaceView("integrations")}
+      >
+        Upgrade
+      </button>
+
+      <div
+        ref={publishMenuRef}
+        style={{
+          position: "relative",
+          display: "inline-flex",
+        }}
+      >
+        <button suppressHydrationWarning
+          type="button"
+          className="publish-button"
+          aria-label="Open publish menu"
+          aria-expanded={isPublishMenuOpen}
+          onClick={() => setIsPublishMenuOpen((current) => !current)}
+        >
+          Publish
+        </button>
+
+        {isPublishMenuOpen ? (
+          <PublishDropdownPopover
+            previewState={previewState}
+            files={files}
+            onOpenReadiness={openPublishReadinessFromDropdown}
+            onClose={() => setIsPublishMenuOpen(false)}
+          />
+        ) : null}
+      </div>
+    </header>
   );
 }
 

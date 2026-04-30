@@ -1,41 +1,43 @@
-import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 
-function getSupabaseEnvironment() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl) {
-    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL environment variable.");
-  }
-
-  if (!supabaseKey) {
-    throw new Error(
-      "Missing NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable."
-    );
-  }
-
-  return {
-    supabaseUrl,
-    supabaseKey,
-  };
-}
-
+/**
+ * Refreshes Supabase auth cookies on every request.
+ *
+ * Important:
+ * - This middleware does not enforce route protection.
+ * - It does not redirect users to login.
+ * - It only keeps the auth session readable by Server Components,
+ *   Route Handlers, and protected pages.
+ */
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
     request,
   });
 
-  const { supabaseUrl, supabaseKey } = getSupabaseEnvironment();
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  const supabase = createServerClient(supabaseUrl, supabaseKey, {
+  /**
+   * If env vars are missing, continue instead of crashing middleware.
+   * The actual Supabase client helpers will throw clearer errors later.
+   */
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return response;
+  }
+
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
         return request.cookies.getAll();
       },
+
       setAll(cookiesToSet) {
+        /**
+         * Supabase may refresh auth cookies here.
+         * We apply them to both the request and response so the current request
+         * and the browser both see the latest session state.
+         */
         cookiesToSet.forEach(({ name, value }) => {
           request.cookies.set(name, value);
         });
@@ -51,56 +53,20 @@ export async function middleware(request: NextRequest) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const pathname = request.nextUrl.pathname;
-  const isLoginRoute = pathname.startsWith("/login");
-  const isAuthRoute = pathname.startsWith("/auth");
-  const isApiRoute = pathname.startsWith("/api");
-  const isProtectedPage = pathname === "/";
-
-  if (!user && isProtectedPage) {
-    const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/login";
-    redirectUrl.searchParams.set("next", pathname);
-
-    return NextResponse.redirect(redirectUrl);
-  }
-
-  if (user && isLoginRoute) {
-    const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/";
-    redirectUrl.search = "";
-
-    return NextResponse.redirect(redirectUrl);
-  }
-
-  if (!user && isApiRoute && !isAuthRoute) {
-    return Response.json(
-      {
-        ok: false,
-        error: "Unauthorized.",
-      },
-      {
-        status: 401,
-      }
-    );
-  }
+  /**
+   * Calling getUser() refreshes the session when needed.
+   * Do not remove this unless you enjoy auth loops. Nobody enjoys auth loops.
+   */
+  await supabase.auth.getUser();
 
   return response;
 }
 
+/**
+ * Run middleware everywhere except static assets and images.
+ */
 export const config = {
   matcher: [
-    /*
-      Match all request paths except:
-      - _next/static
-      - _next/image
-      - favicon.ico
-      - common public assets
-    */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

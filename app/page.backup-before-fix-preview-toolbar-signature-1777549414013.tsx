@@ -1213,14 +1213,7 @@ function createFileContents(
 // Latest instruction:
 // ${prompt}
 
-export default function Page() {
-  return (
-    <main>
-      <CommandPanel />
-      <PreviewWorkspace />
-    </main>
-  );
-}`;
+`;
   }
 
   if (path.endsWith("app/globals.css")) {
@@ -6389,29 +6382,33 @@ function PreviewToolbar({
   workspaceView,
   setWorkspaceView,
   onOpenPublishCenter,
-  previewState,
-  files,
-}: {
-  filesOpen: boolean;
-  setFilesOpen: (value: boolean) => void;
-  fileCountLabel: string;
-  workspaceView: WorkspaceView;
-  setWorkspaceView: (view: WorkspaceView) => void;
-  onOpenPublishCenter: () => void;
-  previewState?: PreviewState;
-  files?: ChangedFile[];
-}) {
-  void previewState;
-  void files;
-
   return (
     <PremiumWorkspaceToolbar
-      filesOpen={filesOpen}
-      setFilesOpen={setFilesOpen}
       fileCountLabel={fileCountLabel}
-      workspaceView={workspaceView}
-      setWorkspaceView={setWorkspaceView}
-      onOpenPublishCenter={onOpenPublishCenter}
+      isPreviewSelected={workspaceView === "preview"}
+      isFilesSelected={filesOpen}
+      isCloudSelected={workspaceView === "integrations"}
+      isCodeSelected={workspaceView === "code"}
+      isAnalyticsSelected={workspaceView === "architecture"}
+      isSecuritySelected={workspaceView === "publish-readiness"}
+      onSelectPreview={() => setWorkspaceView("preview")}
+      onSelectFiles={() => setFilesOpen(!filesOpen)}
+      onSelectCloud={() => setWorkspaceView("integrations")}
+      onSelectCode={() => setWorkspaceView("code")}
+      onSelectAnalytics={() => setWorkspaceView("architecture")}
+      onSelectSecurity={() => setWorkspaceView("publish-readiness")}
+      onSelectMore={onOpenPublishCenter}
+      onShare={() => {
+        // Share modal can be wired later.
+      }}
+      onGit={() => {
+        // Git controls can be wired later.
+      }}
+      onUpgrade={() => setWorkspaceView("integrations")}
+      onPublish={onOpenPublishCenter}
+      onToggleSidebar={() => {
+        // Sidebar toggle can be wired later.
+      }}
     />
   );
 }

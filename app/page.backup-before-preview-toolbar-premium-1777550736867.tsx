@@ -1213,14 +1213,7 @@ function createFileContents(
 // Latest instruction:
 // ${prompt}
 
-export default function Page() {
-  return (
-    <main>
-      <CommandPanel />
-      <PreviewWorkspace />
-    </main>
-  );
-}`;
+`;
   }
 
   if (path.endsWith("app/globals.css")) {
@@ -6389,8 +6382,6 @@ function PreviewToolbar({
   workspaceView,
   setWorkspaceView,
   onOpenPublishCenter,
-  previewState,
-  files,
 }: {
   filesOpen: boolean;
   setFilesOpen: (value: boolean) => void;
@@ -6401,20 +6392,75 @@ function PreviewToolbar({
   previewState?: PreviewState;
   files?: ChangedFile[];
 }) {
-  void previewState;
-  void files;
+  const activeToolbarTool =
+    workspaceView === "code"
+      ? "code"
+      : workspaceView === "architecture"
+        ? "analytics"
+        : workspaceView === "publish-readiness"
+          ? "security"
+          : workspaceView === "integrations"
+            ? "cloud"
+            : filesOpen
+              ? "files"
+              : "preview";
 
   return (
     <PremiumWorkspaceToolbar
-      filesOpen={filesOpen}
-      setFilesOpen={setFilesOpen}
       fileCountLabel={fileCountLabel}
-      workspaceView={workspaceView}
-      setWorkspaceView={setWorkspaceView}
-      onOpenPublishCenter={onOpenPublishCenter}
+      isPreviewSelected={activeToolbarTool === "preview"}
+      isFilesSelected={activeToolbarTool === "files"}
+      isCloudSelected={activeToolbarTool === "cloud"}
+      isCodeSelected={activeToolbarTool === "code"}
+      isAnalyticsSelected={activeToolbarTool === "analytics"}
+      isSecuritySelected={activeToolbarTool === "security"}
+      onSelectPreview={() => {
+        setFilesOpen(false);
+        setWorkspaceView("preview");
+      }}
+      onSelectFiles={() => {
+        if (activeToolbarTool === "files") {
+          setFilesOpen(false);
+          return;
+        }
+
+        setFilesOpen(true);
+      }}
+      onSelectCloud={() => {
+        setFilesOpen(false);
+        setWorkspaceView("integrations");
+      }}
+      onSelectCode={() => {
+        setFilesOpen(false);
+        setWorkspaceView("code");
+      }}
+      onSelectAnalytics={() => {
+        setFilesOpen(false);
+        setWorkspaceView("architecture");
+      }}
+      onSelectSecurity={() => {
+        setFilesOpen(false);
+        setWorkspaceView("publish-readiness");
+      }}
+      onSelectMore={onOpenPublishCenter}
+      onShare={() => {
+        // wire later
+      }}
+      onGit={() => {
+        // wire later
+      }}
+      onUpgrade={() => {
+        setFilesOpen(false);
+        setWorkspaceView("integrations");
+      }}
+      onPublish={onOpenPublishCenter}
+      onToggleSidebar={() => {
+        // wire later
+      }}
     />
   );
 }
+
 
 function isAssistantBuildWorking(item: FeedItem) {
   // A build card is considered "working" when it belongs to the assistant and is not completed yet.

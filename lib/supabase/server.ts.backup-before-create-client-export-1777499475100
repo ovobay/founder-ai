@@ -39,10 +39,3 @@ export async function createSupabaseServerClient() {
     },
   });
 }
-
-/**
- * Compatibility alias used by auth route/page files.
- * Existing code can keep using createSupabaseServerClient.
- * New auth pages can import createClient.
- */
-export const createClient = createSupabaseServerClient;

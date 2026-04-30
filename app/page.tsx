@@ -46,6 +46,7 @@ import { PremiumWorkspaceToolbar } from "@/components/workspace/PremiumWorkspace
 import { AnalyticsWorkspace } from "@/components/workspace/AnalyticsWorkspace";
 import { CloudWorkspace } from "@/components/workspace/CloudWorkspace";
 import { SecurityWorkspace } from "@/components/workspace/SecurityWorkspace";
+import { HistoryWorkspace as PremiumHistoryWorkspace } from "@/components/workspace/HistoryWorkspace";
 import {
   WorkspaceToolCard,
   WorkspaceToolEmpty,
@@ -6983,10 +6984,28 @@ function PreviewContent({
           ) : null}
 
           {!isLoadingWorkspace && !filesOpen && workspaceView === "history" ? (
-            <HistoryToolWorkspace
-              buildHistory={buildHistory}
-              onRestoreBuild={onRestoreBuild}
+            <PremiumHistoryWorkspace
+              projectName={previewState.title}
+              lastUpdatedLabel={previewState.lastUpdatedLabel}
+              historyItems={buildHistory.map((item) => ({
+                id: item.id,
+                title: `${item.projectType} build`,
+                prompt: item.prompt,
+                projectType: item.projectType,
+                createdAtLabel: new Date(item.createdAt).toLocaleString(),
+                status: item.status,
+                changedFiles: files.length,
+                modules: previewState.modules.length,
+              }))}
               onClose={() => setWorkspaceView("preview")}
+              onOpenPreview={() => setWorkspaceView("preview")}
+              onRestoreBuild={(historyItem) => {
+                const build = buildHistory.find((item) => item.id === historyItem.id);
+
+                if (build) {
+                  onRestoreBuild(build);
+                }
+              }}
             />
           ) : null}
         </div>

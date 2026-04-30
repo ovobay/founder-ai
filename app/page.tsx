@@ -43,6 +43,9 @@ import {
 } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { PremiumWorkspaceToolbar } from "@/components/workspace/PremiumWorkspaceToolbar";
+import { AnalyticsWorkspace } from "@/components/workspace/AnalyticsWorkspace";
+import { CloudWorkspace } from "@/components/workspace/CloudWorkspace";
+import { SecurityWorkspace } from "@/components/workspace/SecurityWorkspace";
 import {
   WorkspaceToolCard,
   WorkspaceToolEmpty,
@@ -6942,6 +6945,26 @@ function PreviewContent({
             <IntegrationsWorkspace
               previewState={previewState}
               onClose={() => setWorkspaceView("preview")}
+            />
+          ) : null}
+
+          {!isLoadingWorkspace && !filesOpen && workspaceView === "security" ? (
+            <SecurityWorkspace
+              projectName={previewState.title}
+              lastCheckedLabel={previewState.lastUpdatedLabel}
+              onClose={() => setWorkspaceView("preview")}
+              onOpenPublish={() => setWorkspaceView("publish-readiness")}
+              onGenerateSecurityDoc={() => setWorkspaceView("publish-readiness")}
+            />
+          ) : null}
+
+          {!isLoadingWorkspace && !filesOpen && workspaceView === "analytics" ? (
+            <AnalyticsWorkspace
+              projectName={previewState.title}
+              lastUpdatedLabel={previewState.lastUpdatedLabel}
+              onClose={() => setWorkspaceView("preview")}
+              onRefresh={() => setWorkspaceView("analytics")}
+              onOpenReports={() => setWorkspaceView("analytics")}
             />
           ) : null}
 

@@ -186,7 +186,7 @@ function normalizeSingleFile(value: unknown): NormalizedFile | null {
   const pathValidation = validateProjectFilePath(value.path);
 
   if (!pathValidation.ok || !pathValidation.path) {
-    throw new Error(pathValidation.error);
+    throw new Error(pathValidation.error ?? "Invalid file path.");
   }
 
   const contents = typeof value.contents === "string" ? value.contents : "";

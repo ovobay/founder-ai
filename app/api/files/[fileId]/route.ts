@@ -317,7 +317,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   if (normalized.pathValidation) {
     if (!normalized.pathValidation.ok) {
-      return jsonError(normalized.pathValidation.error, 400);
+      return jsonError(normalized.pathValidation.error ?? "Invalid file path.", 400);
     }
 
     const nextPath = normalized.pathValidation.path;

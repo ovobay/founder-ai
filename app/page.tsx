@@ -1,4 +1,5 @@
 "use client";
+import type { WorkspaceView } from "@/types/workspace";
 
 import {
   ArrowDown,
@@ -60,15 +61,6 @@ import {
 } from "@/components/workspace/WorkspaceToolShell";
 
 type Mode = "build" | "visual-edits";
-type WorkspaceView =
-  | "preview"
-  | "code"
-  | "architecture"
-  | "integrations"
-  | "publish-readiness"
-  | "security"
-  | "analytics"
-  | "history";
 
 type ProjectType = string;
 

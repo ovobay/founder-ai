@@ -1,4 +1,5 @@
 "use client";
+import type { WorkspaceView } from "@/types/workspace";
 
 import type { ComponentType, CSSProperties } from "react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -23,15 +24,6 @@ import {
 
 import styles from "./PremiumWorkspaceToolbar.module.css";
 
-type WorkspaceView =
-  | "preview"
-  | "code"
-  | "architecture"
-  | "integrations"
-  | "publish-readiness"
-  | "security"
-  | "analytics"
-  | "history";
 
 type ToolId =
   | "preview"

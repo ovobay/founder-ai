@@ -13,18 +13,21 @@ import {
   Trash2,
 } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
-  WorkspaceAlert,
   WorkspaceCard,
   WorkspaceEmptyState,
   WorkspaceHero,
   WorkspaceMetricCard,
   WorkspaceMetricGrid,
-  WorkspacePanel,
-  WorkspaceStatusPill,
-} from "./tool-system/WorkspacePanel";
-
-import styles from "./CodeWorkspacePanel.module.css";
+  WorkspaceNotice,
+  WorkspaceSectionStack,
+  WorkspaceShell,
+  WorkspaceStatusBadge,
+  WorkspaceTwoColumnGrid,
+} from "@/components/workspace/shadcn/WorkspaceShell";
 
 export type CodeWorkspaceFile = {
   id: string;
@@ -68,6 +71,7 @@ function getLanguageFromPath(path: string) {
 
 function countLines(contents: string) {
   if (!contents) return 0;
+
   return contents.split("\n").length;
 }
 
@@ -79,6 +83,7 @@ function getStatusTone(status?: CodeWorkspaceFile["status"]) {
   if (status === "created") return "green" as const;
   if (status === "updated") return "blue" as const;
   if (status === "deleted") return "red" as const;
+
   return "default" as const;
 }
 
@@ -86,6 +91,7 @@ function getStatusLabel(status?: CodeWorkspaceFile["status"]) {
   if (status === "created") return "Created";
   if (status === "updated") return "Updated";
   if (status === "deleted") return "Deleted";
+
   return "Checked";
 }
 
@@ -100,7 +106,9 @@ export function CodeWorkspacePanel({
   onRefresh,
 }: CodeWorkspacePanelProps) {
   const [draftPath, setDraftPath] = useState(selectedFile?.path ?? "");
-  const [draftContents, setDraftContents] = useState(selectedFile?.contents ?? "");
+  const [draftContents, setDraftContents] = useState(
+    selectedFile?.contents ?? ""
+  );
   const [statusMessage, setStatusMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -114,6 +122,7 @@ export function CodeWorkspacePanel({
   }, [selectedFile?.id, selectedFile?.path, selectedFile?.contents]);
 
   const isDatabaseBacked = Boolean(selectedFile?.isDatabaseBacked);
+
   const isDirty =
     draftPath !== (selectedFile?.path ?? "") ||
     draftContents !== (selectedFile?.contents ?? "");
@@ -156,7 +165,9 @@ export function CodeWorkspacePanel({
       await onDeleteFile(selectedFile.id);
       setStatusMessage("Deleted.");
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "Delete failed.");
+      setStatusMessage(
+        error instanceof Error ? error.message : "Delete failed."
+      );
     } finally {
       setIsDeleting(false);
     }
@@ -173,48 +184,51 @@ export function CodeWorkspacePanel({
   }
 
   return (
-    <WorkspacePanel
+    <WorkspaceShell
       title="Code"
       eyebrow="File editor"
       description="Inspect and edit generated project files with save, delete, and review controls."
-      icon={<Code2 size={17} strokeWidth={2.3} />}
+      icon={<Code2 className="h-4 w-4" />}
       badge={
         selectedFile ? (
-          <WorkspaceStatusPill tone={getStatusTone(selectedFile.status)}>
+          <WorkspaceStatusBadge tone={getStatusTone(selectedFile.status)}>
             {getStatusLabel(selectedFile.status)}
-          </WorkspaceStatusPill>
+          </WorkspaceStatusBadge>
         ) : (
-          <WorkspaceStatusPill>No file selected</WorkspaceStatusPill>
+          <WorkspaceStatusBadge>No file selected</WorkspaceStatusBadge>
         )
       }
       actions={
-        <button
+        <Button
           suppressHydrationWarning
           type="button"
-          className={styles.topbarButton}
+          size="sm"
+          variant="outline"
           onClick={onRefresh}
         >
-          <RefreshCcw size={14} strokeWidth={2.3} />
+          <RefreshCcw className="h-4 w-4" />
           Refresh
-        </button>
+        </Button>
       }
       onClose={onClose}
     >
-      <div className={styles.codeWorkspace}>
+      <WorkspaceSectionStack>
         <WorkspaceHero
           eyebrow="Code editor"
-          title={selectedFile ? selectedFile.path : `${projectName} code workspace`}
+          title={
+            selectedFile ? selectedFile.path : `${projectName} code workspace`
+          }
           description={
             selectedFile
               ? selectedFile.description ??
                 "Review this generated project file before saving or publishing."
               : "Select a file from the Files workspace to inspect and edit its contents."
           }
-          icon={<FileCode2 size={20} strokeWidth={2.25} />}
+          icon={<FileCode2 className="h-5 w-5" />}
           badge={
-            <WorkspaceStatusPill tone={isDirty ? "orange" : "green"}>
+            <WorkspaceStatusBadge tone={isDirty ? "orange" : "green"}>
               {isDirty ? "Unsaved changes" : `Updated · ${lastUpdatedLabel}`}
-            </WorkspaceStatusPill>
+            </WorkspaceStatusBadge>
           }
           metric={{
             label: "Lines",
@@ -223,58 +237,60 @@ export function CodeWorkspacePanel({
           }}
           actions={
             <>
-              <button
+              <Button
                 suppressHydrationWarning
                 type="button"
-                className={styles.primaryAction}
+                size="sm"
                 onClick={handleSave}
                 disabled={!selectedFile || !isDirty || isSaving}
               >
-                <Save size={14} strokeWidth={2.3} />
+                <Save className="h-4 w-4" />
                 {isSaving ? "Saving" : "Save"}
-              </button>
+              </Button>
 
-              <button
+              <Button
                 suppressHydrationWarning
                 type="button"
-                className={styles.secondaryAction}
+                size="sm"
+                variant="outline"
                 onClick={onOpenFiles}
               >
-                <FileCode2 size={14} strokeWidth={2.3} />
+                <FileCode2 className="h-4 w-4" />
                 Open files
-              </button>
+              </Button>
             </>
           }
         />
 
         {!selectedFile ? (
           <WorkspaceEmptyState
-            icon={<Code2 size={22} strokeWidth={2.2} />}
+            icon={<Code2 className="h-6 w-6" />}
             title="No file selected"
             description="Open the Files workspace and choose a file to edit."
             action={
-              <button
+              <Button
                 suppressHydrationWarning
                 type="button"
-                className={styles.primaryAction}
+                size="sm"
                 onClick={onOpenFiles}
               >
                 Open files
-              </button>
+              </Button>
             }
           />
         ) : (
           <>
             {!isDatabaseBacked ? (
-              <WorkspaceAlert title="Preview-only file" tone="warning">
+              <WorkspaceNotice title="Preview-only file" tone="warning">
                 This file may not be database-backed yet. Saving may be disabled
-                depending on how the parent workspace wires persistence. Because
-                naturally files now have social classes.
-              </WorkspaceAlert>
+                depending on how persistence is wired. Because naturally files
+                now have social classes.
+              </WorkspaceNotice>
             ) : (
-              <WorkspaceAlert title="Database-backed file" tone="success">
-                This file is safe to edit and save through the project file store.
-              </WorkspaceAlert>
+              <WorkspaceNotice title="Database-backed file" tone="success">
+                This file is safe to edit and save through the project file
+                store.
+              </WorkspaceNotice>
             )}
 
             <WorkspaceMetricGrid>
@@ -282,7 +298,7 @@ export function CodeWorkspacePanel({
                 label="Language"
                 value={language}
                 detail="Detected from file extension."
-                icon={<Code2 size={15} strokeWidth={2.25} />}
+                icon={<Code2 className="h-4 w-4" />}
                 tone="blue"
               />
 
@@ -290,7 +306,7 @@ export function CodeWorkspacePanel({
                 label="Lines"
                 value={lineCount}
                 detail="Current draft line count."
-                icon={<FileCode2 size={15} strokeWidth={2.25} />}
+                icon={<FileCode2 className="h-4 w-4" />}
                 tone="purple"
               />
 
@@ -298,114 +314,125 @@ export function CodeWorkspacePanel({
                 label="Characters"
                 value={characterCount.toLocaleString()}
                 detail="Total draft characters."
-                icon={<Sparkles size={15} strokeWidth={2.25} />}
+                icon={<Sparkles className="h-4 w-4" />}
                 tone="default"
               />
 
               <WorkspaceMetricCard
                 label="State"
                 value={isDirty ? "Dirty" : "Clean"}
-                detail={isDirty ? "Unsaved changes exist." : "No unsaved changes."}
+                detail={
+                  isDirty ? "Unsaved changes exist." : "No unsaved changes."
+                }
                 icon={
                   isDirty ? (
-                    <AlertTriangle size={15} strokeWidth={2.25} />
+                    <AlertTriangle className="h-4 w-4" />
                   ) : (
-                    <CheckCircle2 size={15} strokeWidth={2.25} />
+                    <CheckCircle2 className="h-4 w-4" />
                   )
                 }
                 tone={isDirty ? "orange" : "green"}
               />
             </WorkspaceMetricGrid>
 
-            <div className={styles.codeGrid}>
+            <WorkspaceTwoColumnGrid>
               <WorkspaceCard
                 title="File path"
                 description="Rename the path before saving if needed."
                 badge={
-                  <WorkspaceStatusPill tone={isDatabaseBacked ? "purple" : "orange"}>
+                  <WorkspaceStatusBadge
+                    tone={isDatabaseBacked ? "purple" : "orange"}
+                  >
                     {isDatabaseBacked ? "Database" : "Preview only"}
-                  </WorkspaceStatusPill>
+                  </WorkspaceStatusBadge>
                 }
               >
-                <input
+                <Input
                   suppressHydrationWarning
-                  className={styles.pathInput}
                   value={draftPath}
                   onChange={(event) => setDraftPath(event.target.value)}
                   spellCheck={false}
                   disabled={isSaving || isDeleting}
+                  className="font-mono text-sm font-semibold"
                 />
               </WorkspaceCard>
 
               <WorkspaceCard
                 title="Actions"
                 description="Save, copy, delete, or return to the file browser."
-                badge={statusMessage ? <WorkspaceStatusPill>{statusMessage}</WorkspaceStatusPill> : null}
+                badge={
+                  statusMessage ? (
+                    <WorkspaceStatusBadge>{statusMessage}</WorkspaceStatusBadge>
+                  ) : null
+                }
               >
-                <div className={styles.actionList}>
-                  <button
+                <div className="grid gap-2">
+                  <Button
                     suppressHydrationWarning
                     type="button"
-                    className={styles.actionButton}
+                    className="justify-start"
                     onClick={handleSave}
                     disabled={!isDirty || isSaving || isDeleting}
                   >
-                    <Save size={14} strokeWidth={2.3} />
+                    <Save className="h-4 w-4" />
                     {isSaving ? "Saving" : "Save changes"}
-                  </button>
+                  </Button>
 
-                  <button
+                  <Button
                     suppressHydrationWarning
                     type="button"
-                    className={styles.actionButton}
+                    variant="outline"
+                    className="justify-start"
                     onClick={handleCopy}
                     disabled={!draftContents}
                   >
-                    <Copy size={14} strokeWidth={2.3} />
+                    <Copy className="h-4 w-4" />
                     {copied ? "Copied" : "Copy contents"}
-                  </button>
+                  </Button>
 
-                  <button
+                  <Button
                     suppressHydrationWarning
                     type="button"
-                    className={styles.actionButton}
+                    variant="outline"
+                    className="justify-start"
                     onClick={onOpenFiles}
                   >
-                    <FileCode2 size={14} strokeWidth={2.3} />
+                    <FileCode2 className="h-4 w-4" />
                     Back to files
-                  </button>
+                  </Button>
 
-                  <button
+                  <Button
                     suppressHydrationWarning
                     type="button"
-                    className={`${styles.actionButton} ${styles.dangerButton}`}
+                    variant="destructive"
+                    className="justify-start"
                     onClick={handleDelete}
                     disabled={isDeleting}
                   >
-                    <Trash2 size={14} strokeWidth={2.3} />
+                    <Trash2 className="h-4 w-4" />
                     {isDeleting ? "Deleting" : "Delete file"}
-                  </button>
+                  </Button>
                 </div>
               </WorkspaceCard>
+            </WorkspaceTwoColumnGrid>
 
-              <WorkspaceCard
-                title="Editor"
-                description="Edit the selected file contents."
-                badge={<WorkspaceStatusPill tone="blue">{language}</WorkspaceStatusPill>}
-              >
-                <textarea
-                  suppressHydrationWarning
-                  className={styles.codeEditor}
-                  value={draftContents}
-                  onChange={(event) => setDraftContents(event.target.value)}
-                  spellCheck={false}
-                  disabled={isSaving || isDeleting}
-                />
-              </WorkspaceCard>
-            </div>
+            <WorkspaceCard
+              title="Editor"
+              description="Edit the selected file contents."
+              badge={<WorkspaceStatusBadge tone="blue">{language}</WorkspaceStatusBadge>}
+            >
+              <Textarea
+                suppressHydrationWarning
+                value={draftContents}
+                onChange={(event) => setDraftContents(event.target.value)}
+                spellCheck={false}
+                disabled={isSaving || isDeleting}
+                className="min-h-[560px] resize-y rounded-2xl font-mono text-[12.5px] font-semibold leading-7"
+              />
+            </WorkspaceCard>
           </>
         )}
-      </div>
-    </WorkspacePanel>
+      </WorkspaceSectionStack>
+    </WorkspaceShell>
   );
 }

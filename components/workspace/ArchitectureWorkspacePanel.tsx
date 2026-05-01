@@ -3,7 +3,6 @@
 import {
   Boxes,
   Braces,
-  CheckCircle2,
   Database,
   FileCode2,
   GitBranch,
@@ -14,19 +13,20 @@ import {
   Upload,
 } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import {
   WorkspaceActionRow,
-  WorkspaceAlert,
   WorkspaceCard,
   WorkspaceEmptyState,
   WorkspaceHero,
   WorkspaceMetricCard,
   WorkspaceMetricGrid,
-  WorkspacePanel,
-  WorkspaceStatusPill,
-} from "./tool-system/WorkspacePanel";
-
-import styles from "./ArchitectureWorkspacePanel.module.css";
+  WorkspaceNotice,
+  WorkspaceSectionStack,
+  WorkspaceShell,
+  WorkspaceStatusBadge,
+  WorkspaceTwoColumnGrid,
+} from "@/components/workspace/shadcn/WorkspaceShell";
 
 export type ArchitectureModule = {
   id: string;
@@ -147,9 +147,15 @@ const defaultArchitecture: ArchitecturePlan = {
   ],
 };
 
-function getComplexityTone(complexity?: ArchitectureClassification["complexity"]) {
-  if (complexity === "enterprise" || complexity === "advanced") return "purple" as const;
+function getComplexityTone(
+  complexity?: ArchitectureClassification["complexity"]
+) {
+  if (complexity === "enterprise" || complexity === "advanced") {
+    return "purple" as const;
+  }
+
   if (complexity === "standard") return "blue" as const;
+
   return "default" as const;
 }
 
@@ -186,24 +192,28 @@ export function ArchitectureWorkspacePanel({
   const platformTargets = classification?.platformTargets ?? ["web"];
 
   return (
-    <WorkspacePanel
+    <WorkspaceShell
       title="Build"
       eyebrow="Architecture plan"
       description="Review generated modules, data model, API routes, and security architecture."
-      icon={<Boxes size={17} strokeWidth={2.3} />}
-      badge={<WorkspaceStatusPill tone={getComplexityTone(complexity)}>{complexity}</WorkspaceStatusPill>}
+      icon={<Boxes className="h-4 w-4" />}
+      badge={
+        <WorkspaceStatusBadge tone={getComplexityTone(complexity)}>
+          {complexity}
+        </WorkspaceStatusBadge>
+      }
       onClose={onClose}
     >
-      <div className={styles.architectureWorkspace}>
+      <WorkspaceSectionStack>
         <WorkspaceHero
           eyebrow="System blueprint"
           title={`${projectName} architecture`}
-          description="A structured view of what the build is supposed to contain, before it becomes a nest of files and brave assumptions."
-          icon={<Network size={20} strokeWidth={2.25} />}
+          description="A structured view of what the build is supposed to contain before it becomes a nest of files and brave assumptions."
+          icon={<Network className="h-5 w-5" />}
           badge={
-            <WorkspaceStatusPill tone="blue">
+            <WorkspaceStatusBadge tone="blue">
               Updated · {lastUpdatedLabel}
-            </WorkspaceStatusPill>
+            </WorkspaceStatusBadge>
           }
           metric={{
             label: "Modules",
@@ -212,39 +222,42 @@ export function ArchitectureWorkspacePanel({
           }}
           actions={
             <>
-              <button
+              <Button
                 suppressHydrationWarning
                 type="button"
-                className={styles.primaryAction}
+                size="sm"
                 onClick={onExportSql}
               >
-                <Database size={14} strokeWidth={2.3} />
+                <Database className="h-4 w-4" />
                 Export SQL
-              </button>
+              </Button>
 
-              <button
+              <Button
                 suppressHydrationWarning
                 type="button"
-                className={styles.secondaryAction}
+                size="sm"
+                variant="outline"
                 onClick={onOpenCode}
               >
-                <FileCode2 size={14} strokeWidth={2.3} />
+                <FileCode2 className="h-4 w-4" />
                 Open code
-              </button>
+              </Button>
             </>
           }
         />
 
-        <WorkspaceAlert title="Architecture review recommended" tone="info">
-          Review the generated structure before publishing. A confident architecture plan is useful. A wrong confident architecture plan is just theatre with endpoints.
-        </WorkspaceAlert>
+        <WorkspaceNotice title="Architecture review recommended" tone="info">
+          Review the generated structure before publishing. A confident
+          architecture plan is useful. A wrong confident architecture plan is
+          just theatre with endpoints.
+        </WorkspaceNotice>
 
         <WorkspaceMetricGrid>
           <WorkspaceMetricCard
             label="Modules"
             value={moduleCount}
             detail="Detected build areas."
-            icon={<Boxes size={15} strokeWidth={2.25} />}
+            icon={<Boxes className="h-4 w-4" />}
             tone="blue"
           />
 
@@ -252,7 +265,7 @@ export function ArchitectureWorkspacePanel({
             label="Tables"
             value={tableCount}
             detail="Database tables planned."
-            icon={<Table2 size={15} strokeWidth={2.25} />}
+            icon={<Table2 className="h-4 w-4" />}
             tone={tableCount > 0 ? "purple" : "default"}
           />
 
@@ -260,7 +273,7 @@ export function ArchitectureWorkspacePanel({
             label="API routes"
             value={endpointCount}
             detail="Backend endpoints planned."
-            icon={<Route size={15} strokeWidth={2.25} />}
+            icon={<Route className="h-4 w-4" />}
             tone={endpointCount > 0 ? "green" : "default"}
           />
 
@@ -268,36 +281,56 @@ export function ArchitectureWorkspacePanel({
             label="Security"
             value={securityRuleCount}
             detail="Generated review rules."
-            icon={<ShieldCheck size={15} strokeWidth={2.25} />}
+            icon={<ShieldCheck className="h-4 w-4" />}
             tone={securityRuleCount > 0 ? "orange" : "default"}
           />
         </WorkspaceMetricGrid>
 
-        <div className={styles.architectureGrid}>
+        <WorkspaceTwoColumnGrid>
           <WorkspaceCard
             title="Classification"
             description="Detected project category, platform, and complexity."
-            badge={<WorkspaceStatusPill tone={getComplexityTone(complexity)}>{complexity}</WorkspaceStatusPill>}
+            badge={
+              <WorkspaceStatusBadge tone={getComplexityTone(complexity)}>
+                {complexity}
+              </WorkspaceStatusBadge>
+            }
           >
-            <div className={styles.classificationCard}>
-              <div>
-                <span>Primary category</span>
-                <strong>{primaryCategory}</strong>
+            <div className="grid gap-2">
+              <div className="grid min-h-14 gap-1 rounded-2xl border bg-background p-3">
+                <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                  Primary category
+                </span>
+                <strong className="text-sm font-bold tracking-tight text-foreground">
+                  {primaryCategory}
+                </strong>
               </div>
 
-              <div>
-                <span>Project type</span>
-                <strong>{projectType}</strong>
+              <div className="grid min-h-14 gap-1 rounded-2xl border bg-background p-3">
+                <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                  Project type
+                </span>
+                <strong className="text-sm font-bold tracking-tight text-foreground">
+                  {projectType}
+                </strong>
               </div>
 
-              <div>
-                <span>Platforms</span>
-                <strong>{platformTargets.join(", ")}</strong>
+              <div className="grid min-h-14 gap-1 rounded-2xl border bg-background p-3">
+                <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                  Platforms
+                </span>
+                <strong className="text-sm font-bold tracking-tight text-foreground">
+                  {platformTargets.join(", ")}
+                </strong>
               </div>
 
-              <div>
-                <span>Industry</span>
-                <strong>{classification?.industry ?? "General"}</strong>
+              <div className="grid min-h-14 gap-1 rounded-2xl border bg-background p-3">
+                <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                  Industry
+                </span>
+                <strong className="text-sm font-bold tracking-tight text-foreground">
+                  {classification?.industry ?? "General"}
+                </strong>
               </div>
             </div>
           </WorkspaceCard>
@@ -305,90 +338,116 @@ export function ArchitectureWorkspacePanel({
           <WorkspaceCard
             title="Detected modules"
             description="Major product areas generated from the prompt."
-            badge={<WorkspaceStatusPill tone="blue">{moduleCount} modules</WorkspaceStatusPill>}
+            badge={
+              <WorkspaceStatusBadge tone="blue">
+                {moduleCount} modules
+              </WorkspaceStatusBadge>
+            }
           >
             {architecture.modules.length > 0 ? (
-              <div className={styles.itemList}>
+              <div className="grid gap-2">
                 {architecture.modules.map((module) => (
                   <WorkspaceActionRow
                     key={module.id}
                     title={module.label}
                     description={module.description}
-                    icon={<Boxes size={15} strokeWidth={2.25} />}
-                    badge={<WorkspaceStatusPill tone="blue">Module</WorkspaceStatusPill>}
+                    icon={<Boxes className="h-4 w-4" />}
+                    badge={<WorkspaceStatusBadge tone="blue">Module</WorkspaceStatusBadge>}
                   />
                 ))}
               </div>
             ) : (
               <WorkspaceEmptyState
-                icon={<Boxes size={22} strokeWidth={2.2} />}
+                icon={<Boxes className="h-6 w-6" />}
                 title="No modules detected"
                 description="Generate a build to populate architecture modules."
               />
             )}
           </WorkspaceCard>
+        </WorkspaceTwoColumnGrid>
 
-          <WorkspaceCard
-            title="Database tables"
-            description="Planned schema and table responsibilities."
-            badge={<WorkspaceStatusPill tone={tableCount > 0 ? "purple" : "default"}>{tableCount} tables</WorkspaceStatusPill>}
-          >
-            {architecture.tables.length > 0 ? (
-              <div className={styles.schemaList}>
-                {architecture.tables.map((table) => (
-                  <article key={table.id} className={styles.schemaCard}>
-                    <div className={styles.schemaTop}>
-                      <span className={styles.schemaIcon}>
-                        <Table2 size={15} strokeWidth={2.25} />
+        <WorkspaceCard
+          title="Database tables"
+          description="Planned schema and table responsibilities."
+          badge={
+            <WorkspaceStatusBadge tone={tableCount > 0 ? "purple" : "default"}>
+              {tableCount} tables
+            </WorkspaceStatusBadge>
+          }
+        >
+          {architecture.tables.length > 0 ? (
+            <div className="grid gap-2">
+              {architecture.tables.map((table) => (
+                <article
+                  key={table.id}
+                  className="grid gap-3 rounded-2xl border bg-background p-3 transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50/30 hover:shadow-sm"
+                >
+                  <div className="grid grid-cols-[auto_1fr] items-start gap-3">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-blue-200 bg-blue-50 text-blue-700">
+                      <Table2 className="h-4 w-4" />
+                    </span>
+
+                    <div className="min-w-0">
+                      <h4 className="text-sm font-bold tracking-tight text-foreground">
+                        {table.name}
+                      </h4>
+                      <p className="mt-1 text-xs font-medium leading-5 text-muted-foreground">
+                        {table.purpose}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {table.fields.map((field) => (
+                      <span
+                        key={field}
+                        className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-bold text-muted-foreground"
+                      >
+                        {field}
                       </span>
+                    ))}
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <WorkspaceEmptyState
+              icon={<Database className="h-6 w-6" />}
+              title="No tables planned"
+              description="Database tables will appear when the build requires persistence."
+            />
+          )}
+        </WorkspaceCard>
 
-                      <div>
-                        <h4>{table.name}</h4>
-                        <p>{table.purpose}</p>
-                      </div>
-                    </div>
-
-                    <div className={styles.fieldList}>
-                      {table.fields.map((field) => (
-                        <span key={field}>{field}</span>
-                      ))}
-                    </div>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <WorkspaceEmptyState
-                icon={<Database size={22} strokeWidth={2.2} />}
-                title="No tables planned"
-                description="Database tables will appear when the build requires persistence."
-              />
-            )}
-          </WorkspaceCard>
-
+        <WorkspaceTwoColumnGrid>
           <WorkspaceCard
             title="API routes"
             description="Planned endpoint surface for the generated app."
-            badge={<WorkspaceStatusPill tone={endpointCount > 0 ? "green" : "default"}>{endpointCount} routes</WorkspaceStatusPill>}
+            badge={
+              <WorkspaceStatusBadge tone={endpointCount > 0 ? "green" : "default"}>
+                {endpointCount} routes
+              </WorkspaceStatusBadge>
+            }
           >
             {architecture.endpoints.length > 0 ? (
-              <div className={styles.itemList}>
+              <div className="grid gap-2">
                 {architecture.endpoints.map((endpoint) => (
                   <WorkspaceActionRow
                     key={endpoint.id}
                     title={`${endpoint.method.toUpperCase()} ${endpoint.path}`}
                     description={endpoint.purpose}
-                    icon={<Braces size={15} strokeWidth={2.25} />}
+                    icon={<Braces className="h-4 w-4" />}
                     badge={
-                      <WorkspaceStatusPill tone={getMethodTone(endpoint.method)}>
+                      <WorkspaceStatusBadge tone={getMethodTone(endpoint.method)}>
                         {endpoint.method.toUpperCase()}
-                      </WorkspaceStatusPill>
+                      </WorkspaceStatusBadge>
                     }
                   />
                 ))}
               </div>
             ) : (
               <WorkspaceEmptyState
-                icon={<Route size={22} strokeWidth={2.2} />}
+                icon={<Route className="h-6 w-6" />}
                 title="No API routes planned"
                 description="API routes will appear when backend functionality is detected."
               />
@@ -398,70 +457,76 @@ export function ArchitectureWorkspacePanel({
           <WorkspaceCard
             title="Security rules"
             description="Generated architecture-level security checks."
-            badge={<WorkspaceStatusPill tone={securityRuleCount > 0 ? "orange" : "default"}>{securityRuleCount} rules</WorkspaceStatusPill>}
+            badge={
+              <WorkspaceStatusBadge
+                tone={securityRuleCount > 0 ? "orange" : "default"}
+              >
+                {securityRuleCount} rules
+              </WorkspaceStatusBadge>
+            }
           >
             {architecture.securityRules.length > 0 ? (
-              <div className={styles.itemList}>
+              <div className="grid gap-2">
                 {architecture.securityRules.map((rule) => (
                   <WorkspaceActionRow
                     key={rule.id}
                     title={rule.label}
                     description={rule.description}
-                    icon={<ShieldCheck size={15} strokeWidth={2.25} />}
-                    badge={<WorkspaceStatusPill tone="orange">Review</WorkspaceStatusPill>}
+                    icon={<ShieldCheck className="h-4 w-4" />}
+                    badge={<WorkspaceStatusBadge tone="orange">Review</WorkspaceStatusBadge>}
                     onClick={onOpenSecurity}
                   />
                 ))}
               </div>
             ) : (
               <WorkspaceEmptyState
-                icon={<ShieldCheck size={22} strokeWidth={2.2} />}
+                icon={<ShieldCheck className="h-6 w-6" />}
                 title="No security rules"
                 description="Security rules will appear after architecture analysis."
               />
             )}
           </WorkspaceCard>
+        </WorkspaceTwoColumnGrid>
 
-          <WorkspaceCard
-            title="Next actions"
-            description="Recommended steps before publishing."
-            badge={<WorkspaceStatusPill>Workflow</WorkspaceStatusPill>}
-          >
-            <div className={styles.itemList}>
-              <WorkspaceActionRow
-                title="Review generated code"
-                description="Open the code workspace and inspect important generated files."
-                icon={<FileCode2 size={15} strokeWidth={2.25} />}
-                badge={<WorkspaceStatusPill tone="blue">Code</WorkspaceStatusPill>}
-                onClick={onOpenCode}
-              />
+        <WorkspaceCard
+          title="Next actions"
+          description="Recommended steps before publishing."
+          badge={<WorkspaceStatusBadge>Workflow</WorkspaceStatusBadge>}
+        >
+          <div className="grid gap-2">
+            <WorkspaceActionRow
+              title="Review generated code"
+              description="Open the code workspace and inspect important generated files."
+              icon={<FileCode2 className="h-4 w-4" />}
+              badge={<WorkspaceStatusBadge tone="blue">Code</WorkspaceStatusBadge>}
+              onClick={onOpenCode}
+            />
 
-              <WorkspaceActionRow
-                title="Export SQL migration"
-                description="Generate a starter Supabase migration from planned database tables."
-                icon={<Database size={15} strokeWidth={2.25} />}
-                badge={<WorkspaceStatusPill tone="purple">SQL</WorkspaceStatusPill>}
-                onClick={onExportSql}
-              />
+            <WorkspaceActionRow
+              title="Export SQL migration"
+              description="Generate a starter Supabase migration from planned database tables."
+              icon={<Database className="h-4 w-4" />}
+              badge={<WorkspaceStatusBadge tone="purple">SQL</WorkspaceStatusBadge>}
+              onClick={onExportSql}
+            />
 
-              <WorkspaceActionRow
-                title="Review launch readiness"
-                description="Open publish readiness and check blockers before deployment."
-                icon={<Upload size={15} strokeWidth={2.25} />}
-                badge={<WorkspaceStatusPill tone="green">Publish</WorkspaceStatusPill>}
-                onClick={onOpenPublish}
-              />
+            <WorkspaceActionRow
+              title="Review launch readiness"
+              description="Open publish readiness and check blockers before deployment."
+              icon={<Upload className="h-4 w-4" />}
+              badge={<WorkspaceStatusBadge tone="green">Publish</WorkspaceStatusBadge>}
+              onClick={onOpenPublish}
+            />
 
-              <WorkspaceActionRow
-                title="Commit architecture checkpoint"
-                description="Save a stable Git checkpoint before major structural changes."
-                icon={<GitBranch size={15} strokeWidth={2.25} />}
-                badge={<WorkspaceStatusPill>Recommended</WorkspaceStatusPill>}
-              />
-            </div>
-          </WorkspaceCard>
-        </div>
-      </div>
-    </WorkspacePanel>
+            <WorkspaceActionRow
+              title="Commit architecture checkpoint"
+              description="Save a stable Git checkpoint before major structural changes."
+              icon={<GitBranch className="h-4 w-4" />}
+              badge={<WorkspaceStatusBadge>Recommended</WorkspaceStatusBadge>}
+            />
+          </div>
+        </WorkspaceCard>
+      </WorkspaceSectionStack>
+    </WorkspaceShell>
   );
 }

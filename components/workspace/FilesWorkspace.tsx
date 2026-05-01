@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  CheckCircle2,
   Code2,
   Database,
   File,
@@ -14,19 +13,20 @@ import {
   Sparkles,
 } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import {
   WorkspaceActionRow,
-  WorkspaceAlert,
   WorkspaceCard,
   WorkspaceEmptyState,
   WorkspaceHero,
   WorkspaceMetricCard,
   WorkspaceMetricGrid,
-  WorkspacePanel,
-  WorkspaceStatusPill,
-} from "./tool-system/WorkspacePanel";
-
-import styles from "./FilesWorkspace.module.css";
+  WorkspaceNotice,
+  WorkspaceSectionStack,
+  WorkspaceShell,
+  WorkspaceStatusBadge,
+  WorkspaceTwoColumnGrid,
+} from "@/components/workspace/shadcn/WorkspaceShell";
 
 export type WorkspaceFileStatus = "created" | "updated" | "checked" | "deleted";
 
@@ -79,6 +79,7 @@ function getStatusTone(status: WorkspaceFileStatus) {
   if (status === "created") return "green" as const;
   if (status === "updated") return "blue" as const;
   if (status === "deleted") return "red" as const;
+
   return "default" as const;
 }
 
@@ -86,17 +87,20 @@ function getStatusLabel(status: WorkspaceFileStatus) {
   if (status === "created") return "Created";
   if (status === "updated") return "Updated";
   if (status === "deleted") return "Deleted";
+
   return "Checked";
 }
 
 function getSourceTone(source?: WorkspaceFileItem["source"]) {
   if (source === "database") return "purple" as const;
   if (source === "generated") return "blue" as const;
+
   return "default" as const;
 }
 
 function getFileExtension(path: string) {
   const parts = path.split(".");
+
   return parts.length > 1 ? parts.at(-1) || "file" : "file";
 }
 
@@ -135,35 +139,40 @@ export function FilesWorkspace({
     files.find((file) => file.id === selectedFileId) ?? files[0] ?? null;
 
   return (
-    <WorkspacePanel
+    <WorkspaceShell
       title="Files"
       eyebrow="Project tree"
       description="Browse generated files, database-backed files, and changed workspace output."
-      icon={<Files size={17} strokeWidth={2.3} />}
-      badge={<WorkspaceStatusPill tone="blue">{files.length} files</WorkspaceStatusPill>}
+      icon={<Files className="h-4 w-4" />}
+      badge={
+        <WorkspaceStatusBadge tone="blue">
+          {files.length} files
+        </WorkspaceStatusBadge>
+      }
       actions={
-        <button
+        <Button
           suppressHydrationWarning
           type="button"
-          className={styles.topbarButton}
+          size="sm"
+          variant="outline"
           onClick={onRefresh}
         >
-          <RefreshCcw size={14} strokeWidth={2.3} />
+          <RefreshCcw className="h-4 w-4" />
           Refresh
-        </button>
+        </Button>
       }
       onClose={onClose}
     >
-      <div className={styles.filesWorkspace}>
+      <WorkspaceSectionStack>
         <WorkspaceHero
           eyebrow="File system"
           title={`${projectName} project files`}
-          description="Review created, updated, checked, and database-backed files before editing or publishing. Because trusting generated code blindly is how software becomes folklore."
-          icon={<FolderTree size={20} strokeWidth={2.25} />}
+          description="Review created, updated, checked, and database-backed files before editing or publishing. Generated code is fast. That does not make it innocent."
+          icon={<FolderTree className="h-5 w-5" />}
           badge={
-            <WorkspaceStatusPill tone="blue">
+            <WorkspaceStatusBadge tone="blue">
               Updated · {lastUpdatedLabel}
-            </WorkspaceStatusPill>
+            </WorkspaceStatusBadge>
           }
           metric={{
             label: "Files",
@@ -172,41 +181,42 @@ export function FilesWorkspace({
           }}
           actions={
             <>
-              <button
+              <Button
                 suppressHydrationWarning
                 type="button"
-                className={styles.primaryAction}
+                size="sm"
                 onClick={onCreateFile}
               >
-                <FilePlus2 size={14} strokeWidth={2.3} />
+                <FilePlus2 className="h-4 w-4" />
                 Create file
-              </button>
+              </Button>
 
-              <button
+              <Button
                 suppressHydrationWarning
                 type="button"
-                className={styles.secondaryAction}
+                size="sm"
+                variant="outline"
                 onClick={onOpenCode}
               >
-                <Code2 size={14} strokeWidth={2.3} />
+                <Code2 className="h-4 w-4" />
                 Open code
-              </button>
+              </Button>
             </>
           }
         />
 
-        <WorkspaceAlert title="File review matters" tone="info">
+        <WorkspaceNotice title="File review matters" tone="info">
           Generated files should be inspected before publishing. The machine can
-          write code quickly, which is useful, and also exactly how nonsense
-          gets deployed at speed.
-        </WorkspaceAlert>
+          write code quickly, which is useful, and also exactly how nonsense gets
+          deployed at speed.
+        </WorkspaceNotice>
 
         <WorkspaceMetricGrid>
           <WorkspaceMetricCard
             label="Created"
             value={createdCount}
             detail="New files generated."
-            icon={<FilePlus2 size={15} strokeWidth={2.25} />}
+            icon={<FilePlus2 className="h-4 w-4" />}
             tone={createdCount > 0 ? "green" : "default"}
           />
 
@@ -214,7 +224,7 @@ export function FilesWorkspace({
             label="Updated"
             value={updatedCount}
             detail="Existing files changed."
-            icon={<Sparkles size={15} strokeWidth={2.25} />}
+            icon={<Sparkles className="h-4 w-4" />}
             tone={updatedCount > 0 ? "blue" : "default"}
           />
 
@@ -222,7 +232,7 @@ export function FilesWorkspace({
             label="Database"
             value={databaseCount}
             detail="Synced project files."
-            icon={<Database size={15} strokeWidth={2.25} />}
+            icon={<Database className="h-4 w-4" />}
             tone={databaseCount > 0 ? "purple" : "default"}
           />
 
@@ -230,19 +240,23 @@ export function FilesWorkspace({
             label="Generated"
             value={generatedCount}
             detail="AI generated output."
-            icon={<FileCode2 size={15} strokeWidth={2.25} />}
+            icon={<FileCode2 className="h-4 w-4" />}
             tone={generatedCount > 0 ? "blue" : "default"}
           />
         </WorkspaceMetricGrid>
 
-        <div className={styles.filesGrid}>
+        <WorkspaceTwoColumnGrid>
           <WorkspaceCard
             title="File browser"
             description="Project files grouped by generated and database-backed output."
-            badge={<WorkspaceStatusPill tone="blue">{files.length} total</WorkspaceStatusPill>}
+            badge={
+              <WorkspaceStatusBadge tone="blue">
+                {files.length} total
+              </WorkspaceStatusBadge>
+            }
           >
             {files.length > 0 ? (
-              <div className={styles.fileList}>
+              <div className="grid gap-2">
                 {files.map((file) => {
                   const isSelected = selectedFile?.id === file.id;
 
@@ -251,30 +265,36 @@ export function FilesWorkspace({
                       suppressHydrationWarning
                       key={file.id}
                       type="button"
-                      className={`${styles.fileRow} ${
-                        isSelected ? styles.fileRowSelected : ""
-                      }`}
                       onClick={() => onSelectFile?.(file.id)}
+                      className={[
+                        "grid min-h-16 w-full grid-cols-[auto_1fr_auto] items-center gap-3 rounded-2xl border bg-background p-3 text-left transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50/30 hover:shadow-sm",
+                        isSelected
+                          ? "border-blue-300 bg-blue-50/50 shadow-sm"
+                          : "",
+                      ].join(" ")}
                     >
-                      <span className={styles.fileIcon}>
-                        <File size={15} strokeWidth={2.25} />
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-blue-200 bg-blue-50 text-blue-700">
+                        <File className="h-4 w-4" />
                       </span>
 
-                      <span className={styles.fileText}>
-                        <strong>{file.path}</strong>
-                        <small>
+                      <span className="min-w-0">
+                        <strong className="block truncate text-sm font-bold tracking-tight text-foreground">
+                          {file.path}
+                        </strong>
+
+                        <small className="mt-0.5 block truncate text-xs font-medium text-muted-foreground">
                           {file.description ?? `${getFileExtension(file.path)} file`}
                         </small>
                       </span>
 
-                      <span className={styles.fileBadges}>
-                        <WorkspaceStatusPill tone={getSourceTone(file.source)}>
+                      <span className="flex flex-wrap justify-end gap-1.5">
+                        <WorkspaceStatusBadge tone={getSourceTone(file.source)}>
                           {file.source ?? "local"}
-                        </WorkspaceStatusPill>
+                        </WorkspaceStatusBadge>
 
-                        <WorkspaceStatusPill tone={getStatusTone(file.status)}>
+                        <WorkspaceStatusBadge tone={getStatusTone(file.status)}>
                           {getStatusLabel(file.status)}
-                        </WorkspaceStatusPill>
+                        </WorkspaceStatusBadge>
                       </span>
                     </button>
                   );
@@ -282,7 +302,7 @@ export function FilesWorkspace({
               </div>
             ) : (
               <WorkspaceEmptyState
-                icon={<Files size={22} strokeWidth={2.2} />}
+                icon={<Files className="h-6 w-6" />}
                 title="No files yet"
                 description="Create a file or generate a build to populate the project tree."
               />
@@ -294,80 +314,90 @@ export function FilesWorkspace({
             description="Quick inspection for the currently selected project file."
             badge={
               selectedFile ? (
-                <WorkspaceStatusPill tone={getStatusTone(selectedFile.status)}>
+                <WorkspaceStatusBadge tone={getStatusTone(selectedFile.status)}>
                   {getStatusLabel(selectedFile.status)}
-                </WorkspaceStatusPill>
+                </WorkspaceStatusBadge>
               ) : null
             }
           >
             {selectedFile ? (
-              <div className={styles.selectedFileCard}>
-                <div className={styles.selectedFileTop}>
-                  <span className={styles.selectedFileIcon}>
-                    <FileCode2 size={22} strokeWidth={2.25} />
+              <div className="grid gap-3">
+                <div className="flex min-h-36 items-start gap-3 rounded-2xl border bg-background p-4">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-blue-200 bg-blue-50 text-blue-700">
+                    <FileCode2 className="h-5 w-5" />
                   </span>
 
-                  <div>
-                    <h4>{selectedFile.path}</h4>
-                    <p>
+                  <div className="min-w-0">
+                    <h4 className="break-words text-base font-bold tracking-tight text-foreground">
+                      {selectedFile.path}
+                    </h4>
+
+                    <p className="mt-2 text-xs font-medium leading-5 text-muted-foreground">
                       {selectedFile.description ??
                         `${getFileExtension(selectedFile.path)} project file.`}
                     </p>
                   </div>
                 </div>
 
-                <div className={styles.selectedFileMeta}>
-                  <span>Extension · {getFileExtension(selectedFile.path)}</span>
-                  <span>Source · {selectedFile.source ?? "local"}</span>
-                  <span>Status · {getStatusLabel(selectedFile.status)}</span>
+                <div className="grid gap-2">
+                  <span className="rounded-xl bg-muted px-3 py-2 text-xs font-bold text-muted-foreground">
+                    Extension · {getFileExtension(selectedFile.path)}
+                  </span>
+                  <span className="rounded-xl bg-muted px-3 py-2 text-xs font-bold text-muted-foreground">
+                    Source · {selectedFile.source ?? "local"}
+                  </span>
+                  <span className="rounded-xl bg-muted px-3 py-2 text-xs font-bold text-muted-foreground">
+                    Status · {getStatusLabel(selectedFile.status)}
+                  </span>
                 </div>
 
-                <button
+                <Button
                   suppressHydrationWarning
                   type="button"
-                  className={styles.fullWidthAction}
+                  variant="outline"
+                  className="w-full"
                   onClick={onOpenCode}
                 >
-                  <Code2 size={14} strokeWidth={2.3} />
+                  <Code2 className="h-4 w-4" />
                   Open in code editor
-                </button>
+                </Button>
               </div>
             ) : (
               <WorkspaceEmptyState
-                icon={<Search size={22} strokeWidth={2.2} />}
+                icon={<Search className="h-6 w-6" />}
                 title="No file selected"
                 description="Select a file to inspect details before editing."
               />
             )}
           </WorkspaceCard>
+        </WorkspaceTwoColumnGrid>
 
-          <WorkspaceCard
-            title="Folders"
-            description="Top-level folders detected in the current project tree."
-            badge={<WorkspaceStatusPill>{folders.length} folders</WorkspaceStatusPill>}
-          >
-            <div className={styles.folderList}>
-              {folders.length > 0 ? (
-                folders.map((folder) => (
-                  <WorkspaceActionRow
-                    key={folder.name}
-                    title={folder.name}
-                    description={`${folder.count} file${folder.count === 1 ? "" : "s"}`}
-                    icon={<FolderTree size={15} strokeWidth={2.25} />}
-                    badge={<WorkspaceStatusPill>{folder.count}</WorkspaceStatusPill>}
-                  />
-                ))
-              ) : (
-                <WorkspaceEmptyState
-                  icon={<FolderTree size={22} strokeWidth={2.2} />}
-                  title="No folders detected"
-                  description="Folder summaries will appear when files are available."
+        <WorkspaceCard
+          title="Folders"
+          description="Top-level folders detected in the current project tree."
+          badge={<WorkspaceStatusBadge>{folders.length} folders</WorkspaceStatusBadge>}
+        >
+          <div className="grid gap-2">
+            {folders.length > 0 ? (
+              folders.map((folder) => (
+                <WorkspaceActionRow
+                  key={folder.name}
+                  title={folder.name}
+                  description={`${folder.count} file${folder.count === 1 ? "" : "s"}`}
+                  icon={<FolderTree className="h-4 w-4" />}
+                  badge={<WorkspaceStatusBadge>{folder.count}</WorkspaceStatusBadge>}
                 />
-              )}
-            </div>
-          </WorkspaceCard>
-        </div>
-      </div>
-    </WorkspacePanel>
+              ))
+            ) : (
+              <WorkspaceEmptyState
+                icon={<FolderTree className="h-6 w-6" />}
+                title="No folders detected"
+                description="Folder summaries will appear when files are available."
+              />
+            )}
+          </div>
+        </WorkspaceCard>
+      </WorkspaceSectionStack>
+    </WorkspaceShell>
   );
 }

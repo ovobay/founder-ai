@@ -13,19 +13,20 @@ import {
   TimerReset,
 } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import {
   WorkspaceActionRow,
-  WorkspaceAlert,
   WorkspaceCard,
   WorkspaceEmptyState,
   WorkspaceHero,
   WorkspaceMetricCard,
   WorkspaceMetricGrid,
-  WorkspacePanel,
-  WorkspaceStatusPill,
-} from "./tool-system/WorkspacePanel";
-
-import styles from "./HistoryWorkspace.module.css";
+  WorkspaceNotice,
+  WorkspaceSectionStack,
+  WorkspaceShell,
+  WorkspaceStatusBadge,
+  WorkspaceTwoColumnGrid,
+} from "@/components/workspace/shadcn/WorkspaceShell";
 
 export type WorkspaceHistoryStatus =
   | "completed"
@@ -93,6 +94,7 @@ function getStatusTone(status: WorkspaceHistoryStatus) {
   if (status === "completed") return "green" as const;
   if (status === "restored") return "blue" as const;
   if (status === "failed") return "red" as const;
+
   return "orange" as const;
 }
 
@@ -100,14 +102,24 @@ function getStatusLabel(status: WorkspaceHistoryStatus) {
   if (status === "completed") return "Completed";
   if (status === "restored") return "Restored";
   if (status === "failed") return "Failed";
+
   return "Draft";
 }
 
 function getStatusIcon(status: WorkspaceHistoryStatus) {
-  if (status === "completed") return <CheckCircle2 size={15} strokeWidth={2.25} />;
-  if (status === "restored") return <RotateCcw size={15} strokeWidth={2.25} />;
-  if (status === "failed") return <TimerReset size={15} strokeWidth={2.25} />;
-  return <Clock3 size={15} strokeWidth={2.25} />;
+  if (status === "completed") {
+    return <CheckCircle2 className="h-4 w-4" />;
+  }
+
+  if (status === "restored") {
+    return <RotateCcw className="h-4 w-4" />;
+  }
+
+  if (status === "failed") {
+    return <TimerReset className="h-4 w-4" />;
+  }
+
+  return <Clock3 className="h-4 w-4" />;
 }
 
 export function HistoryWorkspace({
@@ -126,7 +138,9 @@ export function HistoryWorkspace({
     (item) => item.status === "restored"
   ).length;
 
-  const failedCount = historyItems.filter((item) => item.status === "failed").length;
+  const failedCount = historyItems.filter(
+    (item) => item.status === "failed"
+  ).length;
 
   const totalChangedFiles = historyItems.reduce(
     (total, item) => total + (item.changedFiles ?? 0),
@@ -136,35 +150,40 @@ export function HistoryWorkspace({
   const latestItem = historyItems[0];
 
   return (
-    <WorkspacePanel
+    <WorkspaceShell
       title="History"
       eyebrow="Build timeline"
       description="Review previous builds, restore versions, and inspect generated workspace changes."
-      icon={<History size={17} strokeWidth={2.3} />}
-      badge={<WorkspaceStatusPill tone="blue">Updated · {lastUpdatedLabel}</WorkspaceStatusPill>}
+      icon={<History className="h-4 w-4" />}
+      badge={
+        <WorkspaceStatusBadge tone="blue">
+          Updated · {lastUpdatedLabel}
+        </WorkspaceStatusBadge>
+      }
       actions={
-        <button
+        <Button
           suppressHydrationWarning
           type="button"
-          className={styles.topbarButton}
+          size="sm"
+          variant="outline"
           onClick={onOpenPreview}
         >
-          <RefreshCcw size={14} strokeWidth={2.3} />
+          <RefreshCcw className="h-4 w-4" />
           Refresh
-        </button>
+        </Button>
       }
       onClose={onClose}
     >
-      <div className={styles.historyWorkspace}>
+      <WorkspaceSectionStack>
         <WorkspaceHero
           eyebrow="Version timeline"
           title={`${projectName} build history`}
           description="Track what changed, when it changed, and which version you want to resurrect without pretending memory is a deployment strategy."
-          icon={<GitBranch size={20} strokeWidth={2.25} />}
+          icon={<GitBranch className="h-5 w-5" />}
           badge={
-            <WorkspaceStatusPill tone={failedCount > 0 ? "orange" : "green"}>
+            <WorkspaceStatusBadge tone={failedCount > 0 ? "orange" : "green"}>
               {failedCount > 0 ? `${failedCount} needs review` : "Healthy"}
-            </WorkspaceStatusPill>
+            </WorkspaceStatusBadge>
           }
           metric={{
             label: "Builds",
@@ -173,40 +192,42 @@ export function HistoryWorkspace({
           }}
           actions={
             <>
-              <button
+              <Button
                 suppressHydrationWarning
                 type="button"
-                className={styles.primaryAction}
+                size="sm"
                 onClick={onOpenPreview}
               >
-                <Search size={14} strokeWidth={2.3} />
+                <Search className="h-4 w-4" />
                 Inspect latest
-              </button>
+              </Button>
 
-              <button
+              <Button
                 suppressHydrationWarning
                 type="button"
-                className={styles.secondaryAction}
+                size="sm"
+                variant="outline"
                 onClick={() => latestItem && onRestoreBuild?.(latestItem)}
                 disabled={!latestItem}
               >
-                <RotateCcw size={14} strokeWidth={2.3} />
+                <RotateCcw className="h-4 w-4" />
                 Restore latest
-              </button>
+              </Button>
             </>
           }
         />
 
         {historyItems.length > 0 ? (
-          <WorkspaceAlert title="History is available" tone="info">
+          <WorkspaceNotice title="History is available" tone="info">
             You can restore previous generated states from here. Review changed
-            files before restoring, because “undo” is not a substitute for having
-            a functioning frontal lobe.
-          </WorkspaceAlert>
+            files before restoring, because “undo” is not a substitute for
+            knowing what changed.
+          </WorkspaceNotice>
         ) : (
-          <WorkspaceAlert title="No history yet" tone="warning">
-            Generate or save a build before expecting history to perform miracles.
-          </WorkspaceAlert>
+          <WorkspaceNotice title="No history yet" tone="warning">
+            Generate or save a build before expecting history to perform
+            miracles. It is version control, not archaeology with a halo.
+          </WorkspaceNotice>
         )}
 
         <WorkspaceMetricGrid>
@@ -214,7 +235,7 @@ export function HistoryWorkspace({
             label="Builds"
             value={historyItems.length}
             detail="Saved generated states."
-            icon={<Archive size={15} strokeWidth={2.25} />}
+            icon={<Archive className="h-4 w-4" />}
             tone="blue"
           />
 
@@ -222,7 +243,7 @@ export function HistoryWorkspace({
             label="Completed"
             value={completedCount}
             detail="Successfully finished builds."
-            icon={<CheckCircle2 size={15} strokeWidth={2.25} />}
+            icon={<CheckCircle2 className="h-4 w-4" />}
             tone={completedCount > 0 ? "green" : "default"}
           />
 
@@ -230,7 +251,7 @@ export function HistoryWorkspace({
             label="Restored"
             value={restoredCount}
             detail="Versions brought back."
-            icon={<RotateCcw size={15} strokeWidth={2.25} />}
+            icon={<RotateCcw className="h-4 w-4" />}
             tone={restoredCount > 0 ? "blue" : "default"}
           />
 
@@ -238,64 +259,83 @@ export function HistoryWorkspace({
             label="Files changed"
             value={totalChangedFiles}
             detail="Across tracked builds."
-            icon={<Sparkles size={15} strokeWidth={2.25} />}
+            icon={<Sparkles className="h-4 w-4" />}
             tone="purple"
           />
         </WorkspaceMetricGrid>
 
-        <div className={styles.historyGrid}>
+        <WorkspaceTwoColumnGrid>
           <WorkspaceCard
             title="Build timeline"
             description="Saved builds, generated prompts, and restore points."
-            badge={<WorkspaceStatusPill tone="blue">{historyItems.length} items</WorkspaceStatusPill>}
+            badge={
+              <WorkspaceStatusBadge tone="blue">
+                {historyItems.length} items
+              </WorkspaceStatusBadge>
+            }
           >
             {historyItems.length > 0 ? (
-              <div className={styles.timelineList}>
+              <div className="grid gap-2">
                 {historyItems.map((item) => (
-                  <article key={item.id} className={styles.timelineItem}>
-                    <div className={styles.timelineIcon}>
+                  <article
+                    key={item.id}
+                    className="grid grid-cols-[auto_1fr] gap-3 rounded-2xl border bg-background p-3 transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50/30 hover:shadow-sm"
+                  >
+                    <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-blue-200 bg-blue-50 text-blue-700">
                       {getStatusIcon(item.status)}
-                    </div>
+                    </span>
 
-                    <div className={styles.timelineBody}>
-                      <div className={styles.timelineTop}>
-                        <div>
-                          <h4>{item.title}</h4>
-                          <span>
+                    <div className="min-w-0">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h4 className="truncate text-sm font-bold tracking-tight text-foreground">
+                            {item.title}
+                          </h4>
+                          <span className="mt-1 block text-xs font-medium text-muted-foreground">
                             {item.projectType} · {item.createdAtLabel}
                           </span>
                         </div>
 
-                        <WorkspaceStatusPill tone={getStatusTone(item.status)}>
+                        <WorkspaceStatusBadge tone={getStatusTone(item.status)}>
                           {getStatusLabel(item.status)}
-                        </WorkspaceStatusPill>
+                        </WorkspaceStatusBadge>
                       </div>
 
-                      <p>{item.prompt}</p>
+                      <p className="mt-3 text-xs font-medium leading-5 text-muted-foreground">
+                        {item.prompt}
+                      </p>
 
-                      <div className={styles.timelineMeta}>
-                        <span>{item.changedFiles ?? 0} files changed</span>
-                        <span>{item.modules ?? 0} modules</span>
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-bold text-muted-foreground">
+                          {item.changedFiles ?? 0} files changed
+                        </span>
+                        <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-bold text-muted-foreground">
+                          {item.modules ?? 0} modules
+                        </span>
                       </div>
 
-                      <div className={styles.timelineActions}>
-                        <button
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <Button
                           suppressHydrationWarning
                           type="button"
+                          size="sm"
+                          variant="outline"
                           onClick={() => onRestoreBuild?.(item)}
                         >
-                          <RotateCcw size={13} strokeWidth={2.3} />
+                          <RotateCcw className="h-4 w-4" />
                           Restore
-                        </button>
+                        </Button>
 
-                        <button
+                        <Button
                           suppressHydrationWarning
                           type="button"
+                          size="sm"
+                          variant="outline"
                           onClick={onOpenPreview}
                         >
-                          <Search size={13} strokeWidth={2.3} />
+                          <Search className="h-4 w-4" />
                           Inspect
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   </article>
@@ -303,7 +343,7 @@ export function HistoryWorkspace({
               </div>
             ) : (
               <WorkspaceEmptyState
-                icon={<History size={22} strokeWidth={2.2} />}
+                icon={<History className="h-6 w-6" />}
                 title="No saved builds"
                 description="Build history will appear here after you generate and save workspace changes."
               />
@@ -313,34 +353,38 @@ export function HistoryWorkspace({
           <WorkspaceCard
             title="Recommended actions"
             description="Keep version history clean and recoverable."
-            badge={<WorkspaceStatusPill>Workflow</WorkspaceStatusPill>}
+            badge={<WorkspaceStatusBadge>Workflow</WorkspaceStatusBadge>}
           >
-            <div className={styles.actionList}>
+            <div className="grid gap-2">
               <WorkspaceActionRow
                 title="Review latest generated files"
                 description="Inspect changed files before restoring or publishing."
-                icon={<Search size={15} strokeWidth={2.25} />}
-                badge={<WorkspaceStatusPill tone="blue">Review</WorkspaceStatusPill>}
+                icon={<Search className="h-4 w-4" />}
+                badge={<WorkspaceStatusBadge tone="blue">Review</WorkspaceStatusBadge>}
                 onClick={onOpenPreview}
               />
 
               <WorkspaceActionRow
                 title="Restore only known-good builds"
                 description="Avoid restoring partial or failed generations unless you enjoy debugging archaeology."
-                icon={<RotateCcw size={15} strokeWidth={2.25} />}
-                badge={<WorkspaceStatusPill tone="orange">Careful</WorkspaceStatusPill>}
+                icon={<RotateCcw className="h-4 w-4" />}
+                badge={<WorkspaceStatusBadge tone="orange">Careful</WorkspaceStatusBadge>}
               />
 
               <WorkspaceActionRow
                 title="Commit stable checkpoints"
                 description="Push stable workspace states to GitHub before risky UI refactors."
-                icon={<GitBranch size={15} strokeWidth={2.25} />}
-                badge={<WorkspaceStatusPill tone="green">Recommended</WorkspaceStatusPill>}
+                icon={<GitBranch className="h-4 w-4" />}
+                badge={
+                  <WorkspaceStatusBadge tone="green">
+                    Recommended
+                  </WorkspaceStatusBadge>
+                }
               />
             </div>
           </WorkspaceCard>
-        </div>
-      </div>
-    </WorkspacePanel>
+        </WorkspaceTwoColumnGrid>
+      </WorkspaceSectionStack>
+    </WorkspaceShell>
   );
 }

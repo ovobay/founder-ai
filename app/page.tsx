@@ -49,6 +49,7 @@ import { SecurityWorkspace } from "@/components/workspace/SecurityWorkspace";
 import { HistoryWorkspace as PremiumHistoryWorkspace } from "@/components/workspace/HistoryWorkspace";
 import { PublishWorkspace as PremiumPublishWorkspace } from "@/components/workspace/PublishWorkspace";
 import { FilesWorkspace as PremiumFilesWorkspace } from "@/components/workspace/FilesWorkspace";
+import { CodeWorkspacePanel as PremiumCodeWorkspacePanel } from "@/components/workspace/CodeWorkspacePanel";
 import {
   WorkspaceToolCard,
   WorkspaceToolEmpty,
@@ -6963,13 +6964,54 @@ function PreviewContent({
           ) : null}
 
           {!isLoadingWorkspace && !filesOpen && workspaceView === "code" ? (
-            <CodeWorkspace
-              selectedFile={selectedFile}
-              projectFiles={projectFiles}
-              onSaveFile={onSaveFile}
-              onDeleteFile={onDeleteFile}
-              setWorkspaceError={setWorkspaceError}
+            <PremiumCodeWorkspacePanel
+              projectName={previewState.title}
+              lastUpdatedLabel={previewState.lastUpdatedLabel}
+              selectedFile={
+                selectedFile
+                  ? {
+                      id: selectedFile.id,
+                      path: selectedFile.path,
+                      contents: selectedFile.contents,
+                      description: selectedFile.description,
+                      status: selectedFile.status,
+                      source: projectFiles.some((file) => file.id === selectedFile.id)
+                        ? "database"
+                        : "generated",
+                      isDatabaseBacked: projectFiles.some(
+                        (file) => file.id === selectedFile.id
+                      ),
+                    }
+                  : null
+              }
               onClose={() => setWorkspaceView("preview")}
+              onOpenFiles={() => {
+                setWorkspaceView("preview");
+                setFilesOpen(true);
+              }}
+              onRefresh={() => setSelectedFileId(selectedFileId)}
+              onSaveFile={async (fileId, path, contents) => {
+                try {
+                  await onSaveFile(fileId, path, contents);
+                } catch (error) {
+                  const message =
+                    error instanceof Error ? error.message : "Failed to save file.";
+
+                  setWorkspaceError(message);
+                  throw error;
+                }
+              }}
+              onDeleteFile={async (fileId) => {
+                try {
+                  await onDeleteFile(fileId);
+                } catch (error) {
+                  const message =
+                    error instanceof Error ? error.message : "Failed to delete file.";
+
+                  setWorkspaceError(message);
+                  throw error;
+                }
+              }}
             />
           ) : null}
 

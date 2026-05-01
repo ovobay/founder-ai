@@ -52,7 +52,7 @@ import { PublishWorkspace as PremiumPublishWorkspace } from "@/components/worksp
 import { FilesWorkspace as PremiumFilesWorkspace } from "@/components/workspace/FilesWorkspace";
 import { CodeWorkspacePanel as PremiumCodeWorkspacePanel } from "@/components/workspace/CodeWorkspacePanel";
 import { ArchitectureWorkspacePanel as PremiumArchitectureWorkspacePanel } from "@/components/workspace/ArchitectureWorkspacePanel";
-import { PreviewWorkspacePanel as PremiumPreviewWorkspacePanel } from "@/components/workspace/PreviewWorkspacePanel";
+import { PreviewCanvas } from "@/components/workspace/PreviewCanvas";
 import {
   WorkspaceToolCard,
   WorkspaceToolEmpty,
@@ -6954,13 +6954,9 @@ function PreviewContent({
           ) : null}
 
           {!isLoadingWorkspace && !filesOpen && workspaceView === "preview" ? (
-            <PremiumPreviewWorkspacePanel
-              projectName={previewState.title}
-              projectType={previewState.projectType}
+            <PreviewCanvas
+              title={previewState.title}
               generatedUrl={getGeneratedPreviewUrl(previewState)}
-              lastUpdatedLabel={previewState.lastUpdatedLabel}
-              fileCount={files.length}
-              moduleCount={previewState.modules.length}
               isLoading={isLoadingWorkspace}
               onRefresh={() => setWorkspaceView("preview")}
               onOpenCode={() => setWorkspaceView("code")}
@@ -6969,7 +6965,7 @@ function PreviewContent({
               onOpenSecurity={() => setWorkspaceView("security")}
             >
               <PreviewWebsite previewState={previewState} />
-            </PremiumPreviewWorkspacePanel>
+            </PreviewCanvas>
           ) : null}
 
           {!isLoadingWorkspace && !filesOpen && workspaceView === "code" ? (

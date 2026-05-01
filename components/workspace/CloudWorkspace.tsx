@@ -17,19 +17,20 @@ import {
   XCircle,
 } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import {
   WorkspaceActionRow,
-  WorkspaceAlert,
   WorkspaceCard,
   WorkspaceEmptyState,
   WorkspaceHero,
   WorkspaceMetricCard,
   WorkspaceMetricGrid,
-  WorkspacePanel,
-  WorkspaceStatusPill,
-} from "./tool-system/WorkspacePanel";
-
-import styles from "./CloudWorkspace.module.css";
+  WorkspaceNotice,
+  WorkspaceSectionStack,
+  WorkspaceShell,
+  WorkspaceStatusBadge,
+  WorkspaceTwoColumnGrid,
+} from "@/components/workspace/shadcn/WorkspaceShell";
 
 export type CloudIntegrationStatus =
   | "connected"
@@ -145,6 +146,7 @@ function getIntegrationTone(status: CloudIntegrationStatus) {
   if (status === "connected") return "green" as const;
   if (status === "needs-setup") return "orange" as const;
   if (status === "optional") return "blue" as const;
+
   return "default" as const;
 }
 
@@ -152,14 +154,24 @@ function getIntegrationLabel(status: CloudIntegrationStatus) {
   if (status === "connected") return "Connected";
   if (status === "needs-setup") return "Needs setup";
   if (status === "optional") return "Optional";
+
   return "Disabled";
 }
 
 function getIntegrationIcon(status: CloudIntegrationStatus) {
-  if (status === "connected") return <CheckCircle2 size={15} strokeWidth={2.25} />;
-  if (status === "needs-setup") return <PlugZap size={15} strokeWidth={2.25} />;
-  if (status === "optional") return <Workflow size={15} strokeWidth={2.25} />;
-  return <XCircle size={15} strokeWidth={2.25} />;
+  if (status === "connected") {
+    return <CheckCircle2 className="h-4 w-4" />;
+  }
+
+  if (status === "needs-setup") {
+    return <PlugZap className="h-4 w-4" />;
+  }
+
+  if (status === "optional") {
+    return <Workflow className="h-4 w-4" />;
+  }
+
+  return <XCircle className="h-4 w-4" />;
 }
 
 function getCloudScore({
@@ -180,7 +192,8 @@ function getCloudScore({
     requiredIntegrations.length === 0
       ? 50
       : Math.round(
-          (connectedRequiredIntegrations.length / requiredIntegrations.length) * 50
+          (connectedRequiredIntegrations.length / requiredIntegrations.length) *
+            50
         );
 
   const envScore = requiredEnvVars.length > 0 ? 25 : 35;
@@ -192,6 +205,7 @@ function getCloudScore({
 function getCloudScoreTone(score: number) {
   if (score >= 80) return "green" as const;
   if (score >= 55) return "orange" as const;
+
   return "red" as const;
 }
 
@@ -206,7 +220,6 @@ export function CloudWorkspace({
   onOpenPublish,
   onOpenSecurity,
 }: CloudWorkspaceProps) {
-  const requiredIntegrations = integrations.filter((item) => item.required);
   const connectedIntegrations = integrations.filter(
     (item) => item.status === "connected"
   );
@@ -214,41 +227,48 @@ export function CloudWorkspace({
     (item) => item.status === "needs-setup"
   );
   const requiredEnvVars = environmentVariables.filter((item) => item.required);
-  const serverEnvVars = environmentVariables.filter((item) => item.scope === "server");
+  const serverEnvVars = environmentVariables.filter(
+    (item) => item.scope === "server"
+  );
 
   const cloudScore = getCloudScore({ integrations, environmentVariables });
   const cloudTone = getCloudScoreTone(cloudScore);
 
   return (
-    <WorkspacePanel
+    <WorkspaceShell
       title="Cloud"
       eyebrow="Deployment setup"
       description="Review integrations, environment variables, deployment target, and production readiness."
-      icon={<Cloud size={17} strokeWidth={2.3} />}
-      badge={<WorkspaceStatusPill tone={cloudTone}>{cloudScore}% ready</WorkspaceStatusPill>}
+      icon={<Cloud className="h-4 w-4" />}
+      badge={
+        <WorkspaceStatusBadge tone={cloudTone}>
+          {cloudScore}% ready
+        </WorkspaceStatusBadge>
+      }
       actions={
-        <button
+        <Button
           suppressHydrationWarning
           type="button"
-          className={styles.topbarButton}
+          size="sm"
+          variant="outline"
           onClick={onRefresh}
         >
-          <RefreshCcw size={14} strokeWidth={2.3} />
+          <RefreshCcw className="h-4 w-4" />
           Refresh
-        </button>
+        </Button>
       }
       onClose={onClose}
     >
-      <div className={styles.cloudWorkspace}>
+      <WorkspaceSectionStack>
         <WorkspaceHero
           eyebrow="Cloud readiness"
           title={`${projectName} deployment setup`}
           description="Central place for deployment target, required services, production variables, and all the tiny configuration gremlins that ruin launch day."
-          icon={<UploadCloud size={20} strokeWidth={2.25} />}
+          icon={<UploadCloud className="h-5 w-5" />}
           badge={
-            <WorkspaceStatusPill tone={cloudTone}>
+            <WorkspaceStatusBadge tone={cloudTone}>
               Last checked · {lastCheckedLabel}
-            </WorkspaceStatusPill>
+            </WorkspaceStatusBadge>
           }
           metric={{
             label: "Ready",
@@ -257,41 +277,42 @@ export function CloudWorkspace({
           }}
           actions={
             <>
-              <button
+              <Button
                 suppressHydrationWarning
                 type="button"
-                className={styles.primaryAction}
+                size="sm"
                 onClick={onOpenPublish}
               >
-                <UploadCloud size={14} strokeWidth={2.3} />
+                <UploadCloud className="h-4 w-4" />
                 Publish readiness
-              </button>
+              </Button>
 
-              <button
+              <Button
                 suppressHydrationWarning
                 type="button"
-                className={styles.secondaryAction}
+                size="sm"
+                variant="outline"
                 onClick={onOpenSecurity}
               >
-                <ShieldCheck size={14} strokeWidth={2.3} />
+                <ShieldCheck className="h-4 w-4" />
                 Security review
-              </button>
+              </Button>
             </>
           }
         />
 
         {setupIntegrations.length > 0 ? (
-          <WorkspaceAlert title="Required setup still needed" tone="warning">
+          <WorkspaceNotice title="Required setup still needed" tone="warning">
             {setupIntegrations.length} integration
             {setupIntegrations.length === 1 ? "" : "s"} still need setup before
             a clean production launch.
-          </WorkspaceAlert>
+          </WorkspaceNotice>
         ) : (
-          <WorkspaceAlert title="Cloud setup looks healthy" tone="success">
+          <WorkspaceNotice title="Cloud setup looks healthy" tone="success">
             Required integrations are connected. Still verify production
             environment variables before deploying, because “it worked locally”
             belongs in a museum of famous last words.
-          </WorkspaceAlert>
+          </WorkspaceNotice>
         )}
 
         <WorkspaceMetricGrid>
@@ -299,7 +320,7 @@ export function CloudWorkspace({
             label="Integrations"
             value={integrations.length}
             detail="Detected service connections."
-            icon={<PlugZap size={15} strokeWidth={2.25} />}
+            icon={<PlugZap className="h-4 w-4" />}
             tone="blue"
           />
 
@@ -307,7 +328,7 @@ export function CloudWorkspace({
             label="Connected"
             value={connectedIntegrations.length}
             detail="Services ready to use."
-            icon={<CheckCircle2 size={15} strokeWidth={2.25} />}
+            icon={<CheckCircle2 className="h-4 w-4" />}
             tone={connectedIntegrations.length > 0 ? "green" : "orange"}
           />
 
@@ -315,7 +336,7 @@ export function CloudWorkspace({
             label="Required env"
             value={requiredEnvVars.length}
             detail="Variables needed for launch."
-            icon={<KeyRound size={15} strokeWidth={2.25} />}
+            icon={<KeyRound className="h-4 w-4" />}
             tone={requiredEnvVars.length > 0 ? "orange" : "green"}
           />
 
@@ -323,37 +344,45 @@ export function CloudWorkspace({
             label="Server secrets"
             value={serverEnvVars.length}
             detail="Must stay server-only."
-            icon={<ServerCog size={15} strokeWidth={2.25} />}
+            icon={<ServerCog className="h-4 w-4" />}
             tone="purple"
           />
         </WorkspaceMetricGrid>
 
-        <div className={styles.cloudGrid}>
+        <WorkspaceTwoColumnGrid>
           <WorkspaceCard
             title="Deployment target"
             description="Where this generated workspace should be prepared for production."
-            badge={<WorkspaceStatusPill tone="blue">{deploymentTarget}</WorkspaceStatusPill>}
+            badge={
+              <WorkspaceStatusBadge tone="blue">
+                {deploymentTarget}
+              </WorkspaceStatusBadge>
+            }
           >
-            <div className={styles.deploymentCard}>
-              <span className={styles.deploymentIcon}>
-                <Globe2 size={22} strokeWidth={2.2} />
+            <div className="grid min-h-36 grid-cols-[auto_1fr_auto] items-start gap-3 rounded-2xl border bg-background p-4">
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-blue-200 bg-blue-50 text-blue-700">
+                <Globe2 className="h-5 w-5" />
               </span>
 
-              <div className={styles.deploymentText}>
-                <h4>{deploymentTarget}</h4>
-                <p>
+              <div className="min-w-0">
+                <h4 className="text-base font-bold tracking-tight text-foreground">
+                  {deploymentTarget}
+                </h4>
+                <p className="mt-2 text-xs font-medium leading-5 text-muted-foreground">
                   Recommended target for Next.js hosting, environment variables,
                   preview deployments, and production promotion.
                 </p>
               </div>
 
-              <button
+              <Button
                 suppressHydrationWarning
                 type="button"
-                className={styles.iconButton}
+                size="icon"
+                variant="outline"
+                className="h-8 w-8 rounded-xl"
               >
-                <ExternalLink size={14} strokeWidth={2.25} />
-              </button>
+                <ExternalLink className="h-4 w-4" />
+              </Button>
             </div>
           </WorkspaceCard>
 
@@ -361,131 +390,164 @@ export function CloudWorkspace({
             title="Integrations"
             description="Required and optional external services detected for this build."
             badge={
-              <WorkspaceStatusPill tone={setupIntegrations.length > 0 ? "orange" : "green"}>
+              <WorkspaceStatusBadge
+                tone={setupIntegrations.length > 0 ? "orange" : "green"}
+              >
                 {setupIntegrations.length} pending
-              </WorkspaceStatusPill>
+              </WorkspaceStatusBadge>
             }
           >
-            <div className={styles.integrationList}>
-              {integrations.length > 0 ? (
-                integrations.map((integration) => (
-                  <article key={integration.id} className={styles.integrationCard}>
-                    <div className={styles.integrationTop}>
-                      <span className={styles.integrationIcon}>
+            {integrations.length > 0 ? (
+              <div className="grid gap-2">
+                {integrations.map((integration) => (
+                  <article
+                    key={integration.id}
+                    className="grid gap-3 rounded-2xl border bg-background p-3 transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50/30 hover:shadow-sm"
+                  >
+                    <div className="grid grid-cols-[auto_1fr_auto] items-start gap-3">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-blue-200 bg-blue-50 text-blue-700">
                         {getIntegrationIcon(integration.status)}
                       </span>
 
-                      <div>
-                        <h4>{integration.label}</h4>
-                        <span>{integration.provider}</span>
+                      <div className="min-w-0">
+                        <h4 className="text-sm font-bold tracking-tight text-foreground">
+                          {integration.label}
+                        </h4>
+                        <span className="mt-1 block text-xs font-medium text-muted-foreground">
+                          {integration.provider}
+                        </span>
                       </div>
 
-                      <WorkspaceStatusPill tone={getIntegrationTone(integration.status)}>
+                      <WorkspaceStatusBadge
+                        tone={getIntegrationTone(integration.status)}
+                      >
                         {getIntegrationLabel(integration.status)}
-                      </WorkspaceStatusPill>
+                      </WorkspaceStatusBadge>
                     </div>
 
-                    <p>{integration.description}</p>
+                    <p className="text-xs font-medium leading-5 text-muted-foreground">
+                      {integration.description}
+                    </p>
 
-                    <div className={styles.integrationFooter}>
-                      <span>{integration.required ? "Required" : "Optional"}</span>
-                      <button suppressHydrationWarning type="button">
+                    <div className="flex items-center justify-between gap-2 border-t pt-2">
+                      <span className="text-xs font-bold text-muted-foreground">
+                        {integration.required ? "Required" : "Optional"}
+                      </span>
+
+                      <Button
+                        suppressHydrationWarning
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                      >
                         Configure
-                      </button>
+                      </Button>
                     </div>
                   </article>
-                ))
-              ) : (
-                <WorkspaceEmptyState
-                  icon={<PlugZap size={22} strokeWidth={2.2} />}
-                  title="No integrations detected"
-                  description="Generated integration requirements will appear here after the project is analysed."
+                ))}
+              </div>
+            ) : (
+              <WorkspaceEmptyState
+                icon={<PlugZap className="h-6 w-6" />}
+                title="No integrations detected"
+                description="Generated integration requirements will appear here after the project is analysed."
+              />
+            )}
+          </WorkspaceCard>
+        </WorkspaceTwoColumnGrid>
+
+        <WorkspaceCard
+          title="Environment variables"
+          description="Public and server-only values required by this workspace."
+          badge={
+            <WorkspaceStatusBadge
+              tone={requiredEnvVars.length > 0 ? "orange" : "green"}
+            >
+              {requiredEnvVars.length} required
+            </WorkspaceStatusBadge>
+          }
+        >
+          <div className="grid gap-2">
+            {environmentVariables.length > 0 ? (
+              environmentVariables.map((variable) => (
+                <WorkspaceActionRow
+                  key={variable.key}
+                  title={variable.key}
+                  description={variable.reason}
+                  icon={
+                    variable.scope === "server" ? (
+                      <ServerCog className="h-4 w-4" />
+                    ) : (
+                      <Code2 className="h-4 w-4" />
+                    )
+                  }
+                  badge={
+                    <WorkspaceStatusBadge
+                      tone={variable.scope === "server" ? "purple" : "blue"}
+                    >
+                      {variable.scope}
+                    </WorkspaceStatusBadge>
+                  }
                 />
-              )}
-            </div>
-          </WorkspaceCard>
-
-          <WorkspaceCard
-            title="Environment variables"
-            description="Public and server-only values required by this workspace."
-            badge={
-              <WorkspaceStatusPill tone={requiredEnvVars.length > 0 ? "orange" : "green"}>
-                {requiredEnvVars.length} required
-              </WorkspaceStatusPill>
-            }
-          >
-            <div className={styles.envList}>
-              {environmentVariables.length > 0 ? (
-                environmentVariables.map((variable) => (
-                  <WorkspaceActionRow
-                    key={variable.key}
-                    title={variable.key}
-                    description={variable.reason}
-                    icon={
-                      variable.scope === "server" ? (
-                        <ServerCog size={15} strokeWidth={2.25} />
-                      ) : (
-                        <Code2 size={15} strokeWidth={2.25} />
-                      )
-                    }
-                    badge={
-                      <WorkspaceStatusPill
-                        tone={variable.scope === "server" ? "purple" : "blue"}
-                      >
-                        {variable.scope}
-                      </WorkspaceStatusPill>
-                    }
-                  />
-                ))
-              ) : (
-                <WorkspaceEmptyState
-                  icon={<KeyRound size={22} strokeWidth={2.2} />}
-                  title="No environment variables"
-                  description="No environment requirements were detected for this build."
-                />
-              )}
-            </div>
-          </WorkspaceCard>
-
-          <WorkspaceCard
-            title="Cloud checklist"
-            description="Recommended setup steps before production deployment."
-            badge={<WorkspaceStatusPill>Checklist</WorkspaceStatusPill>}
-          >
-            <div className={styles.envList}>
-              <WorkspaceActionRow
-                title="Confirm production environment variables"
-                description="Check all server and public variables in your deployment provider."
-                icon={<KeyRound size={15} strokeWidth={2.25} />}
-                badge={<WorkspaceStatusPill tone="orange">Required</WorkspaceStatusPill>}
+              ))
+            ) : (
+              <WorkspaceEmptyState
+                icon={<KeyRound className="h-6 w-6" />}
+                title="No environment variables"
+                description="No environment requirements were detected for this build."
               />
+            )}
+          </div>
+        </WorkspaceCard>
 
-              <WorkspaceActionRow
-                title="Verify database and auth configuration"
-                description="Confirm Supabase URL, anon key, policies, and auth redirects."
-                icon={<Database size={15} strokeWidth={2.25} />}
-                badge={<WorkspaceStatusPill>Manual</WorkspaceStatusPill>}
-              />
+        <WorkspaceCard
+          title="Cloud checklist"
+          description="Recommended setup steps before production deployment."
+          badge={<WorkspaceStatusBadge>Checklist</WorkspaceStatusBadge>}
+        >
+          <div className="grid gap-2">
+            <WorkspaceActionRow
+              title="Confirm production environment variables"
+              description="Check all server and public variables in your deployment provider."
+              icon={<KeyRound className="h-4 w-4" />}
+              badge={
+                <WorkspaceStatusBadge tone="orange">
+                  Required
+                </WorkspaceStatusBadge>
+              }
+            />
 
-              <WorkspaceActionRow
-                title="Review deployment security"
-                description="Check server-only secrets, webhook validation, and protected routes."
-                icon={<ShieldCheck size={15} strokeWidth={2.25} />}
-                badge={<WorkspaceStatusPill tone="blue">Security</WorkspaceStatusPill>}
-                onClick={onOpenSecurity}
-              />
+            <WorkspaceActionRow
+              title="Verify database and auth configuration"
+              description="Confirm Supabase URL, anon key, policies, and auth redirects."
+              icon={<Database className="h-4 w-4" />}
+              badge={<WorkspaceStatusBadge>Manual</WorkspaceStatusBadge>}
+            />
 
-              <WorkspaceActionRow
-                title="Open publish readiness"
-                description="Generate final launch checks and review blockers before deployment."
-                icon={<UploadCloud size={15} strokeWidth={2.25} />}
-                badge={<WorkspaceStatusPill tone="green">Next</WorkspaceStatusPill>}
-                onClick={onOpenPublish}
-              />
-            </div>
-          </WorkspaceCard>
-        </div>
-      </div>
-    </WorkspacePanel>
+            <WorkspaceActionRow
+              title="Review deployment security"
+              description="Check server-only secrets, webhook validation, and protected routes."
+              icon={<ShieldCheck className="h-4 w-4" />}
+              badge={
+                <WorkspaceStatusBadge tone="blue">
+                  Security
+                </WorkspaceStatusBadge>
+              }
+              onClick={onOpenSecurity}
+            />
+
+            <WorkspaceActionRow
+              title="Open publish readiness"
+              description="Generate final launch checks and review blockers before deployment."
+              icon={<UploadCloud className="h-4 w-4" />}
+              badge={
+                <WorkspaceStatusBadge tone="green">Next</WorkspaceStatusBadge>
+              }
+              onClick={onOpenPublish}
+            />
+          </div>
+        </WorkspaceCard>
+      </WorkspaceSectionStack>
+    </WorkspaceShell>
   );
 }

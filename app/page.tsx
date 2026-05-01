@@ -47,6 +47,7 @@ import { AnalyticsWorkspace } from "@/components/workspace/AnalyticsWorkspace";
 import { CloudWorkspace } from "@/components/workspace/CloudWorkspace";
 import { SecurityWorkspace } from "@/components/workspace/SecurityWorkspace";
 import { HistoryWorkspace as PremiumHistoryWorkspace } from "@/components/workspace/HistoryWorkspace";
+import { PublishWorkspace as PremiumPublishWorkspace } from "@/components/workspace/PublishWorkspace";
 import {
   WorkspaceToolCard,
   WorkspaceToolEmpty,
@@ -4181,7 +4182,8 @@ export default function Page() {
             onCreateFile={createProjectFile}
             setWorkspaceError={setWorkspaceError}
             setWorkspaceView={setWorkspaceView}
-              publishCenterRef={publishCenterRef}
+            publishCenterRef={publishCenterRef}
+            onOpenPublishCenter={openPublishCenter}
             />
         </main>
       </div>
@@ -6870,6 +6872,7 @@ function PreviewContent({
   setWorkspaceError,
   setWorkspaceView,
   publishCenterRef,
+  onOpenPublishCenter,
 }: {
   filesOpen: boolean;
   setFilesOpen: (value: boolean) => void;
@@ -6896,6 +6899,7 @@ function PreviewContent({
   setWorkspaceError: (value: string) => void;
   setWorkspaceView: (value: WorkspaceView) => void;
   publishCenterRef?: React.RefObject<HTMLDivElement | null>;
+  onOpenPublishCenter: () => void;
 }) {
   return (
     <div className="preview-content">
@@ -6970,16 +6974,46 @@ function PreviewContent({
           ) : null}
 
           {!isLoadingWorkspace && !filesOpen && workspaceView === "publish-readiness" ? (
-            <PublishToolWorkspace
-              previewState={previewState}
-              files={files}
-              onCreateFile={onCreateFile}
-              onSaveFile={onSaveFile}
-              setSelectedFileId={setSelectedFileId}
-              setWorkspaceView={setWorkspaceView}
-              setWorkspaceError={setWorkspaceError}
-              publishCenterRef={publishCenterRef}
+            <PremiumPublishWorkspace
+              projectName={previewState.title}
+              generatedUrl={getGeneratedPreviewUrl(previewState)}
+              lastCheckedLabel={previewState.lastUpdatedLabel}
+              fileCount={files.length}
+              changedFileCount={files.filter((file) => file.status === "created" || file.status === "updated").length}
+              environmentVariableCount={getRequiredEnvironmentVariables({
+                projectType: previewState.projectType,
+                modules: previewState.modules,
+                architecture: previewState.architecture,
+                classification: previewState.classification,
+              }).length}
+              integrationCount={getIntegrationReadiness({
+                projectType: previewState.projectType,
+                modules: previewState.modules,
+                architecture: previewState.architecture,
+                classification: previewState.classification,
+              }).length}
+              requirements={getPublishGateReport({
+                previewState,
+                files,
+              }).requirements.map((requirement) => ({
+                id: requirement.id,
+                title: requirement.label,
+                description: requirement.detail,
+                status: requirement.passed ? "passed" : "warning",
+                area:
+                  requirement.id === "security"
+                    ? "security"
+                    : requirement.id === "architecture"
+                      ? "database"
+                      : requirement.id === "files" || requirement.id === "changes"
+                        ? "files"
+                        : "review",
+              }))}
               onClose={() => setWorkspaceView("preview")}
+              onOpenCloud={() => setWorkspaceView("integrations")}
+              onOpenSecurity={() => setWorkspaceView("security")}
+              onCreateChecklist={() => setWorkspaceView("publish-readiness")}
+              onContinuePublish={onOpenPublishCenter}
             />
           ) : null}
 

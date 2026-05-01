@@ -13,19 +13,20 @@ import {
   Upload,
 } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import {
   WorkspaceActionRow,
-  WorkspaceAlert,
   WorkspaceCard,
   WorkspaceEmptyState,
   WorkspaceHero,
   WorkspaceMetricCard,
   WorkspaceMetricGrid,
-  WorkspacePanel,
-  WorkspaceStatusPill,
-} from "./tool-system/WorkspacePanel";
-
-import styles from "./SecurityWorkspace.module.css";
+  WorkspaceNotice,
+  WorkspaceSectionStack,
+  WorkspaceShell,
+  WorkspaceStatusBadge,
+  WorkspaceTwoColumnGrid,
+} from "@/components/workspace/shadcn/WorkspaceShell";
 
 type SecuritySeverity = "critical" | "high" | "medium" | "low" | "info";
 type SecurityFindingStatus = "open" | "reviewed" | "resolved";
@@ -97,6 +98,7 @@ function getSeverityTone(severity: SecuritySeverity) {
   if (severity === "critical" || severity === "high") return "red" as const;
   if (severity === "medium") return "orange" as const;
   if (severity === "low") return "blue" as const;
+
   return "default" as const;
 }
 
@@ -105,6 +107,7 @@ function getSeverityLabel(severity: SecuritySeverity) {
   if (severity === "high") return "High";
   if (severity === "medium") return "Medium";
   if (severity === "low") return "Low";
+
   return "Info";
 }
 
@@ -116,6 +119,7 @@ function getOverallScore(findings: SecurityFinding[]) {
     if (finding.severity === "high") return total + 18;
     if (finding.severity === "medium") return total + 10;
     if (finding.severity === "low") return total + 4;
+
     return total + 2;
   }, 0);
 
@@ -125,6 +129,7 @@ function getOverallScore(findings: SecurityFinding[]) {
 function getScoreTone(score: number) {
   if (score >= 85) return "green" as const;
   if (score >= 65) return "orange" as const;
+
   return "red" as const;
 }
 
@@ -156,34 +161,34 @@ export function SecurityWorkspace({
 
   const scanBadge =
     scanStatus === "running" ? (
-      <WorkspaceStatusPill tone="blue">Scanning</WorkspaceStatusPill>
+      <WorkspaceStatusBadge tone="blue">Scanning</WorkspaceStatusBadge>
     ) : scanStatus === "complete" ? (
-      <WorkspaceStatusPill tone={scoreTone}>
+      <WorkspaceStatusBadge tone={scoreTone}>
         {score >= 85 ? "Healthy" : "Needs review"}
-      </WorkspaceStatusPill>
+      </WorkspaceStatusBadge>
     ) : (
-      <WorkspaceStatusPill>Idle</WorkspaceStatusPill>
+      <WorkspaceStatusBadge>Idle</WorkspaceStatusBadge>
     );
 
   return (
-    <WorkspacePanel
+    <WorkspaceShell
       title="Security"
       eyebrow="Workspace protection"
       description="Review launch risks, auth checks, secrets, and deployment safety."
-      icon={<Shield size={17} strokeWidth={2.3} />}
+      icon={<Shield className="h-4 w-4" />}
       badge={scanBadge}
       onClose={onClose}
     >
-      <div className={styles.securityWorkspace}>
+      <WorkspaceSectionStack>
         <WorkspaceHero
           eyebrow="Security scan"
           title={`${projectName} security review`}
-          description="Use this workspace to catch the boring-but-expensive mistakes before launch: exposed secrets, weak access control, missing database policies, and deployment gaps."
-          icon={<ShieldCheck size={20} strokeWidth={2.25} />}
+          description="Use this workspace to catch expensive mistakes before launch: exposed secrets, weak access control, missing database policies, and deployment gaps."
+          icon={<ShieldCheck className="h-5 w-5" />}
           badge={
-            <WorkspaceStatusPill tone={scoreTone}>
+            <WorkspaceStatusBadge tone={scoreTone}>
               Last checked · {lastCheckedLabel}
-            </WorkspaceStatusPill>
+            </WorkspaceStatusBadge>
           }
           metric={{
             label: "Score",
@@ -192,41 +197,42 @@ export function SecurityWorkspace({
           }}
           actions={
             <>
-              <button
+              <Button
                 suppressHydrationWarning
                 type="button"
-                className={styles.primaryAction}
+                size="sm"
                 onClick={onGenerateSecurityDoc}
               >
-                <FileCheck2 size={14} strokeWidth={2.3} />
+                <FileCheck2 className="h-4 w-4" />
                 Generate security.md
-              </button>
+              </Button>
 
-              <button
+              <Button
                 suppressHydrationWarning
                 type="button"
-                className={styles.secondaryAction}
+                size="sm"
+                variant="outline"
                 onClick={onOpenPublish}
               >
-                <Upload size={14} strokeWidth={2.3} />
+                <Upload className="h-4 w-4" />
                 Publish readiness
-              </button>
+              </Button>
             </>
           }
         />
 
         {highRiskCount > 0 ? (
-          <WorkspaceAlert title="High-risk items need review" tone="warning">
+          <WorkspaceNotice title="High-risk items need review" tone="warning">
             {highRiskCount} high-priority security item
             {highRiskCount === 1 ? "" : "s"} should be reviewed before
             production deployment.
-          </WorkspaceAlert>
+          </WorkspaceNotice>
         ) : (
-          <WorkspaceAlert title="No high-risk blockers detected" tone="success">
+          <WorkspaceNotice title="No high-risk blockers detected" tone="success">
             No critical or high-severity generated findings are currently open.
-            Manual review is still required, because production does not care
-            about our optimism.
-          </WorkspaceAlert>
+            Manual review is still required, because production has never cared
+            about anyone’s optimism.
+          </WorkspaceNotice>
         )}
 
         <WorkspaceMetricGrid>
@@ -234,7 +240,7 @@ export function SecurityWorkspace({
             label="Open findings"
             value={openFindings.length}
             detail="Issues still requiring review."
-            icon={<ShieldAlert size={15} strokeWidth={2.25} />}
+            icon={<ShieldAlert className="h-4 w-4" />}
             tone={openFindings.length > 0 ? "orange" : "green"}
           />
 
@@ -242,7 +248,7 @@ export function SecurityWorkspace({
             label="High risk"
             value={highRiskCount}
             detail="Critical and high severity items."
-            icon={<AlertTriangle size={15} strokeWidth={2.25} />}
+            icon={<AlertTriangle className="h-4 w-4" />}
             tone={highRiskCount > 0 ? "red" : "green"}
           />
 
@@ -250,7 +256,7 @@ export function SecurityWorkspace({
             label="Reviewed"
             value={reviewedCount}
             detail="Items already reviewed or resolved."
-            icon={<CheckCircle2 size={15} strokeWidth={2.25} />}
+            icon={<CheckCircle2 className="h-4 w-4" />}
             tone="blue"
           />
 
@@ -258,42 +264,59 @@ export function SecurityWorkspace({
             label="Env risks"
             value={environmentRisks.length}
             detail="Secrets and configuration checks."
-            icon={<KeyRound size={15} strokeWidth={2.25} />}
+            icon={<KeyRound className="h-4 w-4" />}
             tone={environmentRisks.length > 0 ? "orange" : "green"}
           />
         </WorkspaceMetricGrid>
 
-        <div className={styles.securityGrid}>
+        <WorkspaceTwoColumnGrid>
           <WorkspaceCard
             title="Security findings"
             description="Generated review items grouped by severity and area."
             badge={
-              <WorkspaceStatusPill tone={openFindings.length > 0 ? "orange" : "green"}>
+              <WorkspaceStatusBadge
+                tone={openFindings.length > 0 ? "orange" : "green"}
+              >
                 {openFindings.length} open
-              </WorkspaceStatusPill>
+              </WorkspaceStatusBadge>
             }
           >
             {findings.length > 0 ? (
-              <div className={styles.findingsList}>
+              <div className="grid gap-2">
                 {findings.map((finding) => (
-                  <article key={finding.id} className={styles.findingCard}>
-                    <div className={styles.findingTop}>
-                      <div>
-                        <h4>{finding.title}</h4>
-                        <span>{finding.area}</span>
+                  <article
+                    key={finding.id}
+                    className="grid gap-3 rounded-2xl border bg-background p-3 transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50/30 hover:shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h4 className="text-sm font-bold tracking-tight text-foreground">
+                          {finding.title}
+                        </h4>
+                        <span className="mt-1 block text-xs font-medium text-muted-foreground">
+                          {finding.area}
+                        </span>
                       </div>
 
-                      <WorkspaceStatusPill tone={getSeverityTone(finding.severity)}>
+                      <WorkspaceStatusBadge
+                        tone={getSeverityTone(finding.severity)}
+                      >
                         {getSeverityLabel(finding.severity)}
-                      </WorkspaceStatusPill>
+                      </WorkspaceStatusBadge>
                     </div>
 
-                    <p>{finding.description}</p>
+                    <p className="text-xs font-medium leading-5 text-muted-foreground">
+                      {finding.description}
+                    </p>
 
                     {finding.recommendation ? (
-                      <div className={styles.recommendationBox}>
-                        <strong>Recommended action</strong>
-                        <span>{finding.recommendation}</span>
+                      <div className="grid gap-1 rounded-xl border border-blue-200 bg-blue-50 p-3 text-blue-950">
+                        <strong className="text-[11px] font-bold uppercase tracking-[0.12em]">
+                          Recommended action
+                        </strong>
+                        <span className="text-xs font-medium leading-5">
+                          {finding.recommendation}
+                        </span>
                       </div>
                     ) : null}
                   </article>
@@ -301,7 +324,7 @@ export function SecurityWorkspace({
               </div>
             ) : (
               <WorkspaceEmptyState
-                icon={<ShieldCheck size={22} strokeWidth={2.2} />}
+                icon={<ShieldCheck className="h-6 w-6" />}
                 title="No findings detected"
                 description="Generated security findings will appear here after a scan or build analysis."
               />
@@ -312,70 +335,76 @@ export function SecurityWorkspace({
             title="Environment and secrets"
             description="Configuration risks to check before launch."
             badge={
-              <WorkspaceStatusPill tone={environmentRisks.length > 0 ? "orange" : "green"}>
+              <WorkspaceStatusBadge
+                tone={environmentRisks.length > 0 ? "orange" : "green"}
+              >
                 {environmentRisks.length} checks
-              </WorkspaceStatusPill>
+              </WorkspaceStatusBadge>
             }
           >
-            <div className={styles.actionList}>
+            <div className="grid gap-2">
               {environmentRisks.length > 0 ? (
                 environmentRisks.map((risk) => (
                   <WorkspaceActionRow
                     key={risk}
                     title={risk}
                     description="Review before production deployment."
-                    icon={<LockKeyhole size={15} strokeWidth={2.25} />}
-                    badge={<WorkspaceStatusPill tone="orange">Review</WorkspaceStatusPill>}
+                    icon={<LockKeyhole className="h-4 w-4" />}
+                    badge={
+                      <WorkspaceStatusBadge tone="orange">
+                        Review
+                      </WorkspaceStatusBadge>
+                    }
                   />
                 ))
               ) : (
                 <WorkspaceEmptyState
-                  icon={<KeyRound size={22} strokeWidth={2.2} />}
+                  icon={<KeyRound className="h-6 w-6" />}
                   title="No environment risks"
                   description="No environment configuration risks were generated."
                 />
               )}
             </div>
           </WorkspaceCard>
+        </WorkspaceTwoColumnGrid>
 
-          <WorkspaceCard
-            title="Launch checklist"
-            description="Security checks that should be complete before publishing."
-            badge={<WorkspaceStatusPill tone="blue">Required</WorkspaceStatusPill>}
-          >
-            <div className={styles.actionList}>
-              <WorkspaceActionRow
-                title="Verify authentication and route protection"
-                description="Protected screens and mutation endpoints should require authenticated users."
-                icon={<Shield size={15} strokeWidth={2.25} />}
-                badge={<WorkspaceStatusPill>Manual</WorkspaceStatusPill>}
-              />
+        <WorkspaceCard
+          title="Launch checklist"
+          description="Security checks that should be complete before publishing."
+          badge={<WorkspaceStatusBadge tone="blue">Required</WorkspaceStatusBadge>}
+        >
+          <div className="grid gap-2">
+            <WorkspaceActionRow
+              title="Verify authentication and route protection"
+              description="Protected screens and mutation endpoints should require authenticated users."
+              icon={<Shield className="h-4 w-4" />}
+              badge={<WorkspaceStatusBadge>Manual</WorkspaceStatusBadge>}
+            />
 
-              <WorkspaceActionRow
-                title="Confirm database ownership checks"
-                description="Users should only read and mutate records they own or are permitted to access."
-                icon={<LockKeyhole size={15} strokeWidth={2.25} />}
-                badge={<WorkspaceStatusPill>Manual</WorkspaceStatusPill>}
-              />
+            <WorkspaceActionRow
+              title="Confirm database ownership checks"
+              description="Users should only read and mutate records they own or are permitted to access."
+              icon={<LockKeyhole className="h-4 w-4" />}
+              badge={<WorkspaceStatusBadge>Manual</WorkspaceStatusBadge>}
+            />
 
-              <WorkspaceActionRow
-                title="Review production deployment variables"
-                description="Confirm live keys, callback URLs, webhook secrets, and server-only values."
-                icon={<KeyRound size={15} strokeWidth={2.25} />}
-                badge={<WorkspaceStatusPill>Manual</WorkspaceStatusPill>}
-              />
+            <WorkspaceActionRow
+              title="Review production deployment variables"
+              description="Confirm live keys, callback URLs, webhook secrets, and server-only values."
+              icon={<KeyRound className="h-4 w-4" />}
+              badge={<WorkspaceStatusBadge>Manual</WorkspaceStatusBadge>}
+            />
 
-              <WorkspaceActionRow
-                title="Run final publish readiness review"
-                description="Open publish readiness and generate the deployment checklist."
-                icon={<ScanLine size={15} strokeWidth={2.25} />}
-                badge={<WorkspaceStatusPill tone="blue">Next</WorkspaceStatusPill>}
-                onClick={onOpenPublish}
-              />
-            </div>
-          </WorkspaceCard>
-        </div>
-      </div>
-    </WorkspacePanel>
+            <WorkspaceActionRow
+              title="Run final publish readiness review"
+              description="Open publish readiness and generate the deployment checklist."
+              icon={<ScanLine className="h-4 w-4" />}
+              badge={<WorkspaceStatusBadge tone="blue">Next</WorkspaceStatusBadge>}
+              onClick={onOpenPublish}
+            />
+          </div>
+        </WorkspaceCard>
+      </WorkspaceSectionStack>
+    </WorkspaceShell>
   );
 }

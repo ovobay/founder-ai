@@ -50,6 +50,7 @@ import { HistoryWorkspace as PremiumHistoryWorkspace } from "@/components/worksp
 import { PublishWorkspace as PremiumPublishWorkspace } from "@/components/workspace/PublishWorkspace";
 import { FilesWorkspace as PremiumFilesWorkspace } from "@/components/workspace/FilesWorkspace";
 import { CodeWorkspacePanel as PremiumCodeWorkspacePanel } from "@/components/workspace/CodeWorkspacePanel";
+import { ArchitectureWorkspacePanel as PremiumArchitectureWorkspacePanel } from "@/components/workspace/ArchitectureWorkspacePanel";
 import {
   WorkspaceToolCard,
   WorkspaceToolEmpty,
@@ -7016,13 +7017,48 @@ function PreviewContent({
           ) : null}
 
           {!isLoadingWorkspace && !filesOpen && workspaceView === "architecture" ? (
-            <ArchitectureWorkspace
-              previewState={previewState}
-              files={files}
-              onSaveFile={onSaveFile}
-              onCreateFile={onCreateFile}
-              setWorkspaceError={setWorkspaceError}
+            <PremiumArchitectureWorkspacePanel
+              projectName={previewState.title}
+              projectType={previewState.projectType}
+              lastUpdatedLabel={previewState.lastUpdatedLabel}
+              classification={previewState.classification}
+              architecture={{
+                modules: previewState.modules,
+                tables: previewState.architecture.tables,
+                endpoints: previewState.architecture.endpoints,
+                securityRules: previewState.architecture.securityRules,
+              }}
               onClose={() => setWorkspaceView("preview")}
+              onOpenCode={() => setWorkspaceView("code")}
+              onOpenSecurity={() => setWorkspaceView("security")}
+              onOpenPublish={() => setWorkspaceView("publish-readiness")}
+              onExportSql={async () => {
+                const filePath = "supabase/migrations/generated_architecture.sql";
+                const contents = createSqlMigrationContents(previewState.architecture);
+                const existingFile = files.find((file) => file.path === filePath);
+
+                try {
+                  if (existingFile) {
+                    await onSaveFile(existingFile.id, filePath, contents);
+                    setSelectedFileId(existingFile.id);
+                  } else {
+                    const createdFile = await onCreateFile(filePath, contents);
+
+                    if (createdFile?.id) {
+                      setSelectedFileId(createdFile.id);
+                    }
+                  }
+
+                  setWorkspaceView("code");
+                } catch (error) {
+                  const message =
+                    error instanceof Error
+                      ? error.message
+                      : "Failed to export SQL migration.";
+
+                  setWorkspaceError(message);
+                }
+              }}
             />
           ) : null}
 

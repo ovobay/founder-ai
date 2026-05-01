@@ -1,0 +1,218 @@
+.codeWorkspace {
+  display: grid;
+  gap: 12px;
+}
+
+.codeGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.45fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.codeGrid > section:nth-child(3) {
+  grid-column: 1 / -1;
+}
+
+.topbarButton,
+.primaryAction,
+.secondaryAction,
+.actionButton {
+  height: 32px;
+  padding: 0 11px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 760;
+  letter-spacing: -0.02em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    filter 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.topbarButton,
+.secondaryAction,
+.actionButton {
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #111827;
+}
+
+.primaryAction {
+  border: 0;
+  background: linear-gradient(180deg, #3156f4 0%, #2142d7 100%);
+  color: #ffffff;
+  box-shadow:
+    0 10px 22px rgba(49, 86, 244, 0.18),
+    0 2px 6px rgba(15, 23, 42, 0.08);
+}
+
+.topbarButton:hover:not(:disabled),
+.primaryAction:hover:not(:disabled),
+.secondaryAction:hover:not(:disabled),
+.actionButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.01);
+}
+
+.topbarButton:hover:not(:disabled),
+.secondaryAction:hover:not(:disabled),
+.actionButton:hover:not(:disabled) {
+  border-color: #9ca3af;
+  background: #f8fafc;
+}
+
+.topbarButton:active:not(:disabled),
+.primaryAction:active:not(:disabled),
+.secondaryAction:active:not(:disabled),
+.actionButton:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.topbarButton:disabled,
+.primaryAction:disabled,
+.secondaryAction:disabled,
+.actionButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.pathInput {
+  width: 100%;
+  height: 42px;
+  padding: 0 12px;
+  border-radius: 13px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #111827;
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    "Liberation Mono",
+    "Courier New",
+    monospace;
+  font-size: 13px;
+  font-weight: 700;
+  outline: none;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease;
+}
+
+.pathInput:focus {
+  border-color: rgba(49, 86, 244, 0.75);
+  box-shadow: 0 0 0 4px rgba(49, 86, 244, 0.1);
+}
+
+.pathInput:disabled {
+  background: #f9fafb;
+  color: #6b7280;
+}
+
+.actionList {
+  display: grid;
+  gap: 9px;
+}
+
+.actionButton {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.dangerButton {
+  color: #991b1b;
+  border-color: #fecaca;
+  background: #fff7f7;
+}
+
+.dangerButton:hover:not(:disabled) {
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+.codeEditor {
+  width: 100%;
+  min-height: 520px;
+  resize: vertical;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  background:
+    linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(255, 255, 255, 1));
+  color: #111827;
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    "Liberation Mono",
+    "Courier New",
+    monospace;
+  font-size: 12.5px;
+  line-height: 1.7;
+  font-weight: 600;
+  outline: none;
+  tab-size: 2;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.72) transparent;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease;
+}
+
+.codeEditor:focus {
+  border-color: rgba(49, 86, 244, 0.75);
+  box-shadow: 0 0 0 4px rgba(49, 86, 244, 0.1);
+}
+
+.codeEditor::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.codeEditor::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.codeEditor::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.55);
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: content-box;
+}
+
+@media (max-width: 1120px) {
+  .codeGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .codeGrid > section:nth-child(3) {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .topbarButton,
+  .primaryAction,
+  .secondaryAction,
+  .actionButton {
+    width: 100%;
+  }
+
+  .codeEditor {
+    min-height: 420px;
+  }
+}

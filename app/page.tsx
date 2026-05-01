@@ -48,6 +48,7 @@ import { CloudWorkspace } from "@/components/workspace/CloudWorkspace";
 import { SecurityWorkspace } from "@/components/workspace/SecurityWorkspace";
 import { HistoryWorkspace as PremiumHistoryWorkspace } from "@/components/workspace/HistoryWorkspace";
 import { PublishWorkspace as PremiumPublishWorkspace } from "@/components/workspace/PublishWorkspace";
+import { FilesWorkspace as PremiumFilesWorkspace } from "@/components/workspace/FilesWorkspace";
 import {
   WorkspaceToolCard,
   WorkspaceToolEmpty,
@@ -6903,8 +6904,45 @@ function PreviewContent({
 }) {
   return (
     <div className="preview-content">
-      <div className="preview-frame-wrap">
-        <div className="preview-frame">
+      {filesOpen ? (
+        <div className="preview-frame-wrap">
+          <div className="preview-frame">
+            <PremiumFilesWorkspace
+              projectName={previewState.title}
+              lastUpdatedLabel={previewState.lastUpdatedLabel}
+              selectedFileId={selectedFileId}
+              files={files.map((file) => {
+                const databaseFile = projectFiles.find((item) => item.id === file.id);
+
+                return {
+                  id: file.id,
+                  path: file.path,
+                  description: file.description,
+                  status: file.status,
+                  source: databaseFile ? "database" : "generated",
+                  contents: file.contents,
+                };
+              })}
+              onClose={() => {
+                setFilesOpen(false);
+                setWorkspaceView("preview");
+              }}
+              onSelectFile={(fileId) => setSelectedFileId(fileId)}
+              onCreateFile={() => {
+                setFilesOpen(false);
+                setWorkspaceView("code");
+              }}
+              onOpenCode={() => {
+                setFilesOpen(false);
+                setWorkspaceView("code");
+              }}
+              onRefresh={() => setSelectedFileId(selectedFileId)}
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="preview-frame-wrap">
+          <div className="preview-frame">
           {isLoadingWorkspace ? <LoadingWorkspace /> : null}
 
           {!isLoadingWorkspace && filesOpen ? (
@@ -7044,6 +7082,7 @@ function PreviewContent({
           ) : null}
         </div>
       </div>
+      )}
     </div>
   );
 }

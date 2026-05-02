@@ -193,7 +193,10 @@ function PublishMenu({
                 <button
                   type="button"
                   className={styles.customDomainButton}
-                  onClick={(event) => event.preventDefault()}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    onOpenPublishCenter?.();
+                  }}
                 >
                   <ExternalLink className={styles.menuIcon} />
                   Add custom domain
@@ -268,7 +271,7 @@ function PublishMenu({
                 className={styles.updateButton}
                 onClick={(event) => {
                   event.preventDefault();
-                  onCreateChecklist?.();
+                  onOpenPublishCenter?.();
                   onDeployProject?.();
                 }}
               >

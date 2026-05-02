@@ -44,14 +44,14 @@
 }
 
 .toolButton {
-  width: 29px;
-  min-width: 29px;
-  max-width: 29px;
-  height: 29px;
-  min-height: 29px;
+  width: 30px;
+  min-width: 30px;
+  max-width: 30px;
+  height: 30px;
+  min-height: 30px;
   padding: 0;
   gap: 0;
-  border-radius: 8px;
+  border-radius: 10px;
   border: 1px solid #d8dee8;
   background: #ffffff;
   color: #111827;
@@ -109,7 +109,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 12px;
-  font-weight: 550;
+  font-weight: 760;
   line-height: 1;
   letter-spacing: -0.025em;
 }
@@ -222,195 +222,12 @@
   z-index: 220;
   min-width: 180px;
   border-radius: 14px;
-}
-
-.publishMenu {
-  z-index: 240;
-  width: 360px;
-  max-height: min(620px, calc(100vh - 96px));
-  overflow: auto;
-  padding: 0;
-  border-radius: 18px;
+  padding: 6px;
   border: 1px solid rgba(226, 232, 240, 0.96);
-  background: rgba(255, 255, 255, 0.98);
+  background: #ffffff;
   box-shadow:
     0 24px 70px rgba(15, 23, 42, 0.16),
     0 6px 18px rgba(15, 23, 42, 0.08);
-}
-
-.publishHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 14px;
-}
-
-.publishHeaderText {
-  min-width: 0;
-}
-
-.publishTitle {
-  padding: 0;
-  font-size: 17px;
-  font-weight: 820;
-  letter-spacing: -0.035em;
-  color: #111827;
-}
-
-.publishDescription {
-  margin-top: 3px;
-  max-width: 210px;
-  color: #6b7280;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.45;
-}
-
-.publishBadge {
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.publishContent {
-  display: grid;
-  gap: 10px;
-  padding: 12px;
-}
-
-.publishSection {
-  border: 1px solid #e5e7eb;
-  border-radius: 14px;
-  background: #ffffff;
-  padding: 12px;
-}
-
-.publishSectionHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.publishSection h4,
-.visibilityRow h4 {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 780;
-  letter-spacing: -0.02em;
-  color: #111827;
-}
-
-.publishSection p,
-.visibilityRow p {
-  margin: 3px 0 0;
-  color: #6b7280;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.45;
-}
-
-.compactMenuButton {
-  height: 28px;
-  min-height: 28px;
-  border-radius: 10px;
-  padding: 0 8px;
-  gap: 5px;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.menuIcon {
-  width: 14px;
-  height: 14px;
-  flex: 0 0 auto;
-  stroke-width: 2.25;
-}
-
-.urlBox {
-  margin-top: 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  background: #f9fafb;
-  padding: 10px;
-  color: #111827;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1.45;
-  word-break: break-all;
-}
-
-.visibilityRow {
-  display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
-  gap: 10px;
-  align-items: start;
-}
-
-.visibilityIcon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  background: #f9fafb;
-  color: #111827;
-}
-
-.publishActions {
-  display: grid;
-  gap: 4px;
-}
-
-.publishItem {
-  min-height: 36px;
-  border-radius: 12px;
-  gap: 8px;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.itemBadge {
-  margin-left: auto;
-  border-radius: 999px;
-  font-size: 10px;
-}
-
-@media (max-width: 1120px) {
-  .toolbar {
-    flex-wrap: wrap;
-  }
-
-  .right {
-    width: 100%;
-    justify-content: flex-end;
-  }
-}
-
-.moreMenu [data-radix-collection-item],
-.publishMenu [data-radix-collection-item] {
-  cursor: pointer;
-  outline: none;
-}
-
-.moreMenu [data-highlighted],
-.publishMenu [data-highlighted] {
-  background: #f3f4f6;
-  color: #111827;
-}
-.moreMenu [data-radix-collection-item],
-.publishMenu [data-radix-collection-item] {
-  cursor: pointer;
-  outline: none;
-}
-
-.moreMenu [data-highlighted],
-.publishMenu [data-highlighted] {
-  background: #f3f4f6;
-  color: #111827;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -679,6 +496,13 @@
   background: #1f48cf;
 }
 
+.menuIcon {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  stroke-width: 2.25;
+}
+
 .moreMenu [data-radix-collection-item],
 .publishMenu [data-radix-collection-item] {
   cursor: pointer;
@@ -689,4 +513,15 @@
 .publishMenu [data-highlighted] {
   background: #f3f4f6;
   color: #111827;
+}
+
+@media (max-width: 1120px) {
+  .toolbar {
+    flex-wrap: wrap;
+  }
+
+  .right {
+    width: 100%;
+    justify-content: flex-end;
+  }
 }

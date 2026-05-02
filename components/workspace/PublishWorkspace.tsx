@@ -14,22 +14,35 @@ import {
   Rocket,
   ShieldCheck,
   UploadCloud,
+  XCircle,
 } from "lucide-react";
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  WorkspaceActionRow,
-  WorkspaceCard,
-  WorkspaceEmptyState,
-  WorkspaceHero,
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   WorkspaceMetricCard,
   WorkspaceMetricGrid,
-  WorkspaceNotice,
-  WorkspaceSectionStack,
-  WorkspaceShell,
-  WorkspaceStatusBadge,
-  WorkspaceTwoColumnGrid,
-} from "@/components/workspace/shadcn/WorkspaceShell";
+  WorkspacePanel,
+  WorkspaceStatusPill,
+} from "@/components/workspace/tool-system/WorkspacePanel";
 
 export type PublishRequirementStatus = "passed" | "warning" | "blocked";
 
@@ -93,10 +106,10 @@ const defaultRequirements: PublishRequirement[] = [
 ];
 
 function getRequirementTone(status: PublishRequirementStatus) {
-  if (status === "passed") return "green" as const;
-  if (status === "blocked") return "red" as const;
+  if (status === "passed") return "success" as const;
+  if (status === "blocked") return "danger" as const;
 
-  return "orange" as const;
+  return "warning" as const;
 }
 
 function getRequirementLabel(status: PublishRequirementStatus) {
@@ -104,6 +117,13 @@ function getRequirementLabel(status: PublishRequirementStatus) {
   if (status === "blocked") return "Blocked";
 
   return "Review";
+}
+
+function getRequirementIcon(status: PublishRequirementStatus) {
+  if (status === "passed") return <CheckCircle2 className="h-4 w-4" />;
+  if (status === "blocked") return <XCircle className="h-4 w-4" />;
+
+  return <AlertTriangle className="h-4 w-4" />;
 }
 
 function getAreaIcon(area: PublishRequirement["area"]) {
@@ -130,11 +150,18 @@ function getPublishScore(requirements: PublishRequirement[]) {
 }
 
 function getPublishTone(score: number, blockedCount: number) {
-  if (blockedCount > 0) return "red" as const;
-  if (score >= 85) return "green" as const;
-  if (score >= 60) return "orange" as const;
+  if (blockedCount > 0) return "danger" as const;
+  if (score >= 85) return "success" as const;
+  if (score >= 60) return "warning" as const;
 
-  return "red" as const;
+  return "danger" as const;
+}
+
+function getPublishLabel(score: number, blockedCount: number) {
+  if (blockedCount > 0) return "Blocked";
+  if (score >= 85) return "Ready";
+
+  return "Needs review";
 }
 
 export function PublishWorkspace({
@@ -169,263 +196,321 @@ export function PublishWorkspace({
   const canContinue = blockedCount === 0;
 
   return (
-    <WorkspaceShell
-      title="Publish"
+    <WorkspacePanel
       eyebrow="Launch readiness"
-      description="Review files, security, cloud setup, environment variables, and final launch blockers."
-      icon={<Rocket className="h-4 w-4" />}
-      badge={
-        <WorkspaceStatusBadge tone={publishTone}>
-          {blockedCount > 0 ? "Blocked" : score >= 85 ? "Ready" : "Needs review"}
-        </WorkspaceStatusBadge>
+      title="Publish"
+      description="Review files, security, cloud setup, environment variables, and final launch blockers before deployment."
+      status={getPublishLabel(score, blockedCount)}
+      statusTone={publishTone}
+      actions={
+        <>
+          <Button
+            suppressHydrationWarning
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={onCreateChecklist}
+          >
+            <FileCheck2 className="h-4 w-4" />
+            Checklist
+          </Button>
+
+          <Button
+            suppressHydrationWarning
+            type="button"
+            size="sm"
+            onClick={onContinuePublish}
+            disabled={!canContinue}
+          >
+            <Rocket className="h-4 w-4" />
+            Continue
+          </Button>
+
+          {onClose ? (
+            <Button
+              suppressHydrationWarning
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={onClose}
+            >
+              Close
+            </Button>
+          ) : null}
+        </>
       }
-      onClose={onClose}
     >
-      <WorkspaceSectionStack>
-        <WorkspaceHero
-          eyebrow="Publish readiness"
-          title={`${projectName} launch review`}
-          description="A final checkpoint before this thing leaves the workshop and wanders into production, where users and payment systems start having opinions."
-          icon={<UploadCloud className="h-5 w-5" />}
-          badge={
-            <WorkspaceStatusBadge tone={publishTone}>
-              Last checked · {lastCheckedLabel}
-            </WorkspaceStatusBadge>
-          }
-          metric={{
-            label: "Ready",
-            value: `${score}%`,
-            tone: publishTone,
-          }}
-          actions={
-            <>
+      {blockedCount > 0 ? (
+        <Alert variant="destructive">
+          <XCircle className="h-4 w-4" />
+          <AlertTitle>Publishing is blocked</AlertTitle>
+          <AlertDescription>
+            {blockedCount} blocker{blockedCount === 1 ? "" : "s"} must be
+            resolved before continuing to production.
+          </AlertDescription>
+        </Alert>
+      ) : warningCount > 0 ? (
+        <Alert>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Manual review recommended</AlertTitle>
+          <AlertDescription>
+            {warningCount} item{warningCount === 1 ? "" : "s"} still need
+            review before launch. Boring, yes. Still cheaper than production
+            embarrassment.
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <Alert>
+          <CheckCircle2 className="h-4 w-4" />
+          <AlertTitle>Ready for final publish review</AlertTitle>
+          <AlertDescription>
+            No generated blockers were detected. Still perform a manual smoke
+            test before production, because confidence is not a QA strategy.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <WorkspaceMetricGrid>
+        <WorkspaceMetricCard
+          label="Readiness"
+          value={`${score}%`}
+          description="Calculated from launch requirements."
+          icon={<Rocket className="h-4 w-4" />}
+        />
+
+        <WorkspaceMetricCard
+          label="Files"
+          value={fileCount}
+          description="Generated files available."
+          icon={<Code2 className="h-4 w-4" />}
+        />
+
+        <WorkspaceMetricCard
+          label="Changed"
+          value={changedFileCount}
+          description="Created or updated files."
+          icon={<ClipboardCheck className="h-4 w-4" />}
+        />
+
+        <WorkspaceMetricCard
+          label="Warnings"
+          value={warningCount}
+          description="Manual review items."
+          icon={<AlertTriangle className="h-4 w-4" />}
+        />
+      </WorkspaceMetricGrid>
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <Card className="min-w-0 overflow-hidden">
+          <CardHeader>
+            <div className="flex min-w-0 items-start justify-between gap-4">
+              <div className="min-w-0">
+                <CardTitle>Readiness requirements</CardTitle>
+                <CardDescription>
+                  Launch conditions grouped by status and affected area.
+                </CardDescription>
+              </div>
+
+              <CardAction>
+                <Badge variant="outline" className="rounded-full">
+                  {passedCount}/{requirements.length} passed
+                </Badge>
+              </CardAction>
+            </div>
+          </CardHeader>
+
+          <CardContent>
+            <div className="overflow-hidden rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[130px]">Status</TableHead>
+                    <TableHead>Requirement</TableHead>
+                    <TableHead className="w-[150px]">Area</TableHead>
+                  </TableRow>
+                </TableHeader>
+
+                <TableBody>
+                  {requirements.length > 0 ? (
+                    requirements.map((requirement) => (
+                      <TableRow key={requirement.id}>
+                        <TableCell>
+                          <WorkspaceStatusPill
+                            tone={getRequirementTone(requirement.status)}
+                          >
+                            <span className="inline-flex items-center gap-1.5">
+                              {getRequirementIcon(requirement.status)}
+                              {getRequirementLabel(requirement.status)}
+                            </span>
+                          </WorkspaceStatusPill>
+                        </TableCell>
+
+                        <TableCell>
+                          <div className="font-medium">{requirement.title}</div>
+                          <div className="mt-1 text-sm text-muted-foreground">
+                            {requirement.description}
+                          </div>
+                        </TableCell>
+
+                        <TableCell>
+                          <div className="flex items-center gap-2 text-sm">
+                            {getAreaIcon(requirement.area)}
+                            <span className="capitalize">{requirement.area}</span>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={3} className="h-40 text-center">
+                        <div className="flex flex-col items-center justify-center gap-2">
+                          <CheckCircle2 className="h-8 w-8 text-muted-foreground" />
+                          <div className="font-medium">
+                            No requirements generated
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Publish requirements will appear after analysis.
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Generated URL</CardTitle>
+              <CardDescription>
+                Preview or staging URL for final review.
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent>
+              <div className="flex items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border bg-muted">
+                  <Globe2 className="h-5 w-5 text-muted-foreground" />
+                </div>
+
+                <div className="min-w-0">
+                  <h4 className="break-words font-medium">
+                    {generatedUrl.replace(/^https?:\/\//, "")}
+                  </h4>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Use this for QA, stakeholder preview, and smoke testing.
+                  </p>
+                </div>
+              </div>
+
+              <Separator className="my-4" />
+
               <Button
                 suppressHydrationWarning
                 type="button"
-                size="sm"
-                onClick={onContinuePublish}
-                disabled={!canContinue}
+                variant="outline"
+                className="w-full"
               >
-                <Rocket className="h-4 w-4" />
-                Continue to publish
+                <ExternalLink className="h-4 w-4" />
+                Open preview
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Launch summary</CardTitle>
+              <CardDescription>
+                Final deployment signals and setup state.
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="space-y-3 text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">Last checked</span>
+                <span className="font-medium">{lastCheckedLabel}</span>
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">Environment vars</span>
+                <Badge variant="outline">{environmentVariableCount}</Badge>
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">Integrations</span>
+                <Badge variant="outline">{integrationCount}</Badge>
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">Blockers</span>
+                <WorkspaceStatusPill
+                  tone={blockedCount > 0 ? "danger" : "success"}
+                >
+                  {blockedCount}
+                </WorkspaceStatusPill>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Launch actions</CardTitle>
+              <CardDescription>
+                Review setup before continuing.
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="grid gap-2">
+              <Button
+                suppressHydrationWarning
+                type="button"
+                variant="outline"
+                className="justify-start"
+                onClick={onOpenCloud}
+              >
+                <Cloud className="h-4 w-4" />
+                Review cloud setup
               </Button>
 
               <Button
                 suppressHydrationWarning
                 type="button"
-                size="sm"
                 variant="outline"
+                className="justify-start"
+                onClick={onOpenSecurity}
+              >
+                <ShieldCheck className="h-4 w-4" />
+                Review security
+              </Button>
+
+              <Button
+                suppressHydrationWarning
+                type="button"
+                variant="outline"
+                className="justify-start"
                 onClick={onCreateChecklist}
               >
                 <FileCheck2 className="h-4 w-4" />
-                Create checklist
+                Generate checklist
               </Button>
-            </>
-          }
-        />
-
-        {blockedCount > 0 ? (
-          <WorkspaceNotice title="Publishing is blocked" tone="danger">
-            {blockedCount} blocker{blockedCount === 1 ? "" : "s"} must be fixed
-            before continuing to production.
-          </WorkspaceNotice>
-        ) : warningCount > 0 ? (
-          <WorkspaceNotice title="Manual review recommended" tone="warning">
-            {warningCount} item{warningCount === 1 ? "" : "s"} still need manual
-            review before launch. Boring, yes. Still cheaper than production
-            embarrassment.
-          </WorkspaceNotice>
-        ) : (
-          <WorkspaceNotice title="Ready for final publish review" tone="success">
-            No generated blockers were detected. Still perform a manual smoke
-            test before production, because confidence is not a QA strategy.
-          </WorkspaceNotice>
-        )}
-
-        <WorkspaceMetricGrid>
-          <WorkspaceMetricCard
-            label="Files"
-            value={fileCount}
-            detail="Generated files available."
-            icon={<Code2 className="h-4 w-4" />}
-            tone={fileCount > 0 ? "blue" : "orange"}
-          />
-
-          <WorkspaceMetricCard
-            label="Changed"
-            value={changedFileCount}
-            detail="Created or updated files."
-            icon={<ClipboardCheck className="h-4 w-4" />}
-            tone={changedFileCount > 0 ? "green" : "orange"}
-          />
-
-          <WorkspaceMetricCard
-            label="Env vars"
-            value={environmentVariableCount}
-            detail="Required configuration values."
-            icon={<KeyRound className="h-4 w-4" />}
-            tone={environmentVariableCount > 0 ? "orange" : "green"}
-          />
-
-          <WorkspaceMetricCard
-            label="Integrations"
-            value={integrationCount}
-            detail="Detected service dependencies."
-            icon={<Cloud className="h-4 w-4" />}
-            tone={integrationCount > 0 ? "blue" : "default"}
-          />
-        </WorkspaceMetricGrid>
-
-        <WorkspaceTwoColumnGrid>
-          <WorkspaceCard
-            title="Generated URL"
-            description="Preview or staging URL for this workspace."
-            badge={<WorkspaceStatusBadge tone="blue">Preview</WorkspaceStatusBadge>}
-          >
-            <div className="grid min-h-36 grid-cols-[auto_1fr_auto] items-start gap-3 rounded-2xl border bg-background p-4">
-              <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-blue-200 bg-blue-50 text-blue-700">
-                <Globe2 className="h-5 w-5" />
-              </span>
-
-              <div className="min-w-0">
-                <h4 className="break-words text-base font-bold tracking-tight text-foreground">
-                  {generatedUrl.replace(/^https?:\/\//, "")}
-                </h4>
-                <p className="mt-2 text-xs font-medium leading-5 text-muted-foreground">
-                  Use this URL for final review, stakeholder preview, and launch
-                  smoke testing.
-                </p>
-              </div>
 
               <Button
                 suppressHydrationWarning
                 type="button"
-                size="icon"
-                variant="outline"
-                className="h-8 w-8 rounded-xl"
+                className="justify-start"
+                onClick={onContinuePublish}
+                disabled={!canContinue}
               >
-                <ExternalLink className="h-4 w-4" />
+                <UploadCloud className="h-4 w-4" />
+                {canContinue ? "Continue to publish" : "Resolve blockers first"}
               </Button>
-            </div>
-          </WorkspaceCard>
-
-          <WorkspaceCard
-            title="Readiness requirements"
-            description="Launch conditions grouped by status and area."
-            badge={
-              <WorkspaceStatusBadge tone={publishTone}>
-                {passedCount}/{requirements.length} passed
-              </WorkspaceStatusBadge>
-            }
-          >
-            {requirements.length > 0 ? (
-              <div className="grid gap-2">
-                {requirements.map((requirement) => (
-                  <article
-                    key={requirement.id}
-                    className="grid grid-cols-[auto_1fr] gap-3 rounded-2xl border bg-background p-3 transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50/30 hover:shadow-sm"
-                  >
-                    <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-blue-200 bg-blue-50 text-blue-700">
-                      {getAreaIcon(requirement.area)}
-                    </span>
-
-                    <div className="min-w-0">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <h4 className="text-sm font-bold tracking-tight text-foreground">
-                            {requirement.title}
-                          </h4>
-                          <span className="mt-1 block text-xs font-medium capitalize text-muted-foreground">
-                            {requirement.area}
-                          </span>
-                        </div>
-
-                        <WorkspaceStatusBadge
-                          tone={getRequirementTone(requirement.status)}
-                        >
-                          {getRequirementLabel(requirement.status)}
-                        </WorkspaceStatusBadge>
-                      </div>
-
-                      <p className="mt-3 text-xs font-medium leading-5 text-muted-foreground">
-                        {requirement.description}
-                      </p>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <WorkspaceEmptyState
-                icon={<CheckCircle2 className="h-6 w-6" />}
-                title="No requirements generated"
-                description="Publish requirements will appear here after the workspace is analysed."
-              />
-            )}
-          </WorkspaceCard>
-        </WorkspaceTwoColumnGrid>
-
-        <WorkspaceCard
-          title="Launch actions"
-          description="Useful next steps before continuing."
-          badge={<WorkspaceStatusBadge>Actions</WorkspaceStatusBadge>}
-        >
-          <div className="grid gap-2">
-            <WorkspaceActionRow
-              title="Review cloud setup"
-              description="Check deployment target, integrations, and environment variables."
-              icon={<Cloud className="h-4 w-4" />}
-              badge={<WorkspaceStatusBadge tone="blue">Cloud</WorkspaceStatusBadge>}
-              onClick={onOpenCloud}
-            />
-
-            <WorkspaceActionRow
-              title="Review security"
-              description="Check authentication, protected routes, server secrets, and database policies."
-              icon={<ShieldCheck className="h-4 w-4" />}
-              badge={
-                <WorkspaceStatusBadge tone="orange">
-                  Security
-                </WorkspaceStatusBadge>
-              }
-              onClick={onOpenSecurity}
-            />
-
-            <WorkspaceActionRow
-              title="Generate publish checklist"
-              description="Create a markdown launch checklist for review and handoff."
-              icon={<FileCheck2 className="h-4 w-4" />}
-              badge={
-                <WorkspaceStatusBadge tone="green">
-                  Generate
-                </WorkspaceStatusBadge>
-              }
-              onClick={onCreateChecklist}
-            />
-
-            <WorkspaceActionRow
-              title="Continue to publish"
-              description={
-                canContinue
-                  ? "Proceed to final publish flow."
-                  : "Resolve blockers before continuing."
-              }
-              icon={
-                canContinue ? (
-                  <Rocket className="h-4 w-4" />
-                ) : (
-                  <AlertTriangle className="h-4 w-4" />
-                )
-              }
-              badge={
-                <WorkspaceStatusBadge tone={canContinue ? "green" : "red"}>
-                  {canContinue ? "Ready" : "Blocked"}
-                </WorkspaceStatusBadge>
-              }
-              onClick={canContinue ? onContinuePublish : undefined}
-            />
-          </div>
-        </WorkspaceCard>
-      </WorkspaceSectionStack>
-    </WorkspaceShell>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </WorkspacePanel>
   );
 }

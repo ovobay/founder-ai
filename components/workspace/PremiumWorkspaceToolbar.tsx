@@ -1,537 +1,474 @@
 "use client";
-import type { WorkspaceView } from "@/types/workspace";
 
-import type { ComponentType, CSSProperties } from "react";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import * as React from "react";
+import styles from "./PremiumWorkspaceToolbar.module.css";
+
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import {
-  ArrowUp,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuPortal,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+import {
   BarChart3,
-  CheckCircle2,
-  ChevronRight,
   Cloud,
   Code2,
   Copy,
+  ExternalLink,
   Eye,
-  FileCheck2,
   FileText,
   Globe2,
+  History,
   MoreHorizontal,
   Share2,
   Shield,
-  Upload,
+  Sparkles,
+  Wrench,
 } from "lucide-react";
 
-import styles from "./PremiumWorkspaceToolbar.module.css";
-
-
-type ToolId =
-  | "preview"
-  | "files"
-  | "cloud"
-  | "code"
-  | "architecture"
-  | "security"
-  | "analytics"
-  | "history";
-
-type ToolConfig = {
-  id: ToolId;
-  label: string;
-  icon: ComponentType<{
-    className?: string;
-    size?: number;
-    strokeWidth?: number;
-  }>;
-};
-
-type PremiumWorkspaceToolbarProps = {
-  filesOpen: boolean;
-  setFilesOpen: (value: boolean) => void;
-  fileCountLabel: string;
-  workspaceView: WorkspaceView;
-  setWorkspaceView: (view: WorkspaceView) => void;
-  onOpenPublishCenter?: () => void;
-  previewState?: {
-    projectType?: string;
-    securityFindings?: Array<{ severity?: string }>;
-  };
-};
-
-const tools: ToolConfig[] = [
-  { id: "preview", label: "Preview", icon: Globe2 },
-  { id: "files", label: "Files", icon: FileText },
-  { id: "cloud", label: "Cloud", icon: Cloud },
-  { id: "code", label: "Code", icon: Code2 },
-  { id: "architecture", label: "Build", icon: BarChart3 },
-  { id: "security", label: "Security", icon: Shield },
-  { id: "analytics", label: "Analytics", icon: BarChart3 },
-  { id: "history", label: "More", icon: MoreHorizontal },
-];
-
-function GitHubLogo() {
+function GithubLogo(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       aria-hidden="true"
-      className={styles.githubLogo}
       viewBox="0 0 24 24"
-      role="img"
+      fill="currentColor"
+      {...props}
     >
-      <path
-        fill="currentColor"
-        d="M12 2C6.477 2 2 6.484 2 12.017c0 4.427 2.865 8.182 6.839 9.504.5.092.682-.217.682-.483 0-.237-.009-1.04-.014-1.887-2.782.605-3.369-1.192-3.369-1.192-.455-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.004.071 1.532 1.032 1.532 1.032.893 1.53 2.341 1.088 2.91.832.091-.651.35-1.088.636-1.338-2.221-.254-4.555-1.114-4.555-4.957 0-1.094.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.651 0 0 .84-.269 2.75 1.027A9.564 9.564 0 0 1 12 6.836c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.203 2.398.1 2.651.64.7 1.028 1.594 1.028 2.688 0 3.853-2.338 4.7-4.566 4.95.359.31.678.92.678 1.855 0 1.34-.012 2.422-.012 2.75 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.523 2 12 2Z"
-      />
+      <path d="M12 2C6.48 2 2 6.58 2 12.26c0 4.53 2.87 8.37 6.84 9.73.5.09.68-.22.68-.49 0-.24-.01-1.04-.01-1.89-2.78.62-3.37-1.21-3.37-1.21-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.63.07-.63 1 .07 1.53 1.06 1.53 1.06.9 1.57 2.36 1.12 2.94.86.09-.67.35-1.12.63-1.38-2.22-.26-4.56-1.14-4.56-5.08 0-1.12.39-2.04 1.03-2.76-.1-.26-.45-1.31.1-2.72 0 0 .84-.28 2.75 1.05A9.3 9.3 0 0 1 12 6.99c.85 0 1.7.12 2.5.34 1.91-1.33 2.75-1.05 2.75-1.05.55 1.41.2 2.46.1 2.72.64.72 1.03 1.64 1.03 2.76 0 3.95-2.34 4.82-4.57 5.08.36.32.68.94.68 1.9 0 1.37-.01 2.47-.01 2.81 0 .27.18.59.69.49A10.12 10.12 0 0 0 22 12.26C22 6.58 17.52 2 12 2Z" />
     </svg>
   );
 }
 
-function getActiveTool(filesOpen: boolean, workspaceView: WorkspaceView): ToolId {
-  if (filesOpen) return "files";
-  if (workspaceView === "code") return "code";
-  if (workspaceView === "architecture") return "architecture";
-  if (workspaceView === "integrations") return "cloud";
-  if (workspaceView === "security") return "security";
-  if (workspaceView === "analytics") return "analytics";
-  if (workspaceView === "history") return "history";
-  return "preview";
+type WorkspaceViewKey =
+  | "preview"
+  | "files"
+  | "cloud"
+  | "code"
+  | "build"
+  | "security"
+  | "analytics"
+  | "history"
+  | "publish"
+  | "publish-readiness";
+
+type PremiumWorkspaceToolbarProps<TWorkspaceView extends string = WorkspaceViewKey> = {
+  filesOpen?: boolean;
+  setFilesOpen?: (value: boolean) => void;
+  fileCountLabel?: string;
+  workspaceView: TWorkspaceView;
+  setWorkspaceView: (view: TWorkspaceView) => void;
+  onOpenPublishCenter?: () => void;
+  onOpenPublishReadiness?: () => void;
+  onCreateChecklist?: () => void;
+  onDeployProject?: () => void;
+  onShare?: () => void;
+  onOpenGithub?: () => void;
+  previewUrl?: string;
+  projectTitle?: string;
+  publishIssueCount?: number;
+  publishStatusLabel?: string;
+  [key: string]: unknown;
+};
+
+type ToolItem = {
+  key: WorkspaceViewKey;
+  label: string;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+};
+
+const PRIMARY_TOOLS: ToolItem[] = [
+  { key: "preview", label: "Preview", icon: Globe2 },
+  { key: "files", label: "Files", icon: FileText },
+  { key: "cloud", label: "Cloud", icon: Cloud },
+  { key: "code", label: "Code", icon: Code2 },
+  { key: "build", label: "Build", icon: Wrench },
+  { key: "security", label: "Security", icon: Shield },
+  { key: "analytics", label: "Analytics", icon: BarChart3 },
+];
+
+const OVERFLOW_TOOLS: ToolItem[] = [
+  { key: "history", label: "History", icon: History },
+];
+
+function ToolButton({
+  item,
+  active,
+  onClick,
+}: {
+  item: ToolItem;
+  active: boolean;
+  onClick: () => void;
+}) {
+  const Icon = item.icon;
+
+  if (active) {
+    return (
+      <Button
+        type="button"
+        variant="outline"
+        onClick={onClick}
+        className={cn(
+          "h-11 rounded-2xl border-primary/40 bg-primary/5 px-4 text-primary shadow-sm",
+          "hover:bg-primary/10 hover:text-primary",
+          "focus-visible:ring-2 focus-visible:ring-primary/30",
+          styles.labeledButton,
+        )}
+      >
+        <Icon className="mr-2 h-5 w-5" />
+        <span className="text-base font-semibold">{item.label}</span>
+      </Button>
+    );
+  }
+
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="icon"
+      onClick={onClick}
+      aria-label={item.label}
+      className={cn(
+        "h-11 w-11 rounded-2xl border-border bg-background shadow-sm",
+        "hover:bg-accent hover:text-accent-foreground",
+        "focus-visible:ring-2 focus-visible:ring-primary/30",
+        styles.iconButton,
+      )}
+    >
+      <Icon className="h-5 w-5" />
+    </Button>
+  );
 }
 
-function buildProjectUrl(projectType?: string) {
-  const slug = (projectType || "founder-workspace")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
+function PublishMenu({
+  previewUrl,
+  projectTitle,
+  publishIssueCount,
+  publishStatusLabel,
+  onOpenPublishCenter,
+  onOpenPublishReadiness,
+  onCreateChecklist,
+  onDeployProject,
+}: {
+  previewUrl: string;
+  projectTitle: string;
+  publishIssueCount: number;
+  publishStatusLabel: string;
+  onOpenPublishCenter?: () => void;
+  onOpenPublishReadiness?: () => void;
+  onCreateChecklist?: () => void;
+  onDeployProject?: () => void;
+}) {
+  const handleCopy = React.useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(previewUrl);
+    } catch {
+      // silent on purpose
+    }
+  }, [previewUrl]);
 
-  return `${slug || "founder-workspace"}.founderai.app`;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          className={cn(
+            "h-11 rounded-2xl px-5 text-base font-semibold shadow-md",
+            "bg-primary text-primary-foreground hover:bg-primary/90",
+          )}
+        >
+          <ExternalLink className="mr-2 h-5 w-5" />
+          Publish
+        </Button>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuPortal>
+        <DropdownMenuContent
+          align="end"
+          sideOffset={12}
+          collisionPadding={16}
+          className={cn(
+            "z-[200] w-[440px] rounded-3xl border bg-background p-0 shadow-2xl",
+            styles.publishMenuFix,
+          )}
+        >
+          <div className="overflow-hidden rounded-3xl">
+            <div className="flex items-center justify-between px-5 py-4">
+              <div>
+                <DropdownMenuLabel className="p-0 text-xl font-semibold text-foreground">
+                  Publish
+                </DropdownMenuLabel>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Review launch readiness before going live.
+                </p>
+              </div>
+              <Badge variant="secondary" className="rounded-full px-3 py-1 text-sm">
+                {publishStatusLabel}
+              </Badge>
+            </div>
+
+            <Separator />
+
+            <ScrollArea className="max-h-[70vh]">
+              <div className="space-y-4 p-4">
+                <Card className="rounded-2xl">
+                  <CardHeader className="space-y-2 pb-3">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <CardTitle className="text-lg">Website URL</CardTitle>
+                        <CardDescription>
+                          Generated staging domain for this workspace.
+                        </CardDescription>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="rounded-xl"
+                        onClick={handleCopy}
+                      >
+                        <Copy className="mr-2 h-4 w-4" />
+                        Copy
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="rounded-2xl border bg-muted/40 px-4 py-4 text-base font-medium">
+                      {previewUrl}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="rounded-2xl">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg">Visibility</CardTitle>
+                    <CardDescription>
+                      Who can access the published project.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-start gap-4 rounded-2xl border bg-muted/20 p-4">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl border bg-background">
+                        <Eye className="h-5 w-5" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-base font-semibold">Public preview</p>
+                        <p className="text-sm text-muted-foreground">
+                          Anyone with the URL can access {projectTitle}.
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="rounded-2xl">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg">Launch actions</CardTitle>
+                    <CardDescription>
+                      Review the things most likely to bite you later.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex h-auto w-full items-center justify-between rounded-2xl px-4 py-4 text-left"
+                      onClick={onOpenPublishReadiness}
+                    >
+                      <div>
+                        <div className="text-base font-semibold">Review security</div>
+                        <div className="text-sm text-muted-foreground">
+                          {publishIssueCount > 0
+                            ? `${publishIssueCount} item(s) need review before launch.`
+                            : "No blockers detected."}
+                        </div>
+                      </div>
+                      <Badge
+                        variant={publishIssueCount > 0 ? "destructive" : "secondary"}
+                        className="rounded-full"
+                      >
+                        {publishIssueCount > 0 ? publishIssueCount : "Ready"}
+                      </Badge>
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex h-auto w-full items-center justify-between rounded-2xl px-4 py-4 text-left"
+                      onClick={onCreateChecklist}
+                    >
+                      <div>
+                        <div className="text-base font-semibold">Create checklist</div>
+                        <div className="text-sm text-muted-foreground">
+                          Generate launch and QA tasks for this build.
+                        </div>
+                      </div>
+                      <FileText className="h-5 w-5 text-muted-foreground" />
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="default"
+                      className="h-12 w-full rounded-2xl text-base font-semibold"
+                      onClick={() => {
+                        onOpenPublishCenter?.();
+                        onDeployProject?.();
+                      }}
+                    >
+                      <Sparkles className="mr-2 h-5 w-5" />
+                      Continue publish flow
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </ScrollArea>
+          </div>
+        </DropdownMenuContent>
+      </DropdownMenuPortal>
+    </DropdownMenu>
+  );
 }
 
-export function PremiumWorkspaceToolbar({
+export function PremiumWorkspaceToolbar<TWorkspaceView extends string = WorkspaceViewKey>({
   filesOpen,
   setFilesOpen,
   fileCountLabel,
   workspaceView,
   setWorkspaceView,
   onOpenPublishCenter,
-  previewState,
-}: PremiumWorkspaceToolbarProps) {
-  const activeTool = getActiveTool(filesOpen, workspaceView);
-
-  const [isPublishOpen, setIsPublishOpen] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [publishPanelPosition, setPublishPanelPosition] = useState({
-    top: 0,
-    left: 0,
-    maxHeight: 640,
-  });
-
-  const publishButtonRef = useRef<HTMLButtonElement | null>(null);
-  const publishPanelRef = useRef<HTMLDivElement | null>(null);
-
-  const projectUrl = useMemo(
-    () => buildProjectUrl(previewState?.projectType),
-    [previewState?.projectType]
+  onOpenPublishReadiness,
+  onCreateChecklist,
+  onDeployProject,
+  onShare,
+  onOpenGithub,
+  previewUrl = "https://itsm-command-center.founder-ai.app",
+  projectTitle = "this workspace",
+  publishIssueCount = 3,
+  publishStatusLabel = "Ready to review",
+}: PremiumWorkspaceToolbarProps<TWorkspaceView>) {
+  const handleToolChange = React.useCallback(
+    (nextView: WorkspaceViewKey) => {
+      setWorkspaceView(nextView as TWorkspaceView);
+      if (setFilesOpen) {
+        setFilesOpen(nextView === "files" ? true : false);
+      }
+    },
+    [setWorkspaceView, setFilesOpen],
   );
 
-  const securityCount = useMemo(() => {
-    if (!previewState?.securityFindings?.length) return 0;
-    return previewState.securityFindings.length;
-  }, [previewState?.securityFindings]);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  useLayoutEffect(() => {
-    if (!isPublishOpen) return;
-
-    function updatePosition() {
-      const button = publishButtonRef.current;
-      if (!button) return;
-
-      const rect = button.getBoundingClientRect();
-      const panelWidth = 448;
-      const viewportPadding = 12;
-
-      let left = rect.right - panelWidth;
-      if (left < viewportPadding) left = viewportPadding;
-      if (left + panelWidth > window.innerWidth - viewportPadding) {
-        left = window.innerWidth - panelWidth - viewportPadding;
-      }
-
-      const preferredTop = rect.bottom + 12;
-      const availableBelow = window.innerHeight - preferredTop - viewportPadding;
-      const preferredMaxHeight = Math.min(640, window.innerHeight - viewportPadding * 2);
-
-      const shouldOpenFromTop = availableBelow < 520;
-      const top = shouldOpenFromTop ? viewportPadding : preferredTop;
-      const maxHeight = shouldOpenFromTop
-        ? window.innerHeight - viewportPadding * 2
-        : Math.max(420, Math.min(preferredMaxHeight, availableBelow));
-
-      setPublishPanelPosition({ top, left, maxHeight });
-    }
-
-    updatePosition();
-
-    window.addEventListener("resize", updatePosition);
-    window.addEventListener("scroll", updatePosition, true);
-
-    return () => {
-      window.removeEventListener("resize", updatePosition);
-      window.removeEventListener("scroll", updatePosition, true);
-    };
-  }, [isPublishOpen]);
-
-  useEffect(() => {
-    if (!isPublishOpen) return;
-
-    function handlePointerDown(event: MouseEvent) {
-      const target = event.target;
-      if (!(target instanceof Node)) return;
-
-      if (publishButtonRef.current?.contains(target)) return;
-      if (publishPanelRef.current?.contains(target)) return;
-
-      setIsPublishOpen(false);
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setIsPublishOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isPublishOpen]);
-
-  useEffect(() => {
-    if (!copied) return;
-    const timer = window.setTimeout(() => setCopied(false), 1500);
-    return () => window.clearTimeout(timer);
-  }, [copied]);
-
-  function selectTool(toolId: ToolId) {
-    setIsPublishOpen(false);
-
-    if (toolId === "files") {
-      setWorkspaceView("preview");
-      setFilesOpen(!filesOpen);
-      return;
-    }
-
-    setFilesOpen(false);
-
-    if (toolId === "preview") {
-      setWorkspaceView("preview");
-      return;
-    }
-
-    if (toolId === "cloud") {
-      setWorkspaceView("integrations");
-      return;
-    }
-
-    if (toolId === "code") {
-      setWorkspaceView("code");
-      return;
-    }
-
-    if (toolId === "architecture") {
-      setWorkspaceView("architecture");
-      return;
-    }
-
-    if (toolId === "security") {
-      setWorkspaceView("security");
-      return;
-    }
-
-    if (toolId === "analytics") {
-      setWorkspaceView("analytics");
-      return;
-    }
-
-    if (toolId === "history") {
-      setWorkspaceView("history");
-    }
-  }
-
-  async function handleCopyUrl() {
-    try {
-      await navigator.clipboard.writeText(`https://${projectUrl}`);
-      setCopied(true);
-    } catch {
-      setCopied(false);
-    }
-  }
-
-  function openPublishReadiness() {
-    setFilesOpen(false);
-    setWorkspaceView("publish-readiness");
-    setIsPublishOpen(false);
-  }
-
-  function openSecurity() {
-    setFilesOpen(false);
-    setWorkspaceView("security");
-    setIsPublishOpen(false);
-  }
-
-  function openCloud() {
-    setFilesOpen(false);
-    setWorkspaceView("integrations");
-    setIsPublishOpen(false);
-  }
-
-  function handleContinuePublish() {
-    setIsPublishOpen(false);
-
-    if (onOpenPublishCenter) {
-      onOpenPublishCenter();
-      return;
-    }
-
-    setFilesOpen(false);
-    setWorkspaceView("publish-readiness");
-  }
-
-  const publishPanel =
-    isMounted && isPublishOpen
-      ? createPortal(
-          <div
-            className={styles.publishPopover}
-            ref={publishPanelRef}
-            role="dialog"
-            aria-label="Publish panel"
-            style={
-              {
-                top: `${publishPanelPosition.top}px`,
-                left: `${publishPanelPosition.left}px`,
-                maxHeight: `${publishPanelPosition.maxHeight}px`,
-              } as CSSProperties
-            }
-          >
-            <div className={styles.publishPopoverHeader}>
-              <div>
-                <h3 className={styles.publishPopoverTitle}>Publish</h3>
-                <p className={styles.publishPopoverSubtitle}>
-                  Review launch readiness before going live.
-                </p>
-              </div>
-
-              <span className={styles.publishStatusChip}>
-                <CheckCircle2 size={13} strokeWidth={2.2} />
-                Ready to review
-              </span>
-            </div>
-
-            <div className={styles.publishPopoverBody}>
-              <div className={styles.publishPopoverSection}>
-                <div className={styles.publishSectionHeader}>
-                  <div>
-                    <h4>Website URL</h4>
-                  <p>Generated staging domain for this workspace.</p>
-                  </div>
-
-                  <button
-                    suppressHydrationWarning
-                    type="button"
-                    className={styles.publishMiniAction}
-                    onClick={handleCopyUrl}
-                  >
-                    <Copy size={13} strokeWidth={2.2} />
-                    {copied ? "Copied" : "Copy"}
-                  </button>
-                </div>
-
-                <div className={styles.publishUrlCard}>
-                  <span className={styles.publishUrlText}>{projectUrl}</span>
-                </div>
-              </div>
-
-              <div className={styles.publishPopoverSection}>
-                <div className={styles.publishSectionHeader}>
-                <div>
-                  <h4>Visibility</h4>
-                  <p>Who can access the published project.</p>
-                </div>
-              </div>
-
-              <div className={styles.publishVisibilityCard}>
-                <div className={styles.publishVisibilityIcon}>
-                  <Eye size={18} strokeWidth={2.1} />
-                </div>
-
-                <div className={styles.publishVisibilityText}>
-                  <strong>Public preview</strong>
-                  <span>Anyone with the URL can access the workspace preview.</span>
-                </div>
-              </div>
-            </div>
-
-            <div className={styles.publishPopoverSection}>
-              <div className={styles.publishSectionHeader}>
-                <div>
-                  <h4>Launch actions</h4>
-                  <p>Review the things most likely to bite you later.</p>
-                </div>
-              </div>
-
-              <div className={styles.publishActionGrid}>
-                <button
-                  suppressHydrationWarning
-                  type="button"
-                  className={styles.publishActionCard}
-                  onClick={openSecurity}
-                >
-                  <span className={styles.publishActionIcon}>
-                    <Shield size={16} strokeWidth={2.2} />
-                  </span>
-                  <span className={styles.publishActionText}>
-                    <strong>Review security</strong>
-                    <small>
-                      {securityCount > 0
-                        ? `${securityCount} finding${securityCount === 1 ? "" : "s"} to review`
-                        : "No blockers detected"}
-                    </small>
-                  </span>
-                  <ChevronRight size={16} strokeWidth={2.3} />
-                </button>
-
-                <button
-                  suppressHydrationWarning
-                  type="button"
-                  className={styles.publishActionCard}
-                  onClick={openPublishReadiness}
-                >
-                  <span className={styles.publishActionIcon}>
-                    <FileCheck2 size={16} strokeWidth={2.2} />
-                  </span>
-                  <span className={styles.publishActionText}>
-                    <strong>Create checklist</strong>
-                    <small>Generate launch steps and review blockers</small>
-                  </span>
-                  <ChevronRight size={16} strokeWidth={2.3} />
-                </button>
-
-                <button
-                  suppressHydrationWarning
-                  type="button"
-                  className={styles.publishActionCard}
-                  onClick={openCloud}
-                >
-                  <span className={styles.publishActionIcon}>
-                    <Cloud size={16} strokeWidth={2.2} />
-                  </span>
-                  <span className={styles.publishActionText}>
-                    <strong>Deployment settings</strong>
-                    <small>Cloud, environment variables, and integrations</small>
-                  </span>
-                  <ChevronRight size={16} strokeWidth={2.3} />
-                </button>
-              </div>
-            </div>
-
-            </div>
-
-            <div className={styles.publishPopoverFooter}>
-              <button
-                suppressHydrationWarning
-                type="button"
-                className={styles.publishPrimaryButton}
-                onClick={handleContinuePublish}
-              >
-                <Upload size={15} strokeWidth={2.2} />
-                Continue to publish
-              </button>
-            </div>
-          </div>,
-          document.body
-        )
-      : null;
+  const currentOverflowActive = OVERFLOW_TOOLS.some((item) => item.key === workspaceView);
 
   return (
-    <>
-      <header className={styles.toolbarShell} aria-label="Preview toolbar">
-        <div className={styles.toolRail} aria-label="Workspace tools">
-          {tools.map((tool) => {
-            const Icon = tool.icon;
-            const isActive = activeTool === tool.id;
-            const label =
-              tool.id === "files" && fileCountLabel
-                ? `Files · ${fileCountLabel}`
-                : tool.label;
+    <div className={styles.toolbar}>
+      <div className={styles.left}>
+        <div className={styles.toolStrip}>
+          {PRIMARY_TOOLS.map((item) => (
+            <ToolButton
+              key={item.key}
+              item={item}
+              active={workspaceView === item.key}
+              onClick={() => handleToolChange(item.key)}
+            />
+          ))}
 
-            return (
-              <button
-                key={tool.id}
-                suppressHydrationWarning
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
                 type="button"
-                className={`${styles.toolButton} ${
-                  isActive ? styles.toolButtonActive : ""
-                }`}
-                aria-label={label}
-                aria-pressed={isActive}
-                title={label}
-                onClick={() => selectTool(tool.id)}
+                variant="outline"
+                size="icon"
+                aria-label="More tools"
+                className={cn(
+                  "h-11 w-11 rounded-2xl border-border bg-background shadow-sm",
+                  currentOverflowActive &&
+                    "border-primary/40 bg-primary/5 text-primary ring-2 ring-primary/20",
+                )}
               >
-                <span className={styles.toolIconWrap}>
-                  <Icon className={styles.toolIcon} size={14} strokeWidth={2.25} />
-                </span>
+                <MoreHorizontal className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
 
-                <span className={styles.toolLabelWrap} aria-hidden={!isActive}>
-                  <span className={styles.toolLabel}>{tool.label}</span>
-                </span>
-              </button>
-            );
-          })}
+            <DropdownMenuContent
+              align="start"
+              sideOffset={10}
+              className="z-[160] min-w-[220px] rounded-2xl"
+            >
+              <DropdownMenuLabel>More tools</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                {OVERFLOW_TOOLS.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <DropdownMenuItem
+                      key={item.key}
+                      onClick={() => handleToolChange(item.key)}
+                      className="rounded-xl"
+                    >
+                      <Icon className="mr-2 h-4 w-4" />
+                      {item.label}
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
+      </div>
 
-        <div className={styles.actionRail} aria-label="Workspace actions">
-          <button suppressHydrationWarning type="button" className={styles.shareButton}>
-            <Share2 size={14} strokeWidth={2.15} />
-            <span>Share</span>
-          </button>
+      <div className={styles.right}>
+        <Button
+          type="button"
+          variant="outline"
+          className="h-11 rounded-2xl px-5 text-base font-semibold shadow-sm"
+          onClick={() => onShare?.()}
+        >
+          <Share2 className="mr-2 h-5 w-5" />
+          Share
+        </Button>
 
-          <button
-            suppressHydrationWarning
-            type="button"
-            className={styles.githubButton}
-            aria-label="GitHub"
-            title="GitHub"
-          >
-            <GitHubLogo />
-          </button>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          aria-label="Open GitHub"
+          className="h-11 w-11 rounded-2xl shadow-sm"
+          onClick={() => onOpenGithub?.()}
+        >
+          <GithubLogo className="h-5 w-5" />
+        </Button>
 
-          <button suppressHydrationWarning type="button" className={styles.upgradeButton}>
-            <ArrowUp size={14} strokeWidth={2.3} />
-            <span>Upgrade</span>
-          </button>
+        <Button
+          type="button"
+          className={cn(
+            "h-11 rounded-2xl px-5 text-base font-semibold shadow-md",
+            "bg-violet-600 text-white hover:bg-violet-700",
+          )}
+        >
+          <Sparkles className="mr-2 h-5 w-5" />
+          Upgrade
+        </Button>
 
-          <button
-            ref={publishButtonRef}
-            suppressHydrationWarning
-            type="button"
-            className={styles.publishButton}
-            aria-label="Open publish panel"
-            aria-haspopup="dialog"
-            aria-expanded={isPublishOpen}
-            onClick={() => setIsPublishOpen((current) => !current)}
-          >
-            <Upload size={14} strokeWidth={2.2} />
-            <span>Publish</span>
-          </button>
-        </div>
-      </header>
-
-      {publishPanel}
-    </>
+        <PublishMenu
+          previewUrl={previewUrl}
+          projectTitle={projectTitle}
+          publishIssueCount={publishIssueCount}
+          publishStatusLabel={publishStatusLabel}
+          onOpenPublishCenter={onOpenPublishCenter}
+          onOpenPublishReadiness={onOpenPublishReadiness}
+          onCreateChecklist={onCreateChecklist}
+          onDeployProject={onDeployProject}
+        />
+      </div>
+    </div>
   );
 }

@@ -1,21 +1,13 @@
 "use client";
 
 import * as React from "react";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+
 import styles from "./PremiumWorkspaceToolbar.module.css";
 
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuPortal,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 import {
   BarChart3,
@@ -25,7 +17,6 @@ import {
   ExternalLink,
   Eye,
   FileText,
-  Folder,
   Globe2,
   History,
   MoreHorizontal,
@@ -48,7 +39,9 @@ type ToolbarViewKey =
   | "publish"
   | "publish-readiness";
 
-type PremiumWorkspaceToolbarProps<TWorkspaceView extends string = ToolbarViewKey> = {
+type PremiumWorkspaceToolbarProps<
+  TWorkspaceView extends string = ToolbarViewKey,
+> = {
   filesOpen?: boolean;
   setFilesOpen?: (value: boolean) => void;
   fileCountLabel?: string;
@@ -150,13 +143,13 @@ function PublishMenu({
     try {
       await navigator.clipboard.writeText(previewUrl);
     } catch {
-      // No noisy failure for clipboard. Humanity has suffered enough popups.
+      // Clipboard failure should not explode the UI like a Victorian boiler.
     }
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger asChild>
         <Button
           suppressHydrationWarning
           type="button"
@@ -165,20 +158,22 @@ function PublishMenu({
           <ExternalLink className={styles.actionIcon} />
           <span>Publish</span>
         </Button>
-      </DropdownMenuTrigger>
+      </DropdownMenu.Trigger>
 
-      <DropdownMenuPortal>
-        <DropdownMenuContent
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content
           align="end"
+          side="bottom"
           sideOffset={8}
           collisionPadding={12}
+          avoidCollisions
           className={styles.publishMenu}
         >
           <div className={styles.publishHeader}>
             <div className={styles.publishHeaderText}>
-              <DropdownMenuLabel className={styles.publishTitle}>
+              <DropdownMenu.Label className={styles.publishTitle}>
                 Publish
-              </DropdownMenuLabel>
+              </DropdownMenu.Label>
               <p className={styles.publishDescription}>
                 Review launch readiness before going live.
               </p>
@@ -189,7 +184,7 @@ function PublishMenu({
             </Badge>
           </div>
 
-          <DropdownMenuSeparator />
+          <DropdownMenu.Separator />
 
           <div className={styles.publishContent}>
             <section className={styles.publishSection}>
@@ -228,10 +223,10 @@ function PublishMenu({
               </div>
             </section>
 
-            <DropdownMenuGroup className={styles.publishActions}>
-              <DropdownMenuItem
+            <div className={styles.publishActions}>
+              <DropdownMenu.Item
                 className={styles.publishItem}
-                onClick={onOpenPublishReadiness}
+                onSelect={onOpenPublishReadiness}
               >
                 <Shield className={styles.menuIcon} />
                 <span>Review security</span>
@@ -241,31 +236,31 @@ function PublishMenu({
                 >
                   {publishIssueCount > 0 ? publishIssueCount : "Ready"}
                 </Badge>
-              </DropdownMenuItem>
+              </DropdownMenu.Item>
 
-              <DropdownMenuItem
+              <DropdownMenu.Item
                 className={styles.publishItem}
-                onClick={onCreateChecklist}
+                onSelect={onCreateChecklist}
               >
                 <FileText className={styles.menuIcon} />
                 <span>Create checklist</span>
-              </DropdownMenuItem>
+              </DropdownMenu.Item>
 
-              <DropdownMenuItem
+              <DropdownMenu.Item
                 className={styles.publishItem}
-                onClick={() => {
+                onSelect={() => {
                   onOpenPublishCenter?.();
                   onDeployProject?.();
                 }}
               >
                 <Rocket className={styles.menuIcon} />
                 <span>Continue publish flow</span>
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
+              </DropdownMenu.Item>
+            </div>
           </div>
-        </DropdownMenuContent>
-      </DropdownMenuPortal>
-    </DropdownMenu>
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
   );
 }
 
@@ -314,8 +309,8 @@ export function PremiumWorkspaceToolbar<
             />
           ))}
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger asChild>
               <Button
                 suppressHydrationWarning
                 type="button"
@@ -329,32 +324,36 @@ export function PremiumWorkspaceToolbar<
               >
                 <MoreHorizontal className={styles.toolIcon} />
               </Button>
-            </DropdownMenuTrigger>
+            </DropdownMenu.Trigger>
 
-            <DropdownMenuPortal>
-              <DropdownMenuContent
+            <DropdownMenu.Portal>
+              <DropdownMenu.Content
                 align="start"
+                side="bottom"
                 sideOffset={8}
+                collisionPadding={12}
+                avoidCollisions
                 className={styles.moreMenu}
               >
-                <DropdownMenuLabel>More tools</DropdownMenuLabel>
-                <DropdownMenuSeparator />
+                <DropdownMenu.Label>More tools</DropdownMenu.Label>
+                <DropdownMenu.Separator />
+
                 {OVERFLOW_TOOLS.map((item) => {
                   const Icon = item.icon;
 
                   return (
-                    <DropdownMenuItem
+                    <DropdownMenu.Item
                       key={item.key}
-                      onClick={() => handleToolChange(item.key)}
+                      onSelect={() => handleToolChange(item.key)}
                     >
                       <Icon className={styles.menuIcon} />
                       {item.label}
-                    </DropdownMenuItem>
+                    </DropdownMenu.Item>
                   );
                 })}
-              </DropdownMenuContent>
-            </DropdownMenuPortal>
-          </DropdownMenu>
+              </DropdownMenu.Content>
+            </DropdownMenu.Portal>
+          </DropdownMenu.Root>
         </div>
       </div>
 

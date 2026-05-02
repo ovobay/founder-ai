@@ -389,3 +389,26 @@
     justify-content: flex-end;
   }
 }
+
+.moreMenu [data-radix-collection-item],
+.publishMenu [data-radix-collection-item] {
+  cursor: pointer;
+  outline: none;
+}
+
+.moreMenu [data-highlighted],
+.publishMenu [data-highlighted] {
+  background: #f3f4f6;
+  color: #111827;
+}
+.moreMenu [data-radix-collection-item],
+.publishMenu [data-radix-collection-item] {
+  cursor: pointer;
+  outline: none;
+}
+
+.moreMenu [data-highlighted],
+.publishMenu [data-highlighted] {
+  background: #f3f4f6;
+  color: #111827;
+}

@@ -6,9 +6,6 @@ import styles from "./PremiumWorkspaceToolbar.module.css";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,29 +25,18 @@ import {
   ExternalLink,
   Eye,
   FileText,
+  Folder,
   Globe2,
   History,
   MoreHorizontal,
+  Rocket,
   Share2,
   Shield,
-  Sparkles,
+  Wand2,
   Wrench,
 } from "lucide-react";
 
-function GithubLogo(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      {...props}
-    >
-      <path d="M12 2C6.48 2 2 6.58 2 12.26c0 4.53 2.87 8.37 6.84 9.73.5.09.68-.22.68-.49 0-.24-.01-1.04-.01-1.89-2.78.62-3.37-1.21-3.37-1.21-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.63.07-.63 1 .07 1.53 1.06 1.53 1.06.9 1.57 2.36 1.12 2.94.86.09-.67.35-1.12.63-1.38-2.22-.26-4.56-1.14-4.56-5.08 0-1.12.39-2.04 1.03-2.76-.1-.26-.45-1.31.1-2.72 0 0 .84-.28 2.75 1.05A9.3 9.3 0 0 1 12 6.99c.85 0 1.7.12 2.5.34 1.91-1.33 2.75-1.05 2.75-1.05.55 1.41.2 2.46.1 2.72.64.72 1.03 1.64 1.03 2.76 0 3.95-2.34 4.82-4.57 5.08.36.32.68.94.68 1.9 0 1.37-.01 2.47-.01 2.81 0 .27.18.59.69.49A10.12 10.12 0 0 0 22 12.26C22 6.58 17.52 2 12 2Z" />
-    </svg>
-  );
-}
-
-type WorkspaceViewKey =
+type ToolbarViewKey =
   | "preview"
   | "files"
   | "cloud"
@@ -62,7 +48,7 @@ type WorkspaceViewKey =
   | "publish"
   | "publish-readiness";
 
-type PremiumWorkspaceToolbarProps<TWorkspaceView extends string = WorkspaceViewKey> = {
+type PremiumWorkspaceToolbarProps<TWorkspaceView extends string = ToolbarViewKey> = {
   filesOpen?: boolean;
   setFilesOpen?: (value: boolean) => void;
   fileCountLabel?: string;
@@ -82,7 +68,7 @@ type PremiumWorkspaceToolbarProps<TWorkspaceView extends string = WorkspaceViewK
 };
 
 type ToolItem = {
-  key: WorkspaceViewKey;
+  key: ToolbarViewKey;
   label: string;
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
 };
@@ -101,6 +87,19 @@ const OVERFLOW_TOOLS: ToolItem[] = [
   { key: "history", label: "History", icon: History },
 ];
 
+function GithubLogo(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      {...props}
+    >
+      <path d="M12 2C6.48 2 2 6.58 2 12.26c0 4.53 2.87 8.37 6.84 9.73.5.09.68-.22.68-.49 0-.24-.01-1.04-.01-1.89-2.78.62-3.37-1.21-3.37-1.21-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.63.07-.63 1 .07 1.53 1.06 1.53 1.06.9 1.57 2.36 1.12 2.94.86.09-.67.35-1.12.63-1.38-2.22-.26-4.56-1.14-4.56-5.08 0-1.12.39-2.04 1.03-2.76-.1-.26-.45-1.31.1-2.72 0 0 .84-.28 2.75 1.05A9.3 9.3 0 0 1 12 6.99c.85 0 1.7.12 2.5.34 1.91-1.33 2.75-1.05 2.75-1.05.55 1.41.2 2.46.1 2.72.64.72 1.03 1.64 1.03 2.76 0 3.95-2.34 4.82-4.57 5.08.36.32.68.94.68 1.9 0 1.37-.01 2.47-.01 2.81 0 .27.18.59.69.49A10.12 10.12 0 0 0 22 12.26C22 6.58 17.52 2 12 2Z" />
+    </svg>
+  );
+}
+
 function ToolButton({
   item,
   active,
@@ -112,40 +111,18 @@ function ToolButton({
 }) {
   const Icon = item.icon;
 
-  if (active) {
-    return (
-      <Button
-        type="button"
-        variant="outline"
-        onClick={onClick}
-        className={cn(
-          "h-11 rounded-2xl border-primary/40 bg-primary/5 px-4 text-primary shadow-sm",
-          "hover:bg-primary/10 hover:text-primary",
-          "focus-visible:ring-2 focus-visible:ring-primary/30",
-          styles.labeledButton,
-        )}
-      >
-        <Icon className="mr-2 h-5 w-5" />
-        <span className="text-base font-semibold">{item.label}</span>
-      </Button>
-    );
-  }
-
   return (
     <Button
+      suppressHydrationWarning
       type="button"
       variant="outline"
-      size="icon"
-      onClick={onClick}
       aria-label={item.label}
-      className={cn(
-        "h-11 w-11 rounded-2xl border-border bg-background shadow-sm",
-        "hover:bg-accent hover:text-accent-foreground",
-        "focus-visible:ring-2 focus-visible:ring-primary/30",
-        styles.iconButton,
-      )}
+      onClick={onClick}
+      data-active={active ? "true" : "false"}
+      className={cn(styles.toolButton, active && styles.toolButtonActive)}
     >
-      <Icon className="h-5 w-5" />
+      <Icon className={styles.toolIcon} />
+      {active ? <span className={styles.toolLabel}>{item.label}</span> : null}
     </Button>
   );
 }
@@ -169,169 +146,122 @@ function PublishMenu({
   onCreateChecklist?: () => void;
   onDeployProject?: () => void;
 }) {
-  const handleCopy = React.useCallback(async () => {
+  async function handleCopy() {
     try {
       await navigator.clipboard.writeText(previewUrl);
     } catch {
-      // silent on purpose
+      // No noisy failure for clipboard. Humanity has suffered enough popups.
     }
-  }, [previewUrl]);
+  }
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
+          suppressHydrationWarning
           type="button"
-          className={cn(
-            "h-11 rounded-2xl px-5 text-base font-semibold shadow-md",
-            "bg-primary text-primary-foreground hover:bg-primary/90",
-          )}
+          className={cn(styles.actionButton, styles.publishButton)}
         >
-          <ExternalLink className="mr-2 h-5 w-5" />
-          Publish
+          <ExternalLink className={styles.actionIcon} />
+          <span>Publish</span>
         </Button>
       </DropdownMenuTrigger>
 
       <DropdownMenuPortal>
         <DropdownMenuContent
           align="end"
-          sideOffset={12}
-          collisionPadding={16}
-          className={cn(
-            "z-[200] w-[440px] rounded-3xl border bg-background p-0 shadow-2xl",
-            styles.publishMenuFix,
-          )}
+          sideOffset={8}
+          collisionPadding={12}
+          className={styles.publishMenu}
         >
-          <div className="overflow-hidden rounded-3xl">
-            <div className="flex items-center justify-between px-5 py-4">
-              <div>
-                <DropdownMenuLabel className="p-0 text-xl font-semibold text-foreground">
-                  Publish
-                </DropdownMenuLabel>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Review launch readiness before going live.
-                </p>
-              </div>
-              <Badge variant="secondary" className="rounded-full px-3 py-1 text-sm">
-                {publishStatusLabel}
-              </Badge>
+          <div className={styles.publishHeader}>
+            <div className={styles.publishHeaderText}>
+              <DropdownMenuLabel className={styles.publishTitle}>
+                Publish
+              </DropdownMenuLabel>
+              <p className={styles.publishDescription}>
+                Review launch readiness before going live.
+              </p>
             </div>
 
-            <Separator />
+            <Badge variant="secondary" className={styles.publishBadge}>
+              {publishStatusLabel}
+            </Badge>
+          </div>
 
-            <ScrollArea className="max-h-[70vh]">
-              <div className="space-y-4 p-4">
-                <Card className="rounded-2xl">
-                  <CardHeader className="space-y-2 pb-3">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <CardTitle className="text-lg">Website URL</CardTitle>
-                        <CardDescription>
-                          Generated staging domain for this workspace.
-                        </CardDescription>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="rounded-xl"
-                        onClick={handleCopy}
-                      >
-                        <Copy className="mr-2 h-4 w-4" />
-                        Copy
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="rounded-2xl border bg-muted/40 px-4 py-4 text-base font-medium">
-                      {previewUrl}
-                    </div>
-                  </CardContent>
-                </Card>
+          <DropdownMenuSeparator />
 
-                <Card className="rounded-2xl">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg">Visibility</CardTitle>
-                    <CardDescription>
-                      Who can access the published project.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-start gap-4 rounded-2xl border bg-muted/20 p-4">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl border bg-background">
-                        <Eye className="h-5 w-5" />
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-base font-semibold">Public preview</p>
-                        <p className="text-sm text-muted-foreground">
-                          Anyone with the URL can access {projectTitle}.
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+          <div className={styles.publishContent}>
+            <section className={styles.publishSection}>
+              <div className={styles.publishSectionHeader}>
+                <div>
+                  <h4>Website URL</h4>
+                  <p>Generated staging domain.</p>
+                </div>
 
-                <Card className="rounded-2xl">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg">Launch actions</CardTitle>
-                    <CardDescription>
-                      Review the things most likely to bite you later.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="flex h-auto w-full items-center justify-between rounded-2xl px-4 py-4 text-left"
-                      onClick={onOpenPublishReadiness}
-                    >
-                      <div>
-                        <div className="text-base font-semibold">Review security</div>
-                        <div className="text-sm text-muted-foreground">
-                          {publishIssueCount > 0
-                            ? `${publishIssueCount} item(s) need review before launch.`
-                            : "No blockers detected."}
-                        </div>
-                      </div>
-                      <Badge
-                        variant={publishIssueCount > 0 ? "destructive" : "secondary"}
-                        className="rounded-full"
-                      >
-                        {publishIssueCount > 0 ? publishIssueCount : "Ready"}
-                      </Badge>
-                    </Button>
-
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="flex h-auto w-full items-center justify-between rounded-2xl px-4 py-4 text-left"
-                      onClick={onCreateChecklist}
-                    >
-                      <div>
-                        <div className="text-base font-semibold">Create checklist</div>
-                        <div className="text-sm text-muted-foreground">
-                          Generate launch and QA tasks for this build.
-                        </div>
-                      </div>
-                      <FileText className="h-5 w-5 text-muted-foreground" />
-                    </Button>
-
-                    <Button
-                      type="button"
-                      variant="default"
-                      className="h-12 w-full rounded-2xl text-base font-semibold"
-                      onClick={() => {
-                        onOpenPublishCenter?.();
-                        onDeployProject?.();
-                      }}
-                    >
-                      <Sparkles className="mr-2 h-5 w-5" />
-                      Continue publish flow
-                    </Button>
-                  </CardContent>
-                </Card>
+                <Button
+                  suppressHydrationWarning
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className={styles.compactMenuButton}
+                  onClick={handleCopy}
+                >
+                  <Copy className={styles.menuIcon} />
+                  Copy
+                </Button>
               </div>
-            </ScrollArea>
+
+              <div className={styles.urlBox}>{previewUrl}</div>
+            </section>
+
+            <section className={styles.publishSection}>
+              <div className={styles.visibilityRow}>
+                <span className={styles.visibilityIcon}>
+                  <Eye className={styles.menuIcon} />
+                </span>
+
+                <div>
+                  <h4>Public preview</h4>
+                  <p>Anyone with the URL can access {projectTitle}.</p>
+                </div>
+              </div>
+            </section>
+
+            <DropdownMenuGroup className={styles.publishActions}>
+              <DropdownMenuItem
+                className={styles.publishItem}
+                onClick={onOpenPublishReadiness}
+              >
+                <Shield className={styles.menuIcon} />
+                <span>Review security</span>
+                <Badge
+                  variant={publishIssueCount > 0 ? "destructive" : "secondary"}
+                  className={styles.itemBadge}
+                >
+                  {publishIssueCount > 0 ? publishIssueCount : "Ready"}
+                </Badge>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                className={styles.publishItem}
+                onClick={onCreateChecklist}
+              >
+                <FileText className={styles.menuIcon} />
+                <span>Create checklist</span>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                className={styles.publishItem}
+                onClick={() => {
+                  onOpenPublishCenter?.();
+                  onDeployProject?.();
+                }}
+              >
+                <Rocket className={styles.menuIcon} />
+                <span>Continue publish flow</span>
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
           </div>
         </DropdownMenuContent>
       </DropdownMenuPortal>
@@ -339,10 +269,10 @@ function PublishMenu({
   );
 }
 
-export function PremiumWorkspaceToolbar<TWorkspaceView extends string = WorkspaceViewKey>({
-  filesOpen,
+export function PremiumWorkspaceToolbar<
+  TWorkspaceView extends string = ToolbarViewKey,
+>({
   setFilesOpen,
-  fileCountLabel,
   workspaceView,
   setWorkspaceView,
   onOpenPublishCenter,
@@ -357,16 +287,19 @@ export function PremiumWorkspaceToolbar<TWorkspaceView extends string = Workspac
   publishStatusLabel = "Ready to review",
 }: PremiumWorkspaceToolbarProps<TWorkspaceView>) {
   const handleToolChange = React.useCallback(
-    (nextView: WorkspaceViewKey) => {
+    (nextView: ToolbarViewKey) => {
       setWorkspaceView(nextView as TWorkspaceView);
+
       if (setFilesOpen) {
-        setFilesOpen(nextView === "files" ? true : false);
+        setFilesOpen(nextView === "files");
       }
     },
-    [setWorkspaceView, setFilesOpen],
+    [setWorkspaceView, setFilesOpen]
   );
 
-  const currentOverflowActive = OVERFLOW_TOOLS.some((item) => item.key === workspaceView);
+  const overflowActive = OVERFLOW_TOOLS.some(
+    (item) => item.key === workspaceView
+  );
 
   return (
     <div className={styles.toolbar}>
@@ -384,78 +317,77 @@ export function PremiumWorkspaceToolbar<TWorkspaceView extends string = Workspac
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
+                suppressHydrationWarning
                 type="button"
                 variant="outline"
-                size="icon"
                 aria-label="More tools"
+                data-active={overflowActive ? "true" : "false"}
                 className={cn(
-                  "h-11 w-11 rounded-2xl border-border bg-background shadow-sm",
-                  currentOverflowActive &&
-                    "border-primary/40 bg-primary/5 text-primary ring-2 ring-primary/20",
+                  styles.toolButton,
+                  overflowActive && styles.toolButtonActive
                 )}
               >
-                <MoreHorizontal className="h-5 w-5" />
+                <MoreHorizontal className={styles.toolIcon} />
               </Button>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent
-              align="start"
-              sideOffset={10}
-              className="z-[160] min-w-[220px] rounded-2xl"
-            >
-              <DropdownMenuLabel>More tools</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
+            <DropdownMenuPortal>
+              <DropdownMenuContent
+                align="start"
+                sideOffset={8}
+                className={styles.moreMenu}
+              >
+                <DropdownMenuLabel>More tools</DropdownMenuLabel>
+                <DropdownMenuSeparator />
                 {OVERFLOW_TOOLS.map((item) => {
                   const Icon = item.icon;
+
                   return (
                     <DropdownMenuItem
                       key={item.key}
                       onClick={() => handleToolChange(item.key)}
-                      className="rounded-xl"
                     >
-                      <Icon className="mr-2 h-4 w-4" />
+                      <Icon className={styles.menuIcon} />
                       {item.label}
                     </DropdownMenuItem>
                   );
                 })}
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
+              </DropdownMenuContent>
+            </DropdownMenuPortal>
           </DropdownMenu>
         </div>
       </div>
 
       <div className={styles.right}>
         <Button
+          suppressHydrationWarning
           type="button"
           variant="outline"
-          className="h-11 rounded-2xl px-5 text-base font-semibold shadow-sm"
+          className={cn(styles.actionButton, styles.shareButton)}
           onClick={() => onShare?.()}
         >
-          <Share2 className="mr-2 h-5 w-5" />
-          Share
+          <Share2 className={styles.actionIcon} />
+          <span>Share</span>
         </Button>
 
         <Button
+          suppressHydrationWarning
           type="button"
           variant="outline"
-          size="icon"
           aria-label="Open GitHub"
-          className="h-11 w-11 rounded-2xl shadow-sm"
+          className={styles.githubButton}
           onClick={() => onOpenGithub?.()}
         >
-          <GithubLogo className="h-5 w-5" />
+          <GithubLogo className={styles.githubIcon} />
         </Button>
 
         <Button
+          suppressHydrationWarning
           type="button"
-          className={cn(
-            "h-11 rounded-2xl px-5 text-base font-semibold shadow-md",
-            "bg-violet-600 text-white hover:bg-violet-700",
-          )}
+          className={cn(styles.actionButton, styles.upgradeButton)}
         >
-          <Sparkles className="mr-2 h-5 w-5" />
-          Upgrade
+          <Wand2 className={styles.actionIcon} />
+          <span>Upgrade</span>
         </Button>
 
         <PublishMenu

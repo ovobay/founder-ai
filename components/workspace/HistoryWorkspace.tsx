@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import {
   Archive,
   CheckCircle2,
@@ -10,23 +11,35 @@ import {
   RotateCcw,
   Search,
   Sparkles,
-  TimerReset,
+  XCircle,
 } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  WorkspaceActionRow,
-  WorkspaceCard,
-  WorkspaceEmptyState,
-  WorkspaceHero,
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   WorkspaceMetricCard,
   WorkspaceMetricGrid,
-  WorkspaceNotice,
-  WorkspaceSectionStack,
-  WorkspaceShell,
-  WorkspaceStatusBadge,
-  WorkspaceTwoColumnGrid,
-} from "@/components/workspace/shadcn/WorkspaceShell";
+  WorkspacePanel,
+  WorkspaceStatusPill,
+} from "@/components/workspace/tool-system/WorkspacePanel";
 
 export type WorkspaceHistoryStatus =
   | "completed"
@@ -91,11 +104,11 @@ const defaultHistoryItems: WorkspaceHistoryItem[] = [
 ];
 
 function getStatusTone(status: WorkspaceHistoryStatus) {
-  if (status === "completed") return "green" as const;
-  if (status === "restored") return "blue" as const;
-  if (status === "failed") return "red" as const;
+  if (status === "completed") return "success" as const;
+  if (status === "restored") return "info" as const;
+  if (status === "failed") return "danger" as const;
 
-  return "orange" as const;
+  return "warning" as const;
 }
 
 function getStatusLabel(status: WorkspaceHistoryStatus) {
@@ -107,17 +120,9 @@ function getStatusLabel(status: WorkspaceHistoryStatus) {
 }
 
 function getStatusIcon(status: WorkspaceHistoryStatus) {
-  if (status === "completed") {
-    return <CheckCircle2 className="h-4 w-4" />;
-  }
-
-  if (status === "restored") {
-    return <RotateCcw className="h-4 w-4" />;
-  }
-
-  if (status === "failed") {
-    return <TimerReset className="h-4 w-4" />;
-  }
+  if (status === "completed") return <CheckCircle2 className="h-4 w-4" />;
+  if (status === "restored") return <RotateCcw className="h-4 w-4" />;
+  if (status === "failed") return <XCircle className="h-4 w-4" />;
 
   return <Clock3 className="h-4 w-4" />;
 }
@@ -130,6 +135,16 @@ export function HistoryWorkspace({
   onRestoreBuild,
   onOpenPreview,
 }: HistoryWorkspaceProps) {
+  const [selectedId, setSelectedId] = useState(historyItems[0]?.id ?? "");
+
+  const selectedItem = useMemo(
+    () =>
+      historyItems.find((item) => item.id === selectedId) ??
+      historyItems[0] ??
+      null,
+    [historyItems, selectedId]
+  );
+
   const completedCount = historyItems.filter(
     (item) => item.status === "completed"
   ).length;
@@ -147,244 +162,310 @@ export function HistoryWorkspace({
     0
   );
 
-  const latestItem = historyItems[0];
-
   return (
-    <WorkspaceShell
-      title="History"
+    <WorkspacePanel
       eyebrow="Build timeline"
+      title="History"
       description="Review previous builds, restore versions, and inspect generated workspace changes."
-      icon={<History className="h-4 w-4" />}
-      badge={
-        <WorkspaceStatusBadge tone="blue">
-          Updated · {lastUpdatedLabel}
-        </WorkspaceStatusBadge>
-      }
+      status={`Updated · ${lastUpdatedLabel}`}
+      statusTone={failedCount > 0 ? "warning" : "info"}
       actions={
-        <Button
-          suppressHydrationWarning
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={onOpenPreview}
-        >
-          <RefreshCcw className="h-4 w-4" />
-          Refresh
-        </Button>
-      }
-      onClose={onClose}
-    >
-      <WorkspaceSectionStack>
-        <WorkspaceHero
-          eyebrow="Version timeline"
-          title={`${projectName} build history`}
-          description="Track what changed, when it changed, and which version you want to resurrect without pretending memory is a deployment strategy."
-          icon={<GitBranch className="h-5 w-5" />}
-          badge={
-            <WorkspaceStatusBadge tone={failedCount > 0 ? "orange" : "green"}>
-              {failedCount > 0 ? `${failedCount} needs review` : "Healthy"}
-            </WorkspaceStatusBadge>
-          }
-          metric={{
-            label: "Builds",
-            value: historyItems.length,
-            tone: historyItems.length > 0 ? "blue" : "default",
-          }}
-          actions={
-            <>
-              <Button
-                suppressHydrationWarning
-                type="button"
-                size="sm"
-                onClick={onOpenPreview}
-              >
-                <Search className="h-4 w-4" />
-                Inspect latest
-              </Button>
+        <>
+          <Button
+            suppressHydrationWarning
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={onOpenPreview}
+          >
+            <RefreshCcw className="h-4 w-4" />
+            Refresh
+          </Button>
 
-              <Button
-                suppressHydrationWarning
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => latestItem && onRestoreBuild?.(latestItem)}
-                disabled={!latestItem}
-              >
-                <RotateCcw className="h-4 w-4" />
-                Restore latest
-              </Button>
-            </>
-          }
+          <Button
+            suppressHydrationWarning
+            type="button"
+            size="sm"
+            onClick={() => selectedItem && onRestoreBuild?.(selectedItem)}
+            disabled={!selectedItem}
+          >
+            <RotateCcw className="h-4 w-4" />
+            Restore
+          </Button>
+
+          {onClose ? (
+            <Button
+              suppressHydrationWarning
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={onClose}
+            >
+              Close
+            </Button>
+          ) : null}
+        </>
+      }
+    >
+      <WorkspaceMetricGrid>
+        <WorkspaceMetricCard
+          label="Builds"
+          value={historyItems.length}
+          description="Saved generated states."
+          icon={<Archive className="h-4 w-4" />}
         />
 
-        {historyItems.length > 0 ? (
-          <WorkspaceNotice title="History is available" tone="info">
-            You can restore previous generated states from here. Review changed
-            files before restoring, because “undo” is not a substitute for
-            knowing what changed.
-          </WorkspaceNotice>
-        ) : (
-          <WorkspaceNotice title="No history yet" tone="warning">
-            Generate or save a build before expecting history to perform
-            miracles. It is version control, not archaeology with a halo.
-          </WorkspaceNotice>
-        )}
+        <WorkspaceMetricCard
+          label="Completed"
+          value={completedCount}
+          description="Successfully finished builds."
+          icon={<CheckCircle2 className="h-4 w-4" />}
+        />
 
-        <WorkspaceMetricGrid>
-          <WorkspaceMetricCard
-            label="Builds"
-            value={historyItems.length}
-            detail="Saved generated states."
-            icon={<Archive className="h-4 w-4" />}
-            tone="blue"
-          />
+        <WorkspaceMetricCard
+          label="Restored"
+          value={restoredCount}
+          description="Versions brought back."
+          icon={<RotateCcw className="h-4 w-4" />}
+        />
 
-          <WorkspaceMetricCard
-            label="Completed"
-            value={completedCount}
-            detail="Successfully finished builds."
-            icon={<CheckCircle2 className="h-4 w-4" />}
-            tone={completedCount > 0 ? "green" : "default"}
-          />
+        <WorkspaceMetricCard
+          label="Files changed"
+          value={totalChangedFiles}
+          description="Across tracked builds."
+          icon={<Sparkles className="h-4 w-4" />}
+        />
+      </WorkspaceMetricGrid>
 
-          <WorkspaceMetricCard
-            label="Restored"
-            value={restoredCount}
-            detail="Versions brought back."
-            icon={<RotateCcw className="h-4 w-4" />}
-            tone={restoredCount > 0 ? "blue" : "default"}
-          />
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <Card className="min-w-0 overflow-hidden">
+          <CardHeader>
+            <div className="flex min-w-0 items-start justify-between gap-4">
+              <div className="min-w-0">
+                <CardTitle>Build timeline</CardTitle>
+                <CardDescription>
+                  Saved builds, prompts, status, changed files, and restore points.
+                </CardDescription>
+              </div>
 
-          <WorkspaceMetricCard
-            label="Files changed"
-            value={totalChangedFiles}
-            detail="Across tracked builds."
-            icon={<Sparkles className="h-4 w-4" />}
-            tone="purple"
-          />
-        </WorkspaceMetricGrid>
+              <CardAction>
+                <Badge variant="outline" className="rounded-full">
+                  {historyItems.length} versions
+                </Badge>
+              </CardAction>
+            </div>
+          </CardHeader>
 
-        <WorkspaceTwoColumnGrid>
-          <WorkspaceCard
-            title="Build timeline"
-            description="Saved builds, generated prompts, and restore points."
-            badge={
-              <WorkspaceStatusBadge tone="blue">
-                {historyItems.length} items
-              </WorkspaceStatusBadge>
-            }
-          >
-            {historyItems.length > 0 ? (
-              <div className="grid gap-2">
-                {historyItems.map((item) => (
-                  <article
-                    key={item.id}
-                    className="grid grid-cols-[auto_1fr] gap-3 rounded-2xl border bg-background p-3 transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50/30 hover:shadow-sm"
-                  >
-                    <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-blue-200 bg-blue-50 text-blue-700">
-                      {getStatusIcon(item.status)}
-                    </span>
+          <CardContent>
+            <ScrollArea className="h-[600px] rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Build</TableHead>
+                    <TableHead className="w-[140px]">Type</TableHead>
+                    <TableHead className="w-[120px]">Files</TableHead>
+                    <TableHead className="w-[130px]">Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+
+                <TableBody>
+                  {historyItems.length > 0 ? (
+                    historyItems.map((item) => {
+                      const isSelected = selectedItem?.id === item.id;
+
+                      return (
+                        <TableRow
+                          key={item.id}
+                          data-state={isSelected ? "selected" : undefined}
+                          className="cursor-pointer"
+                          onClick={() => setSelectedId(item.id)}
+                        >
+                          <TableCell>
+                            <div className="flex min-w-0 items-start gap-3">
+                              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md border bg-muted text-muted-foreground">
+                                {getStatusIcon(item.status)}
+                              </div>
+
+                              <div className="min-w-0">
+                                <div className="truncate font-medium">
+                                  {item.title}
+                                </div>
+                                <div className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                                  {item.prompt}
+                                </div>
+                                <div className="mt-1 text-xs text-muted-foreground">
+                                  {item.createdAtLabel}
+                                </div>
+                              </div>
+                            </div>
+                          </TableCell>
+
+                          <TableCell>
+                            <Badge variant="outline">{item.projectType}</Badge>
+                          </TableCell>
+
+                          <TableCell>
+                            <div className="text-sm">
+                              <div className="font-medium">
+                                {item.changedFiles ?? 0} files
+                              </div>
+                              <div className="text-muted-foreground">
+                                {item.modules ?? 0} modules
+                              </div>
+                            </div>
+                          </TableCell>
+
+                          <TableCell>
+                            <WorkspaceStatusPill tone={getStatusTone(item.status)}>
+                              {getStatusLabel(item.status)}
+                            </WorkspaceStatusPill>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} className="h-48 text-center">
+                        <div className="flex flex-col items-center justify-center gap-2">
+                          <History className="h-8 w-8 text-muted-foreground" />
+                          <div className="font-medium">No saved builds</div>
+                          <div className="text-sm text-muted-foreground">
+                            Build history will appear after generated changes are saved.
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Selected build</CardTitle>
+              <CardDescription>
+                Inspect the active restore point before doing anything dramatic.
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent>
+              {selectedItem ? (
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border bg-muted text-muted-foreground">
+                      <GitBranch className="h-5 w-5" />
+                    </div>
 
                     <div className="min-w-0">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <h4 className="truncate text-sm font-bold tracking-tight text-foreground">
-                            {item.title}
-                          </h4>
-                          <span className="mt-1 block text-xs font-medium text-muted-foreground">
-                            {item.projectType} · {item.createdAtLabel}
-                          </span>
-                        </div>
-
-                        <WorkspaceStatusBadge tone={getStatusTone(item.status)}>
-                          {getStatusLabel(item.status)}
-                        </WorkspaceStatusBadge>
-                      </div>
-
-                      <p className="mt-3 text-xs font-medium leading-5 text-muted-foreground">
-                        {item.prompt}
+                      <h4 className="break-words font-medium">
+                        {selectedItem.title}
+                      </h4>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {selectedItem.prompt}
                       </p>
-
-                      <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-bold text-muted-foreground">
-                          {item.changedFiles ?? 0} files changed
-                        </span>
-                        <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-bold text-muted-foreground">
-                          {item.modules ?? 0} modules
-                        </span>
-                      </div>
-
-                      <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <Button
-                          suppressHydrationWarning
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onRestoreBuild?.(item)}
-                        >
-                          <RotateCcw className="h-4 w-4" />
-                          Restore
-                        </Button>
-
-                        <Button
-                          suppressHydrationWarning
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={onOpenPreview}
-                        >
-                          <Search className="h-4 w-4" />
-                          Inspect
-                        </Button>
-                      </div>
                     </div>
-                  </article>
-                ))}
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-3 text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground">Type</span>
+                      <Badge variant="outline">{selectedItem.projectType}</Badge>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground">Created</span>
+                      <span className="font-medium">
+                        {selectedItem.createdAtLabel}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground">Changed files</span>
+                      <Badge variant="outline">
+                        {selectedItem.changedFiles ?? 0}
+                      </Badge>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground">Modules</span>
+                      <Badge variant="outline">
+                        {selectedItem.modules ?? 0}
+                      </Badge>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground">Status</span>
+                      <WorkspaceStatusPill tone={getStatusTone(selectedItem.status)}>
+                        {getStatusLabel(selectedItem.status)}
+                      </WorkspaceStatusPill>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Button
+                      suppressHydrationWarning
+                      type="button"
+                      onClick={() => onRestoreBuild?.(selectedItem)}
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                      Restore this build
+                    </Button>
+
+                    <Button
+                      suppressHydrationWarning
+                      type="button"
+                      variant="outline"
+                      onClick={onOpenPreview}
+                    >
+                      <Search className="h-4 w-4" />
+                      Inspect preview
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex min-h-[220px] flex-col items-center justify-center gap-2 text-center">
+                  <History className="h-8 w-8 text-muted-foreground" />
+                  <div className="font-medium">No build selected</div>
+                  <p className="max-w-[260px] text-sm text-muted-foreground">
+                    Select a version from the timeline to inspect or restore it.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Version safety</CardTitle>
+              <CardDescription>
+                Tiny reminders before restoring things. Humanity demanded this.
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="space-y-3 text-sm text-muted-foreground">
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                <span>Review changed files before restoring older versions.</span>
               </div>
-            ) : (
-              <WorkspaceEmptyState
-                icon={<History className="h-6 w-6" />}
-                title="No saved builds"
-                description="Build history will appear here after you generate and save workspace changes."
-              />
-            )}
-          </WorkspaceCard>
 
-          <WorkspaceCard
-            title="Recommended actions"
-            description="Keep version history clean and recoverable."
-            badge={<WorkspaceStatusBadge>Workflow</WorkspaceStatusBadge>}
-          >
-            <div className="grid gap-2">
-              <WorkspaceActionRow
-                title="Review latest generated files"
-                description="Inspect changed files before restoring or publishing."
-                icon={<Search className="h-4 w-4" />}
-                badge={<WorkspaceStatusBadge tone="blue">Review</WorkspaceStatusBadge>}
-                onClick={onOpenPreview}
-              />
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                <span>Commit stable checkpoints before major refactors.</span>
+              </div>
 
-              <WorkspaceActionRow
-                title="Restore only known-good builds"
-                description="Avoid restoring partial or failed generations unless you enjoy debugging archaeology."
-                icon={<RotateCcw className="h-4 w-4" />}
-                badge={<WorkspaceStatusBadge tone="orange">Careful</WorkspaceStatusBadge>}
-              />
-
-              <WorkspaceActionRow
-                title="Commit stable checkpoints"
-                description="Push stable workspace states to GitHub before risky UI refactors."
-                icon={<GitBranch className="h-4 w-4" />}
-                badge={
-                  <WorkspaceStatusBadge tone="green">
-                    Recommended
-                  </WorkspaceStatusBadge>
-                }
-              />
-            </div>
-          </WorkspaceCard>
-        </WorkspaceTwoColumnGrid>
-      </WorkspaceSectionStack>
-    </WorkspaceShell>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                <span>Inspect Preview after restoring a build.</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </WorkspacePanel>
   );
 }

@@ -43,6 +43,11 @@ import {
   useState,
 } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import {
+  createDesignTastePromptBlock,
+  getDesignTasteProfile,
+  inferDesignTasteProfileId,
+} from "@/lib/design/design-taste-profiles";
 import { PremiumWorkspaceToolbar } from "@/components/workspace/PremiumWorkspaceToolbar";
 import { AnalyticsWorkspace } from "@/components/workspace/AnalyticsWorkspace";
 import { CloudWorkspace } from "@/components/workspace/CloudWorkspace";
@@ -3878,6 +3883,21 @@ export default function Page() {
     if (!value || isBuilding || isLoadingWorkspace) return;
 
     const detectedProjectType = inferProjectType(value);
+
+    const designTasteProfile = getDesignTasteProfile(
+      inferDesignTasteProfileId({
+        projectType: detectedProjectType,
+        industry: previewState.classification?.industry,
+        prompt: value,
+      })
+    );
+
+    const designTasteBlock = createDesignTastePromptBlock(designTasteProfile);
+
+    const generationPrompt = `${value}
+
+${designTasteBlock}`;
+
     const detectedModules = inferModules(value, detectedProjectType);
     const detectedArchitecture = createArchitecturePlan(
       detectedProjectType,

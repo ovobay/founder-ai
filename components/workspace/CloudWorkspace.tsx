@@ -1,36 +1,41 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import {
+  AlertTriangle,
+  BrainCircuit,
   CheckCircle2,
+  ChevronRight,
   Cloud,
   Code2,
   Database,
-  ExternalLink,
+  FileText,
   Globe2,
   KeyRound,
-  PlugZap,
+  LockKeyhole,
+  Mail,
   RefreshCcw,
   ServerCog,
   ShieldCheck,
+  Sparkles,
   UploadCloud,
-  Workflow,
-  XCircle,
+  Users,
 } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  WorkspaceActionRow,
-  WorkspaceCard,
-  WorkspaceEmptyState,
-  WorkspaceHero,
+  WorkspaceCallout,
+  WorkspaceList,
   WorkspaceMetricCard,
   WorkspaceMetricGrid,
-  WorkspaceNotice,
-  WorkspaceSectionStack,
-  WorkspaceShell,
-  WorkspaceStatusBadge,
-  WorkspaceTwoColumnGrid,
-} from "@/components/workspace/shadcn/WorkspaceShell";
+  WorkspacePanel,
+  WorkspaceSection,
+  WorkspaceSidebarLayout,
+  WorkspaceSidebarNav,
+  WorkspaceStatusPill,
+  WorkspaceSubHeader,
+} from "@/components/workspace/tool-system/WorkspacePanel";
 
 export type CloudIntegrationStatus =
   | "connected"
@@ -68,40 +73,61 @@ export type CloudWorkspaceProps = {
   onOpenSecurity?: () => void;
 };
 
+type CloudSectionKey =
+  | "overview"
+  | "ai"
+  | "emails"
+  | "database"
+  | "users"
+  | "storage"
+  | "security"
+  | "secrets"
+  | "logs"
+  | "usage";
+
 const defaultIntegrations: CloudIntegration[] = [
   {
-    id: "supabase",
-    label: "Supabase",
-    provider: "Database",
+    id: "openai",
+    label: "OpenAI setup",
+    provider: "AI",
     description:
-      "Database, auth, storage, realtime updates, and secure server-side persistence.",
-    status: "needs-setup",
+      "Required for generation, app planning, workspace assistance, and reasoning workflows.",
+    status: "connected",
     required: true,
   },
   {
-    id: "openai",
-    label: "OpenAI",
-    provider: "AI",
+    id: "email",
+    label: "Domain email",
+    provider: "Email",
     description:
-      "Prompt generation, reasoning flows, app planning, and workspace assistance.",
+      "Optional branded email sending for notifications, invites, and product messages.",
+    status: "optional",
+    required: false,
+  },
+  {
+    id: "supabase",
+    label: "Supabase database",
+    provider: "Database",
+    description:
+      "Stores projects, generated files, user records, workspace state, and auth data.",
     status: "needs-setup",
     required: true,
   },
   {
     id: "stripe",
-    label: "Stripe",
+    label: "Stripe billing",
     provider: "Billing",
     description:
-      "Subscription plans, billing portal, payment events, and entitlement checks.",
+      "Optional subscription billing, checkout, usage limits, and customer portal support.",
     status: "optional",
     required: false,
   },
   {
     id: "github",
-    label: "GitHub",
+    label: "GitHub sync",
     provider: "Source control",
     description:
-      "Repository sync, generated file review, branch management, and deployment flow.",
+      "Repository sync, file review, generated branch flow, and deployment history.",
     status: "connected",
     required: false,
   },
@@ -113,7 +139,7 @@ const defaultEnvironmentVariables: CloudEnvironmentVariable[] = [
     label: "Supabase URL",
     scope: "client",
     required: true,
-    reason: "Needed by the browser client to connect to Supabase.",
+    reason: "Used by the browser client to connect to Supabase.",
     example: "https://your-project.supabase.co",
   },
   {
@@ -121,7 +147,16 @@ const defaultEnvironmentVariables: CloudEnvironmentVariable[] = [
     label: "Supabase anon key",
     scope: "client",
     required: true,
-    reason: "Public anon key used by Supabase client-side auth.",
+    reason: "Public anon key used for Supabase client-side auth.",
+    example: "eyJhbGciOi...",
+  },
+  {
+    key: "SUPABASE_SERVICE_ROLE_KEY",
+    label: "Supabase service role key",
+    scope: "server",
+    required: true,
+    reason:
+      "Server-only key for privileged project file operations and secure admin tasks.",
     example: "eyJhbGciOi...",
   },
   {
@@ -137,17 +172,25 @@ const defaultEnvironmentVariables: CloudEnvironmentVariable[] = [
     label: "Stripe secret key",
     scope: "server",
     required: false,
-    reason: "Required when billing and subscriptions are enabled.",
+    reason: "Required when subscriptions and billing are enabled.",
     example: "sk_live_...",
+  },
+  {
+    key: "STRIPE_WEBHOOK_SECRET",
+    label: "Stripe webhook secret",
+    scope: "server",
+    required: false,
+    reason: "Required to verify live Stripe webhook events.",
+    example: "whsec_...",
   },
 ];
 
 function getIntegrationTone(status: CloudIntegrationStatus) {
-  if (status === "connected") return "green" as const;
-  if (status === "needs-setup") return "orange" as const;
-  if (status === "optional") return "blue" as const;
+  if (status === "connected") return "success" as const;
+  if (status === "needs-setup") return "warning" as const;
+  if (status === "optional") return "info" as const;
 
-  return "default" as const;
+  return "neutral" as const;
 }
 
 function getIntegrationLabel(status: CloudIntegrationStatus) {
@@ -158,20 +201,16 @@ function getIntegrationLabel(status: CloudIntegrationStatus) {
   return "Disabled";
 }
 
-function getIntegrationIcon(status: CloudIntegrationStatus) {
-  if (status === "connected") {
-    return <CheckCircle2 className="h-4 w-4" />;
-  }
+function getIntegrationIcon(provider: string) {
+  const normalized = provider.toLowerCase();
 
-  if (status === "needs-setup") {
-    return <PlugZap className="h-4 w-4" />;
-  }
+  if (normalized.includes("ai")) return <BrainCircuit className="h-4 w-4" />;
+  if (normalized.includes("email")) return <Mail className="h-4 w-4" />;
+  if (normalized.includes("database")) return <Database className="h-4 w-4" />;
+  if (normalized.includes("billing")) return <Sparkles className="h-4 w-4" />;
+  if (normalized.includes("source")) return <Code2 className="h-4 w-4" />;
 
-  if (status === "optional") {
-    return <Workflow className="h-4 w-4" />;
-  }
-
-  return <XCircle className="h-4 w-4" />;
+  return <Cloud className="h-4 w-4" />;
 }
 
 function getCloudScore({
@@ -202,11 +241,206 @@ function getCloudScore({
   return Math.min(100, integrationScore + envScore + securityScore);
 }
 
-function getCloudScoreTone(score: number) {
-  if (score >= 80) return "green" as const;
-  if (score >= 55) return "orange" as const;
+function getScoreTone(score: number, pendingRequiredCount: number) {
+  if (pendingRequiredCount > 0) return "warning" as const;
+  if (score >= 80) return "success" as const;
+  if (score >= 55) return "warning" as const;
 
-  return "red" as const;
+  return "danger" as const;
+}
+
+function getSectionRows({
+  activeSection,
+  integrations,
+  environmentVariables,
+  deploymentTarget,
+}: {
+  activeSection: CloudSectionKey;
+  integrations: CloudIntegration[];
+  environmentVariables: CloudEnvironmentVariable[];
+  deploymentTarget: string;
+}) {
+  if (activeSection === "ai") {
+    return integrations
+      .filter((item) => item.provider.toLowerCase().includes("ai"))
+      .map((item) => ({
+        label: item.label,
+        description: item.description,
+        value: getIntegrationLabel(item.status),
+        trailing: (
+          <WorkspaceStatusPill tone={getIntegrationTone(item.status)}>
+            {getIntegrationLabel(item.status)}
+          </WorkspaceStatusPill>
+        ),
+      }));
+  }
+
+  if (activeSection === "emails") {
+    return integrations
+      .filter((item) => item.provider.toLowerCase().includes("email"))
+      .map((item) => ({
+        label: item.label,
+        description: item.description,
+        value: getIntegrationLabel(item.status),
+        trailing: (
+          <WorkspaceStatusPill tone={getIntegrationTone(item.status)}>
+            {getIntegrationLabel(item.status)}
+          </WorkspaceStatusPill>
+        ),
+      }));
+  }
+
+  if (activeSection === "database") {
+    return [
+      {
+        label: "Primary database",
+        description:
+          "Stores project records, generated files, workspace state, users, and build metadata.",
+        value: "Supabase",
+        trailing: <WorkspaceStatusPill tone="warning">Review</WorkspaceStatusPill>,
+      },
+      {
+        label: "Generated tables",
+        description:
+          "Tables should be reviewed before migration and protected with Row Level Security.",
+        value: "Planned",
+        trailing: <WorkspaceStatusPill tone="info">Schema</WorkspaceStatusPill>,
+      },
+      {
+        label: "Storage-backed files",
+        description:
+          "Generated code files should be stored safely and scoped to the project owner.",
+        value: "Enabled",
+        trailing: <WorkspaceStatusPill tone="success">Ready</WorkspaceStatusPill>,
+      },
+    ];
+  }
+
+  if (activeSection === "security") {
+    return [
+      {
+        label: "Server-only secrets",
+        description:
+          "Privileged values must stay server-side and never use NEXT_PUBLIC prefixes.",
+        value: "Required",
+        trailing: <WorkspaceStatusPill tone="warning">Manual</WorkspaceStatusPill>,
+      },
+      {
+        label: "Webhook verification",
+        description:
+          "Billing and platform webhooks should be verified before processing events.",
+        value: "Review",
+        trailing: <WorkspaceStatusPill tone="warning">Check</WorkspaceStatusPill>,
+      },
+      {
+        label: "Database ownership checks",
+        description:
+          "Users should only read and update records they own or are permitted to access.",
+        value: "Required",
+        trailing: <WorkspaceStatusPill tone="danger">Important</WorkspaceStatusPill>,
+      },
+    ];
+  }
+
+  if (activeSection === "secrets") {
+    return environmentVariables.map((item) => ({
+      label: item.key,
+      description: item.reason,
+      value: item.scope,
+      trailing: (
+        <WorkspaceStatusPill tone={item.scope === "server" ? "warning" : "info"}>
+          {item.required ? "Required" : "Optional"}
+        </WorkspaceStatusPill>
+      ),
+    }));
+  }
+
+  if (activeSection === "logs") {
+    return [
+      {
+        label: "Build logs",
+        description:
+          "Track generated files, failed edits, publish attempts, and workspace warnings.",
+        value: "Planned",
+        trailing: <WorkspaceStatusPill tone="info">Later</WorkspaceStatusPill>,
+      },
+      {
+        label: "Deployment logs",
+        description:
+          "Connect deployment provider events after production deployment is wired.",
+        value: deploymentTarget,
+        trailing: <WorkspaceStatusPill tone="neutral">External</WorkspaceStatusPill>,
+      },
+    ];
+  }
+
+  if (activeSection === "usage") {
+    return [
+      {
+        label: "AI usage",
+        description:
+          "Track generation requests, token usage, tool calls, and model activity.",
+        value: "Planned",
+        trailing: <WorkspaceStatusPill tone="info">Usage</WorkspaceStatusPill>,
+      },
+      {
+        label: "Storage usage",
+        description:
+          "Track generated files, project snapshots, preview assets, and history size.",
+        value: "Planned",
+        trailing: <WorkspaceStatusPill tone="info">Storage</WorkspaceStatusPill>,
+      },
+    ];
+  }
+
+  if (activeSection === "users") {
+    return [
+      {
+        label: "Authentication",
+        description:
+          "User login, workspace ownership, and access control are required before launch.",
+        value: "Supabase Auth",
+        trailing: <WorkspaceStatusPill tone="warning">Review</WorkspaceStatusPill>,
+      },
+      {
+        label: "Roles",
+        description:
+          "Owner/admin roles should be enforced server-side for project actions.",
+        value: "Planned",
+        trailing: <WorkspaceStatusPill tone="info">Roles</WorkspaceStatusPill>,
+      },
+    ];
+  }
+
+  if (activeSection === "storage") {
+    return [
+      {
+        label: "Generated files",
+        description:
+          "Store generated files with ownership scoping and safe retrieval paths.",
+        value: "Database",
+        trailing: <WorkspaceStatusPill tone="success">Enabled</WorkspaceStatusPill>,
+      },
+      {
+        label: "Preview assets",
+        description:
+          "Images, uploads, and exported assets should use a storage-backed workflow.",
+        value: "Planned",
+        trailing: <WorkspaceStatusPill tone="info">Assets</WorkspaceStatusPill>,
+      },
+    ];
+  }
+
+  return integrations.map((item) => ({
+    label: item.label,
+    description: item.description,
+    value: item.provider,
+    trailing: (
+      <WorkspaceStatusPill tone={getIntegrationTone(item.status)}>
+        {getIntegrationLabel(item.status)}
+      </WorkspaceStatusPill>
+    ),
+  }));
 }
 
 export function CloudWorkspace({
@@ -220,334 +454,413 @@ export function CloudWorkspace({
   onOpenPublish,
   onOpenSecurity,
 }: CloudWorkspaceProps) {
+  const [activeSection, setActiveSection] =
+    useState<CloudSectionKey>("overview");
+
+  const requiredIntegrations = integrations.filter((item) => item.required);
+  const pendingRequiredIntegrations = requiredIntegrations.filter(
+    (item) => item.status !== "connected"
+  );
+  const optionalIntegrations = integrations.filter((item) => !item.required);
   const connectedIntegrations = integrations.filter(
     (item) => item.status === "connected"
   );
-  const setupIntegrations = integrations.filter(
-    (item) => item.status === "needs-setup"
-  );
+
   const requiredEnvVars = environmentVariables.filter((item) => item.required);
   const serverEnvVars = environmentVariables.filter(
     (item) => item.scope === "server"
   );
 
   const cloudScore = getCloudScore({ integrations, environmentVariables });
-  const cloudTone = getCloudScoreTone(cloudScore);
+  const scoreTone = getScoreTone(
+    cloudScore,
+    pendingRequiredIntegrations.length
+  );
+
+  const navItems = useMemo(
+    () => [
+      {
+        key: "overview",
+        label: "Overview",
+      },
+      {
+        key: "ai",
+        label: "AI",
+        badge:
+          integrations.find((item) => item.provider.toLowerCase().includes("ai"))
+            ?.status === "connected"
+            ? "Ready"
+            : "Req",
+      },
+      {
+        key: "emails",
+        label: "Emails",
+        badge: "Pro",
+      },
+      {
+        key: "database",
+        label: "Database",
+        badge: `${requiredEnvVars.length}`,
+      },
+      {
+        key: "users",
+        label: "Users",
+      },
+      {
+        key: "storage",
+        label: "Storage",
+      },
+      {
+        key: "security",
+        label: "Security",
+      },
+      {
+        key: "secrets",
+        label: "Secrets",
+        badge: `${serverEnvVars.length}`,
+      },
+      {
+        key: "logs",
+        label: "Logs",
+      },
+      {
+        key: "usage",
+        label: "Usage",
+      },
+    ],
+    [integrations, requiredEnvVars.length, serverEnvVars.length]
+  );
+
+  const rows = getSectionRows({
+    activeSection,
+    integrations,
+    environmentVariables,
+    deploymentTarget,
+  });
+
+  const activeTitle =
+    navItems.find((item) => item.key === activeSection)?.label ?? "Overview";
 
   return (
-    <WorkspaceShell
+    <WorkspacePanel
+      eyebrow="Cloud setup"
       title="Cloud"
-      eyebrow="Deployment setup"
-      description="Review integrations, environment variables, deployment target, and production readiness."
-      icon={<Cloud className="h-4 w-4" />}
-      badge={
-        <WorkspaceStatusBadge tone={cloudTone}>
-          {cloudScore}% ready
-        </WorkspaceStatusBadge>
-      }
+      description="Review deployment target, integrations, secrets, database setup, and production readiness."
+      status={`${cloudScore}% ready`}
+      statusTone={scoreTone}
       actions={
-        <Button
-          suppressHydrationWarning
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={onRefresh}
-        >
-          <RefreshCcw className="h-4 w-4" />
-          Refresh
-        </Button>
-      }
-      onClose={onClose}
-    >
-      <WorkspaceSectionStack>
-        <WorkspaceHero
-          eyebrow="Cloud readiness"
-          title={`${projectName} deployment setup`}
-          description="Central place for deployment target, required services, production variables, and all the tiny configuration gremlins that ruin launch day."
-          icon={<UploadCloud className="h-5 w-5" />}
-          badge={
-            <WorkspaceStatusBadge tone={cloudTone}>
-              Last checked · {lastCheckedLabel}
-            </WorkspaceStatusBadge>
-          }
-          metric={{
-            label: "Ready",
-            value: `${cloudScore}%`,
-            tone: cloudTone,
-          }}
-          actions={
-            <>
-              <Button
-                suppressHydrationWarning
-                type="button"
-                size="sm"
-                onClick={onOpenPublish}
-              >
-                <UploadCloud className="h-4 w-4" />
-                Publish readiness
-              </Button>
-
-              <Button
-                suppressHydrationWarning
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={onOpenSecurity}
-              >
-                <ShieldCheck className="h-4 w-4" />
-                Security review
-              </Button>
-            </>
-          }
-        />
-
-        {setupIntegrations.length > 0 ? (
-          <WorkspaceNotice title="Required setup still needed" tone="warning">
-            {setupIntegrations.length} integration
-            {setupIntegrations.length === 1 ? "" : "s"} still need setup before
-            a clean production launch.
-          </WorkspaceNotice>
-        ) : (
-          <WorkspaceNotice title="Cloud setup looks healthy" tone="success">
-            Required integrations are connected. Still verify production
-            environment variables before deploying, because “it worked locally”
-            belongs in a museum of famous last words.
-          </WorkspaceNotice>
-        )}
-
-        <WorkspaceMetricGrid>
-          <WorkspaceMetricCard
-            label="Integrations"
-            value={integrations.length}
-            detail="Detected service connections."
-            icon={<PlugZap className="h-4 w-4" />}
-            tone="blue"
-          />
-
-          <WorkspaceMetricCard
-            label="Connected"
-            value={connectedIntegrations.length}
-            detail="Services ready to use."
-            icon={<CheckCircle2 className="h-4 w-4" />}
-            tone={connectedIntegrations.length > 0 ? "green" : "orange"}
-          />
-
-          <WorkspaceMetricCard
-            label="Required env"
-            value={requiredEnvVars.length}
-            detail="Variables needed for launch."
-            icon={<KeyRound className="h-4 w-4" />}
-            tone={requiredEnvVars.length > 0 ? "orange" : "green"}
-          />
-
-          <WorkspaceMetricCard
-            label="Server secrets"
-            value={serverEnvVars.length}
-            detail="Must stay server-only."
-            icon={<ServerCog className="h-4 w-4" />}
-            tone="purple"
-          />
-        </WorkspaceMetricGrid>
-
-        <WorkspaceTwoColumnGrid>
-          <WorkspaceCard
-            title="Deployment target"
-            description="Where this generated workspace should be prepared for production."
-            badge={
-              <WorkspaceStatusBadge tone="blue">
-                {deploymentTarget}
-              </WorkspaceStatusBadge>
-            }
+        <>
+          <Button
+            suppressHydrationWarning
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-9 rounded-[12px]"
+            onClick={onRefresh}
           >
-            <div className="grid min-h-36 grid-cols-[auto_1fr_auto] items-start gap-3 rounded-2xl border bg-background p-4">
-              <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-blue-200 bg-blue-50 text-blue-700">
-                <Globe2 className="h-5 w-5" />
-              </span>
+            <RefreshCcw className="h-4 w-4" />
+            Update scan
+          </Button>
 
-              <div className="min-w-0">
-                <h4 className="text-base font-bold tracking-tight text-foreground">
-                  {deploymentTarget}
-                </h4>
-                <p className="mt-2 text-xs font-medium leading-5 text-muted-foreground">
-                  Recommended target for Next.js hosting, environment variables,
-                  preview deployments, and production promotion.
+          <Button
+            suppressHydrationWarning
+            type="button"
+            size="sm"
+            className="h-9 rounded-[12px]"
+            onClick={onOpenPublish}
+          >
+            <UploadCloud className="h-4 w-4" />
+            Publish
+          </Button>
+
+          {onClose ? (
+            <Button
+              suppressHydrationWarning
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-9 rounded-[12px]"
+              onClick={onClose}
+            >
+              Close
+            </Button>
+          ) : null}
+        </>
+      }
+    >
+      <WorkspaceSidebarLayout
+        sidebar={
+          <WorkspaceSidebarNav
+            activeKey={activeSection}
+            items={navItems}
+            onChange={(key) => setActiveSection(key as CloudSectionKey)}
+          />
+        }
+      >
+        <div className="space-y-5">
+          <WorkspaceSubHeader
+            left={
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  {activeTitle}
+                </div>
+                <h3 className="mt-1 text-[24px] font-semibold tracking-[-0.04em] text-slate-950">
+                  {projectName} cloud configuration
+                </h3>
+                <p className="mt-1 max-w-[850px] text-[14px] leading-6 text-slate-600">
+                  Keep setup clear, scannable, and production-aware. The cloud
+                  screen should tell the user what is ready, what is optional,
+                  and what will burn the house down later.
                 </p>
               </div>
+            }
+            right={
+              <WorkspaceStatusPill tone={scoreTone}>
+                Last checked · {lastCheckedLabel}
+              </WorkspaceStatusPill>
+            }
+          />
 
-              <Button
-                suppressHydrationWarning
-                type="button"
-                size="icon"
-                variant="outline"
-                className="h-8 w-8 rounded-xl"
-              >
-                <ExternalLink className="h-4 w-4" />
-              </Button>
-            </div>
-          </WorkspaceCard>
+          {pendingRequiredIntegrations.length > 0 ? (
+            <WorkspaceCallout
+              title="Security and setup issues detected"
+              description="Fix required integrations and production secrets before publishing."
+              tone="danger"
+              action={
+                <Button
+                  suppressHydrationWarning
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-9 rounded-[12px] bg-white"
+                  onClick={onOpenSecurity}
+                >
+                  View issues
+                </Button>
+              }
+            />
+          ) : (
+            <WorkspaceCallout
+              title="Cloud setup looks healthy"
+              description="Required integrations are connected. Review production variables before publishing."
+              tone="success"
+              action={
+                <Button
+                  suppressHydrationWarning
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-9 rounded-[12px] bg-white"
+                  onClick={onOpenPublish}
+                >
+                  Continue
+                </Button>
+              }
+            />
+          )}
 
-          <WorkspaceCard
-            title="Integrations"
-            description="Required and optional external services detected for this build."
-            badge={
-              <WorkspaceStatusBadge
-                tone={setupIntegrations.length > 0 ? "orange" : "green"}
-              >
-                {setupIntegrations.length} pending
-              </WorkspaceStatusBadge>
+          <WorkspaceMetricGrid>
+            <WorkspaceMetricCard
+              label="Required"
+              value={requiredIntegrations.length}
+              description="Required service connections."
+              tone={pendingRequiredIntegrations.length > 0 ? "warning" : "success"}
+              icon={<AlertTriangle className="h-4 w-4" />}
+            />
+
+            <WorkspaceMetricCard
+              label="Optional"
+              value={optionalIntegrations.length}
+              description="Extra services detected."
+              tone="neutral"
+              icon={<Sparkles className="h-4 w-4" />}
+            />
+
+            <WorkspaceMetricCard
+              label="Ready"
+              value={connectedIntegrations.length}
+              description="Connected integrations."
+              tone={connectedIntegrations.length > 0 ? "success" : "warning"}
+              icon={<CheckCircle2 className="h-4 w-4" />}
+            />
+
+            <WorkspaceMetricCard
+              label="Env vars"
+              value={environmentVariables.length}
+              description="Client and server variables."
+              tone="info"
+              icon={<KeyRound className="h-4 w-4" />}
+            />
+          </WorkspaceMetricGrid>
+
+          <WorkspaceSection
+            title={activeTitle}
+            description="Configuration summary for the selected cloud area."
+            action={
+              <Badge variant="outline" className="rounded-full">
+                {deploymentTarget}
+              </Badge>
             }
           >
-            {integrations.length > 0 ? (
-              <div className="grid gap-2">
-                {integrations.map((integration) => (
-                  <article
-                    key={integration.id}
-                    className="grid gap-3 rounded-2xl border bg-background p-3 transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50/30 hover:shadow-sm"
-                  >
-                    <div className="grid grid-cols-[auto_1fr_auto] items-start gap-3">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-blue-200 bg-blue-50 text-blue-700">
-                        {getIntegrationIcon(integration.status)}
-                      </span>
+            <WorkspaceList rows={rows} />
+          </WorkspaceSection>
 
-                      <div className="min-w-0">
-                        <h4 className="text-sm font-bold tracking-tight text-foreground">
+          {activeSection === "overview" ? (
+            <div className="grid gap-5 xl:grid-cols-2">
+              <WorkspaceSection
+                title="Deployment target"
+                description="Recommended target for hosting, previews, and environment configuration."
+              >
+                <div className="rounded-[22px] border border-slate-200 bg-slate-50/70 p-5">
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-[18px] border border-blue-200 bg-blue-50 text-blue-700">
+                      <Globe2 className="h-5 w-5" />
+                    </div>
+
+                    <div className="min-w-0">
+                      <h4 className="text-[18px] font-semibold tracking-[-0.03em] text-slate-950">
+                        {deploymentTarget}
+                      </h4>
+                      <p className="mt-2 text-[14px] leading-6 text-slate-600">
+                        Use this for preview deployments, production variables,
+                        server-side API routes, and final launch promotion.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </WorkspaceSection>
+
+              <WorkspaceSection
+                title="Launch checklist"
+                description="The boring bits that save you from dramatic production nonsense."
+              >
+                <WorkspaceList
+                  rows={[
+                    {
+                      label: "Confirm production variables",
+                      description:
+                        "Set required server and client values in the deployment provider.",
+                      value: "Required",
+                      trailing: (
+                        <WorkspaceStatusPill tone="warning">
+                          Manual
+                        </WorkspaceStatusPill>
+                      ),
+                    },
+                    {
+                      label: "Review database policies",
+                      description:
+                        "Verify ownership checks and Row Level Security before launch.",
+                      value: "Required",
+                      trailing: (
+                        <WorkspaceStatusPill tone="danger">
+                          Important
+                        </WorkspaceStatusPill>
+                      ),
+                    },
+                    {
+                      label: "Open publish readiness",
+                      description:
+                        "Run final launch checks before promoting the project.",
+                      value: "Next",
+                      trailing: (
+                        <Button
+                          suppressHydrationWarning
+                          type="button"
+                          size="sm"
+                          className="h-8 rounded-[10px]"
+                          onClick={onOpenPublish}
+                        >
+                          Publish
+                        </Button>
+                      ),
+                    },
+                  ]}
+                />
+              </WorkspaceSection>
+            </div>
+          ) : null}
+
+          {activeSection === "secrets" ? (
+            <WorkspaceSection
+              title="Secret handling rules"
+              description="Server-only values must never be exposed to the client bundle. This is less a suggestion and more a survival instinct."
+            >
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="rounded-[20px] border border-amber-200 bg-amber-50/70 p-5 text-amber-800">
+                  <div className="flex items-center gap-2 text-[14px] font-semibold">
+                    <LockKeyhole className="h-4 w-4" />
+                    Server-only
+                  </div>
+                  <p className="mt-2 text-[14px] leading-6">
+                    Keep service-role keys, OpenAI keys, Stripe secrets, webhook
+                    secrets, and privileged tokens out of the browser.
+                  </p>
+                </div>
+
+                <div className="rounded-[20px] border border-blue-200 bg-blue-50/70 p-5 text-blue-800">
+                  <div className="flex items-center gap-2 text-[14px] font-semibold">
+                    <Code2 className="h-4 w-4" />
+                    Client-safe
+                  </div>
+                  <p className="mt-2 text-[14px] leading-6">
+                    Only expose values designed for the client, such as public
+                    Supabase URLs and anon keys.
+                  </p>
+                </div>
+              </div>
+            </WorkspaceSection>
+          ) : null}
+
+          <WorkspaceSection
+            title="Detected integrations"
+            description="Services inferred from the current build plan and workspace files."
+          >
+            <div className="grid gap-3">
+              {integrations.map((integration) => (
+                <div
+                  key={integration.id}
+                  className="flex items-start justify-between gap-4 rounded-[20px] border border-slate-200 bg-white px-4 py-4"
+                >
+                  <div className="flex min-w-0 items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border border-slate-200 bg-slate-50 text-slate-700">
+                      {getIntegrationIcon(integration.provider)}
+                    </div>
+
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="text-[14px] font-semibold tracking-[-0.01em] text-slate-950">
                           {integration.label}
                         </h4>
-                        <span className="mt-1 block text-xs font-medium text-muted-foreground">
-                          {integration.provider}
-                        </span>
+                        <WorkspaceStatusPill
+                          tone={getIntegrationTone(integration.status)}
+                        >
+                          {getIntegrationLabel(integration.status)}
+                        </WorkspaceStatusPill>
                       </div>
 
-                      <WorkspaceStatusBadge
-                        tone={getIntegrationTone(integration.status)}
-                      >
-                        {getIntegrationLabel(integration.status)}
-                      </WorkspaceStatusBadge>
+                      <p className="mt-1 text-[14px] leading-6 text-slate-600">
+                        {integration.description}
+                      </p>
                     </div>
+                  </div>
 
-                    <p className="text-xs font-medium leading-5 text-muted-foreground">
-                      {integration.description}
-                    </p>
-
-                    <div className="flex items-center justify-between gap-2 border-t pt-2">
-                      <span className="text-xs font-bold text-muted-foreground">
-                        {integration.required ? "Required" : "Optional"}
-                      </span>
-
-                      <Button
-                        suppressHydrationWarning
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                      >
-                        Configure
-                      </Button>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <WorkspaceEmptyState
-                icon={<PlugZap className="h-6 w-6" />}
-                title="No integrations detected"
-                description="Generated integration requirements will appear here after the project is analysed."
-              />
-            )}
-          </WorkspaceCard>
-        </WorkspaceTwoColumnGrid>
-
-        <WorkspaceCard
-          title="Environment variables"
-          description="Public and server-only values required by this workspace."
-          badge={
-            <WorkspaceStatusBadge
-              tone={requiredEnvVars.length > 0 ? "orange" : "green"}
-            >
-              {requiredEnvVars.length} required
-            </WorkspaceStatusBadge>
-          }
-        >
-          <div className="grid gap-2">
-            {environmentVariables.length > 0 ? (
-              environmentVariables.map((variable) => (
-                <WorkspaceActionRow
-                  key={variable.key}
-                  title={variable.key}
-                  description={variable.reason}
-                  icon={
-                    variable.scope === "server" ? (
-                      <ServerCog className="h-4 w-4" />
-                    ) : (
-                      <Code2 className="h-4 w-4" />
-                    )
-                  }
-                  badge={
-                    <WorkspaceStatusBadge
-                      tone={variable.scope === "server" ? "purple" : "blue"}
-                    >
-                      {variable.scope}
-                    </WorkspaceStatusBadge>
-                  }
-                />
-              ))
-            ) : (
-              <WorkspaceEmptyState
-                icon={<KeyRound className="h-6 w-6" />}
-                title="No environment variables"
-                description="No environment requirements were detected for this build."
-              />
-            )}
-          </div>
-        </WorkspaceCard>
-
-        <WorkspaceCard
-          title="Cloud checklist"
-          description="Recommended setup steps before production deployment."
-          badge={<WorkspaceStatusBadge>Checklist</WorkspaceStatusBadge>}
-        >
-          <div className="grid gap-2">
-            <WorkspaceActionRow
-              title="Confirm production environment variables"
-              description="Check all server and public variables in your deployment provider."
-              icon={<KeyRound className="h-4 w-4" />}
-              badge={
-                <WorkspaceStatusBadge tone="orange">
-                  Required
-                </WorkspaceStatusBadge>
-              }
-            />
-
-            <WorkspaceActionRow
-              title="Verify database and auth configuration"
-              description="Confirm Supabase URL, anon key, policies, and auth redirects."
-              icon={<Database className="h-4 w-4" />}
-              badge={<WorkspaceStatusBadge>Manual</WorkspaceStatusBadge>}
-            />
-
-            <WorkspaceActionRow
-              title="Review deployment security"
-              description="Check server-only secrets, webhook validation, and protected routes."
-              icon={<ShieldCheck className="h-4 w-4" />}
-              badge={
-                <WorkspaceStatusBadge tone="blue">
-                  Security
-                </WorkspaceStatusBadge>
-              }
-              onClick={onOpenSecurity}
-            />
-
-            <WorkspaceActionRow
-              title="Open publish readiness"
-              description="Generate final launch checks and review blockers before deployment."
-              icon={<UploadCloud className="h-4 w-4" />}
-              badge={
-                <WorkspaceStatusBadge tone="green">Next</WorkspaceStatusBadge>
-              }
-              onClick={onOpenPublish}
-            />
-          </div>
-        </WorkspaceCard>
-      </WorkspaceSectionStack>
-    </WorkspaceShell>
+                  <Button
+                    suppressHydrationWarning
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-9 shrink-0 rounded-[12px]"
+                  >
+                    Configure
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </WorkspaceSection>
+        </div>
+      </WorkspaceSidebarLayout>
+    </WorkspacePanel>
   );
 }

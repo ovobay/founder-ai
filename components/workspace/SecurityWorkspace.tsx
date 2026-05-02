@@ -1,35 +1,39 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  Database,
   FileCheck2,
   KeyRound,
   LockKeyhole,
+  RefreshCcw,
   ScanLine,
   Shield,
   ShieldAlert,
   ShieldCheck,
-  Upload,
+  UploadCloud,
 } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  WorkspaceActionRow,
-  WorkspaceCard,
-  WorkspaceEmptyState,
-  WorkspaceHero,
+  WorkspaceCallout,
+  WorkspaceList,
   WorkspaceMetricCard,
   WorkspaceMetricGrid,
-  WorkspaceNotice,
-  WorkspaceSectionStack,
-  WorkspaceShell,
-  WorkspaceStatusBadge,
-  WorkspaceTwoColumnGrid,
-} from "@/components/workspace/shadcn/WorkspaceShell";
+  WorkspacePanel,
+  WorkspaceSection,
+  WorkspaceStatusPill,
+  WorkspaceSubHeader,
+} from "@/components/workspace/tool-system/WorkspacePanel";
 
 type SecuritySeverity = "critical" | "high" | "medium" | "low" | "info";
 type SecurityFindingStatus = "open" | "reviewed" | "resolved";
+type SecurityFilter = "all" | "open" | "high-risk" | "reviewed" | "resolved";
 
 export type SecurityFinding = {
   id: string;
@@ -55,9 +59,9 @@ export type SecurityWorkspaceProps = {
 const defaultFindings: SecurityFinding[] = [
   {
     id: "auth-routes",
-    title: "Review protected routes",
+    title: "Protected routes need review",
     description:
-      "Confirm admin, billing, workspace, and project mutation routes require authenticated access.",
+      "Admin, billing, workspace, and project mutation routes should require authenticated access.",
     severity: "medium",
     area: "Authentication",
     status: "open",
@@ -66,7 +70,7 @@ const defaultFindings: SecurityFinding[] = [
   },
   {
     id: "env-secrets",
-    title: "Confirm server-only secrets",
+    title: "Server-only secrets must be confirmed",
     description:
       "API keys, database service keys, and webhook secrets must not be exposed to the browser.",
     severity: "high",
@@ -77,14 +81,25 @@ const defaultFindings: SecurityFinding[] = [
   },
   {
     id: "rls-review",
-    title: "Review Supabase RLS policies",
+    title: "Supabase RLS policies need validation",
     description:
       "Generated tables should have Row Level Security enabled before production deployment.",
     severity: "medium",
     area: "Database",
     status: "reviewed",
     recommendation:
-      "Validate policies for select, insert, update, and delete operations using test users.",
+      "Validate select, insert, update, and delete policies using test users.",
+  },
+  {
+    id: "webhook-signatures",
+    title: "Webhook signature verification",
+    description:
+      "Billing and platform webhooks should be verified before processing events.",
+    severity: "high",
+    area: "Webhooks",
+    status: "open",
+    recommendation:
+      "Verify webhook signatures on the server before accepting events.",
   },
 ];
 
@@ -95,11 +110,11 @@ const defaultEnvironmentRisks = [
 ];
 
 function getSeverityTone(severity: SecuritySeverity) {
-  if (severity === "critical" || severity === "high") return "red" as const;
-  if (severity === "medium") return "orange" as const;
-  if (severity === "low") return "blue" as const;
+  if (severity === "critical" || severity === "high") return "danger" as const;
+  if (severity === "medium") return "warning" as const;
+  if (severity === "low") return "info" as const;
 
-  return "default" as const;
+  return "neutral" as const;
 }
 
 function getSeverityLabel(severity: SecuritySeverity) {
@@ -111,10 +126,37 @@ function getSeverityLabel(severity: SecuritySeverity) {
   return "Info";
 }
 
+function getStatusTone(status?: SecurityFindingStatus) {
+  if (status === "resolved") return "success" as const;
+  if (status === "reviewed") return "info" as const;
+
+  return "warning" as const;
+}
+
+function getStatusLabel(status?: SecurityFindingStatus) {
+  if (status === "resolved") return "Resolved";
+  if (status === "reviewed") return "Reviewed";
+
+  return "Open";
+}
+
+function getAreaIcon(area: string) {
+  const normalized = area.toLowerCase();
+
+  if (normalized.includes("auth")) return <Shield className="h-4 w-4" />;
+  if (normalized.includes("environment")) return <KeyRound className="h-4 w-4" />;
+  if (normalized.includes("database")) return <Database className="h-4 w-4" />;
+  if (normalized.includes("webhook")) return <ScanLine className="h-4 w-4" />;
+
+  return <ShieldAlert className="h-4 w-4" />;
+}
+
 function getOverallScore(findings: SecurityFinding[]) {
   if (findings.length === 0) return 96;
 
   const penalty = findings.reduce((total, finding) => {
+    if (finding.status === "resolved") return total;
+
     if (finding.severity === "critical") return total + 28;
     if (finding.severity === "high") return total + 18;
     if (finding.severity === "medium") return total + 10;
@@ -126,11 +168,24 @@ function getOverallScore(findings: SecurityFinding[]) {
   return Math.max(12, 100 - penalty);
 }
 
-function getScoreTone(score: number) {
-  if (score >= 85) return "green" as const;
-  if (score >= 65) return "orange" as const;
+function getScoreTone(score: number, highRiskCount: number) {
+  if (highRiskCount > 0) return "danger" as const;
+  if (score >= 85) return "success" as const;
+  if (score >= 65) return "warning" as const;
 
-  return "red" as const;
+  return "danger" as const;
+}
+
+function matchesFilter(finding: SecurityFinding, filter: SecurityFilter) {
+  if (filter === "all") return true;
+  if (filter === "open") return finding.status !== "resolved";
+  if (filter === "reviewed") return finding.status === "reviewed";
+  if (filter === "resolved") return finding.status === "resolved";
+
+  return (
+    finding.severity === "critical" ||
+    finding.severity === "high"
+  );
 }
 
 export function SecurityWorkspace({
@@ -143,268 +198,493 @@ export function SecurityWorkspace({
   onOpenPublish,
   onGenerateSecurityDoc,
 }: SecurityWorkspaceProps) {
+  const [activeFilter, setActiveFilter] = useState<SecurityFilter>("all");
+  const [expandedFindingId, setExpandedFindingId] = useState<string | null>(
+    findings[0]?.id ?? null
+  );
+
   const openFindings = findings.filter(
     (finding) => finding.status !== "resolved"
   );
 
-  const highRiskCount = findings.filter(
+  const highRiskFindings = findings.filter(
     (finding) =>
-      finding.severity === "critical" || finding.severity === "high"
-  ).length;
+      finding.status !== "resolved" &&
+      (finding.severity === "critical" || finding.severity === "high")
+  );
 
   const reviewedCount = findings.filter(
     (finding) => finding.status === "reviewed" || finding.status === "resolved"
   ).length;
 
-  const score = getOverallScore(openFindings);
-  const scoreTone = getScoreTone(score);
+  const resolvedCount = findings.filter(
+    (finding) => finding.status === "resolved"
+  ).length;
 
-  const scanBadge =
-    scanStatus === "running" ? (
-      <WorkspaceStatusBadge tone="blue">Scanning</WorkspaceStatusBadge>
-    ) : scanStatus === "complete" ? (
-      <WorkspaceStatusBadge tone={scoreTone}>
-        {score >= 85 ? "Healthy" : "Needs review"}
-      </WorkspaceStatusBadge>
-    ) : (
-      <WorkspaceStatusBadge>Idle</WorkspaceStatusBadge>
-    );
+  const score = getOverallScore(findings);
+  const scoreTone = getScoreTone(score, highRiskFindings.length);
+
+  const filteredFindings = useMemo(
+    () => findings.filter((finding) => matchesFilter(finding, activeFilter)),
+    [findings, activeFilter]
+  );
+
+  const filterItems: Array<{
+    key: SecurityFilter;
+    label: string;
+    count: number;
+  }> = [
+    {
+      key: "all",
+      label: "All",
+      count: findings.length,
+    },
+    {
+      key: "open",
+      label: "Open",
+      count: openFindings.length,
+    },
+    {
+      key: "high-risk",
+      label: "High risk",
+      count: highRiskFindings.length,
+    },
+    {
+      key: "reviewed",
+      label: "Reviewed",
+      count: reviewedCount,
+    },
+    {
+      key: "resolved",
+      label: "Resolved",
+      count: resolvedCount,
+    },
+  ];
+
+  const scanLabel =
+    scanStatus === "running"
+      ? "Scanning"
+      : scanStatus === "complete"
+        ? "Complete"
+        : "Idle";
 
   return (
-    <WorkspaceShell
+    <WorkspacePanel
+      eyebrow="Security scan"
       title="Security"
-      eyebrow="Workspace protection"
-      description="Review launch risks, auth checks, secrets, and deployment safety."
-      icon={<Shield className="h-4 w-4" />}
-      badge={scanBadge}
-      onClose={onClose}
-    >
-      <WorkspaceSectionStack>
-        <WorkspaceHero
-          eyebrow="Security scan"
-          title={`${projectName} security review`}
-          description="Use this workspace to catch expensive mistakes before launch: exposed secrets, weak access control, missing database policies, and deployment gaps."
-          icon={<ShieldCheck className="h-5 w-5" />}
-          badge={
-            <WorkspaceStatusBadge tone={scoreTone}>
-              Last checked · {lastCheckedLabel}
-            </WorkspaceStatusBadge>
-          }
-          metric={{
-            label: "Score",
-            value: `${score}%`,
-            tone: scoreTone,
-          }}
-          actions={
-            <>
-              <Button
-                suppressHydrationWarning
-                type="button"
-                size="sm"
-                onClick={onGenerateSecurityDoc}
-              >
-                <FileCheck2 className="h-4 w-4" />
-                Generate security.md
-              </Button>
+      description="Review launch risks, access control, secrets, database policies, and deployment safety."
+      status={highRiskFindings.length > 0 ? "Needs review" : "Healthy"}
+      statusTone={scoreTone}
+      actions={
+        <>
+          <Button
+            suppressHydrationWarning
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-9 rounded-[12px]"
+          >
+            <RefreshCcw className="h-4 w-4" />
+            Update scan
+          </Button>
 
+          <Button
+            suppressHydrationWarning
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-9 rounded-[12px]"
+            onClick={onGenerateSecurityDoc}
+          >
+            <FileCheck2 className="h-4 w-4" />
+            security.md
+          </Button>
+
+          <Button
+            suppressHydrationWarning
+            type="button"
+            size="sm"
+            className="h-9 rounded-[12px]"
+            onClick={onOpenPublish}
+          >
+            <UploadCloud className="h-4 w-4" />
+            Publish
+          </Button>
+
+          {onClose ? (
+            <Button
+              suppressHydrationWarning
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-9 rounded-[12px]"
+              onClick={onClose}
+            >
+              Close
+            </Button>
+          ) : null}
+        </>
+      }
+    >
+      <div className="space-y-5">
+        <WorkspaceSubHeader
+          left={
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Workspace protection
+              </div>
+              <h3 className="mt-1 text-[24px] font-semibold tracking-[-0.04em] text-slate-950">
+                {projectName} security review
+              </h3>
+              <p className="mt-1 max-w-[900px] text-[14px] leading-6 text-slate-600">
+                Keep the security view direct and actionable: what is risky,
+                why it matters, and what the user must review before launch.
+                An issue list beats a dramatic dashboard monologue every time.
+              </p>
+            </div>
+          }
+          right={
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <WorkspaceStatusPill tone={scoreTone}>
+                Score · {score}%
+              </WorkspaceStatusPill>
+
+              <WorkspaceStatusPill tone="neutral">
+                {scanLabel} · {lastCheckedLabel}
+              </WorkspaceStatusPill>
+            </div>
+          }
+        />
+
+        {highRiskFindings.length > 0 ? (
+          <WorkspaceCallout
+            title="Security issues detected"
+            description={`${highRiskFindings.length} high-priority security item${
+              highRiskFindings.length === 1 ? "" : "s"
+            } should be reviewed before production deployment.`}
+            tone="danger"
+            action={
               <Button
                 suppressHydrationWarning
                 type="button"
                 size="sm"
                 variant="outline"
+                className="h-9 rounded-[12px] bg-white"
                 onClick={onOpenPublish}
               >
-                <Upload className="h-4 w-4" />
-                Publish readiness
+                View blockers
               </Button>
-            </>
-          }
-        />
-
-        {highRiskCount > 0 ? (
-          <WorkspaceNotice title="High-risk items need review" tone="warning">
-            {highRiskCount} high-priority security item
-            {highRiskCount === 1 ? "" : "s"} should be reviewed before
-            production deployment.
-          </WorkspaceNotice>
+            }
+          />
         ) : (
-          <WorkspaceNotice title="No high-risk blockers detected" tone="success">
-            No critical or high-severity generated findings are currently open.
-            Manual review is still required, because production has never cared
-            about anyone’s optimism.
-          </WorkspaceNotice>
+          <WorkspaceCallout
+            title="No high-risk blockers detected"
+            description="No critical or high-severity generated findings are currently open. Manual review is still required, because production has the personality of a debt collector."
+            tone="success"
+            action={
+              <Button
+                suppressHydrationWarning
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-9 rounded-[12px] bg-white"
+                onClick={onOpenPublish}
+              >
+                Continue
+              </Button>
+            }
+          />
         )}
 
         <WorkspaceMetricGrid>
           <WorkspaceMetricCard
-            label="Open findings"
+            label="Open"
             value={openFindings.length}
-            detail="Issues still requiring review."
+            description="Findings requiring review."
+            tone={openFindings.length > 0 ? "warning" : "success"}
             icon={<ShieldAlert className="h-4 w-4" />}
-            tone={openFindings.length > 0 ? "orange" : "green"}
           />
 
           <WorkspaceMetricCard
             label="High risk"
-            value={highRiskCount}
-            detail="Critical and high severity items."
+            value={highRiskFindings.length}
+            description="Critical and high severity items."
+            tone={highRiskFindings.length > 0 ? "danger" : "success"}
             icon={<AlertTriangle className="h-4 w-4" />}
-            tone={highRiskCount > 0 ? "red" : "green"}
           />
 
           <WorkspaceMetricCard
             label="Reviewed"
             value={reviewedCount}
-            detail="Items already reviewed or resolved."
+            description="Reviewed or resolved findings."
+            tone="info"
             icon={<CheckCircle2 className="h-4 w-4" />}
-            tone="blue"
           />
 
           <WorkspaceMetricCard
             label="Env risks"
             value={environmentRisks.length}
-            detail="Secrets and configuration checks."
+            description="Secrets and config checks."
+            tone={environmentRisks.length > 0 ? "warning" : "success"}
             icon={<KeyRound className="h-4 w-4" />}
-            tone={environmentRisks.length > 0 ? "orange" : "green"}
           />
         </WorkspaceMetricGrid>
 
-        <WorkspaceTwoColumnGrid>
-          <WorkspaceCard
-            title="Security findings"
-            description="Generated review items grouped by severity and area."
-            badge={
-              <WorkspaceStatusBadge
-                tone={openFindings.length > 0 ? "orange" : "green"}
-              >
-                {openFindings.length} open
-              </WorkspaceStatusBadge>
-            }
-          >
-            {findings.length > 0 ? (
-              <div className="grid gap-2">
-                {findings.map((finding) => (
-                  <article
-                    key={finding.id}
-                    className="grid gap-3 rounded-2xl border bg-background p-3 transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50/30 hover:shadow-sm"
+        <WorkspaceSection
+          title="Detected issues"
+          description="Generated review items grouped by severity, status, and affected area."
+          action={
+            <Button
+              suppressHydrationWarning
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-9 rounded-[12px]"
+            >
+              Try fix all
+            </Button>
+          }
+        >
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              {filterItems.map((item) => {
+                const isActive = activeFilter === item.key;
+
+                return (
+                  <button
+                    suppressHydrationWarning
+                    key={item.key}
+                    type="button"
+                    onClick={() => setActiveFilter(item.key)}
+                    className={[
+                      "inline-flex h-9 items-center gap-2 rounded-[12px] border px-3 text-[13px] font-medium transition-colors",
+                      isActive
+                        ? "border-blue-200 bg-blue-50 text-blue-700"
+                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50",
+                    ].join(" ")}
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h4 className="text-sm font-bold tracking-tight text-foreground">
-                          {finding.title}
-                        </h4>
-                        <span className="mt-1 block text-xs font-medium text-muted-foreground">
-                          {finding.area}
-                        </span>
-                      </div>
+                    {item.label}
+                    <Badge
+                      variant="outline"
+                      className="rounded-full bg-white px-2 text-[11px]"
+                    >
+                      {item.count}
+                    </Badge>
+                  </button>
+                );
+              })}
+            </div>
 
-                      <WorkspaceStatusBadge
-                        tone={getSeverityTone(finding.severity)}
-                      >
-                        {getSeverityLabel(finding.severity)}
-                      </WorkspaceStatusBadge>
-                    </div>
-
-                    <p className="text-xs font-medium leading-5 text-muted-foreground">
-                      {finding.description}
-                    </p>
-
-                    {finding.recommendation ? (
-                      <div className="grid gap-1 rounded-xl border border-blue-200 bg-blue-50 p-3 text-blue-950">
-                        <strong className="text-[11px] font-bold uppercase tracking-[0.12em]">
-                          Recommended action
-                        </strong>
-                        <span className="text-xs font-medium leading-5">
-                          {finding.recommendation}
-                        </span>
-                      </div>
-                    ) : null}
-                  </article>
-                ))}
+            <div className="overflow-hidden rounded-[20px] border border-slate-200">
+              <div className="grid grid-cols-[36px_110px_minmax(0,1fr)_150px_130px] border-b border-slate-200 bg-slate-50 px-4 py-3 text-[12px] font-semibold text-slate-500">
+                <div />
+                <div>Level</div>
+                <div>Issue</div>
+                <div>Area</div>
+                <div>Status</div>
               </div>
-            ) : (
-              <WorkspaceEmptyState
-                icon={<ShieldCheck className="h-6 w-6" />}
-                title="No findings detected"
-                description="Generated security findings will appear here after a scan or build analysis."
-              />
-            )}
-          </WorkspaceCard>
 
-          <WorkspaceCard
-            title="Environment and secrets"
-            description="Configuration risks to check before launch."
-            badge={
-              <WorkspaceStatusBadge
-                tone={environmentRisks.length > 0 ? "orange" : "green"}
-              >
-                {environmentRisks.length} checks
-              </WorkspaceStatusBadge>
-            }
-          >
-            <div className="grid gap-2">
-              {environmentRisks.length > 0 ? (
-                environmentRisks.map((risk) => (
-                  <WorkspaceActionRow
-                    key={risk}
-                    title={risk}
-                    description="Review before production deployment."
-                    icon={<LockKeyhole className="h-4 w-4" />}
-                    badge={
-                      <WorkspaceStatusBadge tone="orange">
-                        Review
-                      </WorkspaceStatusBadge>
-                    }
-                  />
-                ))
+              {filteredFindings.length > 0 ? (
+                filteredFindings.map((finding) => {
+                  const isExpanded = expandedFindingId === finding.id;
+
+                  return (
+                    <div key={finding.id} className="border-b border-slate-200 last:border-b-0">
+                      <button
+                        suppressHydrationWarning
+                        type="button"
+                        onClick={() =>
+                          setExpandedFindingId(isExpanded ? null : finding.id)
+                        }
+                        className="grid w-full grid-cols-[36px_110px_minmax(0,1fr)_150px_130px] items-center px-4 py-3 text-left transition-colors hover:bg-slate-50"
+                      >
+                        <div className="text-slate-500">
+                          {isExpanded ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </div>
+
+                        <div>
+                          <WorkspaceStatusPill tone={getSeverityTone(finding.severity)}>
+                            {getSeverityLabel(finding.severity)}
+                          </WorkspaceStatusPill>
+                        </div>
+
+                        <div className="min-w-0">
+                          <div className="truncate text-[14px] font-medium text-slate-950">
+                            {finding.title}
+                          </div>
+                          <div className="mt-0.5 truncate text-[13px] text-slate-500">
+                            {finding.description}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 text-[13px] font-medium text-slate-600">
+                          {getAreaIcon(finding.area)}
+                          {finding.area}
+                        </div>
+
+                        <div>
+                          <WorkspaceStatusPill tone={getStatusTone(finding.status)}>
+                            {getStatusLabel(finding.status)}
+                          </WorkspaceStatusPill>
+                        </div>
+                      </button>
+
+                      {isExpanded ? (
+                        <div className="grid gap-3 bg-slate-50 px-4 py-4 pl-[150px]">
+                          <p className="max-w-[900px] text-[14px] leading-6 text-slate-700">
+                            {finding.description}
+                          </p>
+
+                          {finding.recommendation ? (
+                            <div className="rounded-[18px] border border-blue-200 bg-blue-50 px-4 py-3 text-blue-800">
+                              <div className="text-[12px] font-semibold uppercase tracking-[0.14em]">
+                                Recommended action
+                              </div>
+                              <p className="mt-1 text-[14px] leading-6">
+                                {finding.recommendation}
+                              </p>
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })
               ) : (
-                <WorkspaceEmptyState
-                  icon={<KeyRound className="h-6 w-6" />}
-                  title="No environment risks"
-                  description="No environment configuration risks were generated."
-                />
+                <div className="px-4 py-12 text-center">
+                  <div className="text-[15px] font-semibold text-slate-950">
+                    No findings in this filter
+                  </div>
+                  <p className="mt-1 text-[14px] text-slate-600">
+                    Change the filter to see other security items.
+                  </p>
+                </div>
               )}
             </div>
-          </WorkspaceCard>
-        </WorkspaceTwoColumnGrid>
-
-        <WorkspaceCard
-          title="Launch checklist"
-          description="Security checks that should be complete before publishing."
-          badge={<WorkspaceStatusBadge tone="blue">Required</WorkspaceStatusBadge>}
-        >
-          <div className="grid gap-2">
-            <WorkspaceActionRow
-              title="Verify authentication and route protection"
-              description="Protected screens and mutation endpoints should require authenticated users."
-              icon={<Shield className="h-4 w-4" />}
-              badge={<WorkspaceStatusBadge>Manual</WorkspaceStatusBadge>}
-            />
-
-            <WorkspaceActionRow
-              title="Confirm database ownership checks"
-              description="Users should only read and mutate records they own or are permitted to access."
-              icon={<LockKeyhole className="h-4 w-4" />}
-              badge={<WorkspaceStatusBadge>Manual</WorkspaceStatusBadge>}
-            />
-
-            <WorkspaceActionRow
-              title="Review production deployment variables"
-              description="Confirm live keys, callback URLs, webhook secrets, and server-only values."
-              icon={<KeyRound className="h-4 w-4" />}
-              badge={<WorkspaceStatusBadge>Manual</WorkspaceStatusBadge>}
-            />
-
-            <WorkspaceActionRow
-              title="Run final publish readiness review"
-              description="Open publish readiness and generate the deployment checklist."
-              icon={<ScanLine className="h-4 w-4" />}
-              badge={<WorkspaceStatusBadge tone="blue">Next</WorkspaceStatusBadge>}
-              onClick={onOpenPublish}
-            />
           </div>
-        </WorkspaceCard>
-      </WorkspaceSectionStack>
-    </WorkspaceShell>
+        </WorkspaceSection>
+
+        <div className="grid gap-5 xl:grid-cols-2">
+          <WorkspaceSection
+            title="Environment and secrets"
+            description="Configuration risks to check before launch."
+            action={
+              <WorkspaceStatusPill tone={environmentRisks.length > 0 ? "warning" : "success"}>
+                {environmentRisks.length} checks
+              </WorkspaceStatusPill>
+            }
+          >
+            <WorkspaceList
+              rows={
+                environmentRisks.length > 0
+                  ? environmentRisks.map((risk) => ({
+                      label: risk,
+                      description: "Review before production deployment.",
+                      value: "Review",
+                      trailing: (
+                        <WorkspaceStatusPill tone="warning">
+                          Manual
+                        </WorkspaceStatusPill>
+                      ),
+                    }))
+                  : [
+                      {
+                        label: "No environment risks",
+                        description:
+                          "No environment configuration risks were generated.",
+                        value: "Clear",
+                        trailing: (
+                          <WorkspaceStatusPill tone="success">
+                            Healthy
+                          </WorkspaceStatusPill>
+                        ),
+                      },
+                    ]
+              }
+            />
+          </WorkspaceSection>
+
+          <WorkspaceSection
+            title="Launch checklist"
+            description="Security checks that should be complete before publishing."
+          >
+            <WorkspaceList
+              rows={[
+                {
+                  label: "Verify route protection",
+                  description:
+                    "Protected screens and mutation endpoints should require authenticated users.",
+                  value: "Manual",
+                  trailing: <Shield className="h-4 w-4 text-slate-500" />,
+                },
+                {
+                  label: "Confirm ownership checks",
+                  description:
+                    "Users should only read and mutate records they own or are permitted to access.",
+                  value: "Required",
+                  trailing: <LockKeyhole className="h-4 w-4 text-slate-500" />,
+                },
+                {
+                  label: "Review production variables",
+                  description:
+                    "Confirm live keys, callback URLs, webhook secrets, and server-only values.",
+                  value: "Manual",
+                  trailing: <KeyRound className="h-4 w-4 text-slate-500" />,
+                },
+                {
+                  label: "Run final publish readiness",
+                  description:
+                    "Open publish readiness and review blockers before deployment.",
+                  value: "Next",
+                  trailing: (
+                    <Button
+                      suppressHydrationWarning
+                      type="button"
+                      size="sm"
+                      className="h-8 rounded-[10px]"
+                      onClick={onOpenPublish}
+                    >
+                      Publish
+                    </Button>
+                  ),
+                },
+              ]}
+            />
+          </WorkspaceSection>
+        </div>
+
+        <WorkspaceSection
+          title="Security documentation"
+          description="Generate a security.md file for launch handoff, review notes, and deployment expectations."
+        >
+          <div className="flex flex-col gap-3 rounded-[20px] border border-slate-200 bg-slate-50/70 p-5 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-[15px] font-semibold text-slate-950">
+                <FileCheck2 className="h-4 w-4" />
+                security.md
+              </div>
+              <p className="mt-1 max-w-[760px] text-[14px] leading-6 text-slate-600">
+                Create a security checklist covering auth, secrets, database
+                policies, webhooks, production variables, and manual launch
+                checks.
+              </p>
+            </div>
+
+            <Button
+              suppressHydrationWarning
+              type="button"
+              className="h-9 rounded-[12px]"
+              onClick={onGenerateSecurityDoc}
+            >
+              Generate security.md
+            </Button>
+          </div>
+        </WorkspaceSection>
+      </div>
+    </WorkspacePanel>
   );
 }

@@ -412,3 +412,281 @@
   background: #f3f4f6;
   color: #111827;
 }
+
+/* -------------------------------------------------------------------------- */
+/* Radix publish dropdown: Lovable-style compact publish panel                 */
+/* Does not alter locked toolbar button sizing.                                */
+/* -------------------------------------------------------------------------- */
+
+.publishMenu {
+  z-index: 240;
+  width: 420px;
+  max-height: min(760px, calc(100vh - 88px));
+  overflow: hidden;
+  padding: 0;
+  border-radius: 22px;
+  border: 1px solid rgba(226, 232, 240, 0.96);
+  background: #ffffff;
+  box-shadow:
+    0 24px 70px rgba(15, 23, 42, 0.16),
+    0 6px 18px rgba(15, 23, 42, 0.08);
+}
+
+.publishPanel {
+  overflow: hidden;
+  border-radius: 22px;
+  background: #ffffff;
+}
+
+.publishPanelHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.publishPanelTitle {
+  padding: 0;
+  color: #111827;
+  font-size: 20px;
+  font-weight: 820;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+}
+
+.publishPanelSubtitle {
+  margin: 6px 0 0;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.visitorPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  color: #4b5563;
+  font-size: 12px;
+  font-weight: 760;
+  white-space: nowrap;
+}
+
+.visitorIcon {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.3;
+}
+
+.publishPanelSection {
+  padding: 18px 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.sectionTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sectionTitleRow h4,
+.sectionTitle {
+  margin: 0;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+.customDomainButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #374151;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.customDomainButton:hover {
+  color: #111827;
+}
+
+.urlField {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+  min-height: 52px;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #ffffff;
+  padding: 0 12px 0 16px;
+}
+
+.urlField span {
+  min-width: 0;
+  overflow: hidden;
+  color: #111827;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 760;
+  letter-spacing: -0.02em;
+}
+
+.copyIconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 12px;
+  background: #f7f7f4;
+  color: #4b5563;
+  cursor: pointer;
+}
+
+.copyIconButton:hover {
+  background: #efefec;
+  color: #111827;
+}
+
+.visibilityCard {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  margin-top: 14px;
+  min-height: 76px;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 14px;
+  background: #ffffff;
+}
+
+.visibilityIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: #f7f7f4;
+  color: #4b5563;
+}
+
+.visibilityIconSvg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2.1;
+}
+
+.visibilityCard strong {
+  display: block;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 820;
+  letter-spacing: -0.025em;
+}
+
+.visibilityCard p {
+  margin: 4px 0 0;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.publishFooter {
+  display: grid;
+  gap: 12px;
+  padding: 18px 20px;
+  background: #ffffff;
+}
+
+.publishFooterGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.footerButton {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  border: 1px solid #d1d5db;
+  border-radius: 13px;
+  background: #ffffff;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 760;
+  letter-spacing: -0.02em;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.footerButton:hover {
+  background: #f9fafb;
+}
+
+.securityCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.updateButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  width: 100%;
+  border: 1px solid rgba(37, 99, 235, 0.55);
+  border-radius: 13px;
+  background: #2554e8;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  cursor: pointer;
+  box-shadow:
+    0 8px 20px rgba(37, 99, 235, 0.18),
+    0 2px 6px rgba(15, 23, 42, 0.08);
+}
+
+.updateButton:hover {
+  background: #1f48cf;
+}
+
+.moreMenu [data-radix-collection-item],
+.publishMenu [data-radix-collection-item] {
+  cursor: pointer;
+  outline: none;
+}
+
+.moreMenu [data-highlighted],
+.publishMenu [data-highlighted] {
+  background: #f3f4f6;
+  color: #111827;
+}

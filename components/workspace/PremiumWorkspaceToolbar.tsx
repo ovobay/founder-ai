@@ -143,7 +143,7 @@ function PublishMenu({
     try {
       await navigator.clipboard.writeText(previewUrl);
     } catch {
-      // Clipboard failure should not explode the UI like a Victorian boiler.
+      // Clipboard failure should not punish the user. Revolutionary, I know.
     }
   }
 
@@ -169,94 +169,112 @@ function PublishMenu({
           avoidCollisions
           className={styles.publishMenu}
         >
-          <div className={styles.publishHeader}>
-            <div className={styles.publishHeaderText}>
-              <DropdownMenu.Label className={styles.publishTitle}>
-                Publish
-              </DropdownMenu.Label>
-              <p className={styles.publishDescription}>
-                Review launch readiness before going live.
-              </p>
-            </div>
-
-            <Badge variant="secondary" className={styles.publishBadge}>
-              {publishStatusLabel}
-            </Badge>
-          </div>
-
-          <DropdownMenu.Separator />
-
-          <div className={styles.publishContent}>
-            <section className={styles.publishSection}>
-              <div className={styles.publishSectionHeader}>
-                <div>
-                  <h4>Website URL</h4>
-                  <p>Generated staging domain.</p>
-                </div>
-
-                <Button
-                  suppressHydrationWarning
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className={styles.compactMenuButton}
-                  onClick={handleCopy}
-                >
-                  <Copy className={styles.menuIcon} />
-                  Copy
-                </Button>
+          <div className={styles.publishPanel}>
+            <header className={styles.publishPanelHeader}>
+              <div>
+                <DropdownMenu.Label className={styles.publishPanelTitle}>
+                  Published
+                </DropdownMenu.Label>
+                <p className={styles.publishPanelSubtitle}>
+                  {publishStatusLabel || "Ready to review"}
+                </p>
               </div>
 
-              <div className={styles.urlBox}>{previewUrl}</div>
-            </section>
+              <div className={styles.visitorPill} aria-label="Visitors">
+                <BarChart3 className={styles.visitorIcon} />
+                <span>8 Visitors</span>
+              </div>
+            </header>
 
-            <section className={styles.publishSection}>
-              <div className={styles.visibilityRow}>
+            <div className={styles.publishPanelSection}>
+              <div className={styles.sectionTitleRow}>
+                <h4>Website URL</h4>
+
+                <button
+                  type="button"
+                  className={styles.customDomainButton}
+                  onClick={(event) => event.preventDefault()}
+                >
+                  <ExternalLink className={styles.menuIcon} />
+                  Add custom domain
+                </button>
+              </div>
+
+              <div className={styles.urlField}>
+                <span>{previewUrl.replace(/^https?:\/\//, "")}</span>
+
+                <button
+                  type="button"
+                  className={styles.copyIconButton}
+                  aria-label="Copy website URL"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    void handleCopy();
+                  }}
+                >
+                  <Copy className={styles.menuIcon} />
+                </button>
+              </div>
+            </div>
+
+            <div className={styles.publishPanelSection}>
+              <h4 className={styles.sectionTitle}>Who can see this website</h4>
+
+              <div className={styles.visibilityCard}>
                 <span className={styles.visibilityIcon}>
-                  <Eye className={styles.menuIcon} />
+                  <Globe2 className={styles.visibilityIconSvg} />
                 </span>
 
                 <div>
-                  <h4>Public preview</h4>
-                  <p>Anyone with the URL can access {projectTitle}.</p>
+                  <strong>Public</strong>
+                  <p>Anyone with the URL can access this workspace.</p>
                 </div>
               </div>
-            </section>
+            </div>
 
-            <div className={styles.publishActions}>
-              <DropdownMenu.Item
-                className={styles.publishItem}
-                onSelect={onOpenPublishReadiness}
-              >
-                <Shield className={styles.menuIcon} />
-                <span>Review security</span>
-                <Badge
-                  variant={publishIssueCount > 0 ? "destructive" : "secondary"}
-                  className={styles.itemBadge}
+            <footer className={styles.publishFooter}>
+              <div className={styles.publishFooterGrid}>
+                <button
+                  type="button"
+                  className={styles.footerButton}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    onOpenPublishReadiness?.();
+                  }}
                 >
-                  {publishIssueCount > 0 ? publishIssueCount : "Ready"}
-                </Badge>
-              </DropdownMenu.Item>
+                  <span>Review security</span>
 
-              <DropdownMenu.Item
-                className={styles.publishItem}
-                onSelect={onCreateChecklist}
-              >
-                <FileText className={styles.menuIcon} />
-                <span>Create checklist</span>
-              </DropdownMenu.Item>
+                  {publishIssueCount > 0 ? (
+                    <span className={styles.securityCount}>
+                      {publishIssueCount}
+                    </span>
+                  ) : null}
+                </button>
 
-              <DropdownMenu.Item
-                className={styles.publishItem}
-                onSelect={() => {
-                  onOpenPublishCenter?.();
+                <button
+                  type="button"
+                  className={styles.footerButton}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    onOpenPublishCenter?.();
+                  }}
+                >
+                  Edit settings
+                </button>
+              </div>
+
+              <button
+                type="button"
+                className={styles.updateButton}
+                onClick={(event) => {
+                  event.preventDefault();
+                  onCreateChecklist?.();
                   onDeployProject?.();
                 }}
               >
-                <Rocket className={styles.menuIcon} />
-                <span>Continue publish flow</span>
-              </DropdownMenu.Item>
-            </div>
+                Update
+              </button>
+            </footer>
           </div>
         </DropdownMenu.Content>
       </DropdownMenu.Portal>

@@ -3571,7 +3571,8 @@ export default function Page() {
     buildProjectType: ProjectType,
     buildModules: DetectedModule[],
     buildArchitecture: ArchitecturePlan,
-    existingAssistantId?: string
+    existingAssistantId?: string,
+    generationPromptOverride?: string
   ) {
     const assistantMessage = createInitialAssistantUpdate(
       promptValue,
@@ -3621,6 +3622,7 @@ export default function Page() {
     scheduleScrollUpdate();
 
     let generatedBuild: AiGeneratedBuild | null = null;
+    const aiPrompt = generationPromptOverride ?? promptValue;
 
     try {
       const response = await fetch("/api/ai/generate-build", {
@@ -3630,7 +3632,7 @@ export default function Page() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          prompt: promptValue,
+          prompt: aiPrompt,
         }),
       });
 
@@ -3986,7 +3988,9 @@ ${designTasteBlock}`;
       value,
       detectedProjectType,
       detectedModules,
-      detectedArchitecture
+      detectedArchitecture,
+      undefined,
+      generationPrompt
     );
   }
 

@@ -806,3 +806,297 @@
     0 6px 18px rgba(15, 23, 42, 0.08);
   backdrop-filter: blur(18px);
 }
+
+
+/* -------------------------------------------------------------------------- */
+/* Exact shadcn-style toolbar polish generated from real CSS module classes    */
+/* Keeps compact toolbar sizing. Composer untouched.                           */
+/* -------------------------------------------------------------------------- */
+
+.toolButton,
+.toolButtonActive,
+.toolIcon,
+.toolIconWrap,
+.toolRail {
+  height: 30px;
+  min-height: 30px;
+  border-radius: 10px;
+  border-color: #d8dee8;
+  background: #ffffff;
+  color: #111827;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  transition:
+    transform 150ms ease,
+    background 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.toolButton,
+.toolButtonActive,
+.toolIcon,
+.toolIconWrap,
+.toolRail:hover {
+  transform: translateY(-1px);
+  border-color: #b9c4d4;
+  background: #f8fafc;
+  box-shadow:
+    0 5px 14px rgba(15, 23, 42, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.toolButton,
+.toolButtonActive,
+.toolIcon,
+.toolIconWrap,
+.toolRail:active {
+  transform: translateY(0);
+}
+
+.toolButton,
+.toolButtonActive,
+.toolIcon,
+.toolIconWrap,
+.toolRail svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2.25;
+}
+
+.toolButtonActive {
+  border-color: rgba(49, 86, 244, 0.72);
+  background: #eef3ff;
+  color: #2142d7;
+  box-shadow:
+    0 0 0 3px rgba(49, 86, 244, 0.1),
+    0 5px 14px rgba(49, 86, 244, 0.1);
+}
+
+.publishActionText,
+.publishUrlText,
+.publishVisibilityText,
+.toolLabel,
+.toolLabelWrap {
+  font-size: 12px;
+  font-weight: 760;
+  letter-spacing: -0.025em;
+}
+
+.publishActionCard,
+.publishActionGrid,
+.publishActionIcon,
+.publishActionText,
+.publishButton,
+.publishMiniAction,
+.publishPopover,
+.publishPopoverBody,
+.publishPopoverFooter,
+.publishPopoverHeader,
+.publishPopoverSection,
+.publishPopoverSubtitle,
+.publishPopoverTitle,
+.publishPrimaryButton,
+.publishSectionHeader,
+.publishStatusChip,
+.publishUrlCard,
+.publishUrlText,
+.publishVisibilityCard,
+.publishVisibilityIcon,
+.publishVisibilityText,
+.shareButton,
+.upgradeButton {
+  height: 30px;
+  min-height: 30px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 760;
+  letter-spacing: -0.025em;
+  transition:
+    transform 150ms ease,
+    filter 150ms ease,
+    border-color 150ms ease,
+    background 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.publishActionCard,
+.publishActionGrid,
+.publishActionIcon,
+.publishActionText,
+.publishButton,
+.publishMiniAction,
+.publishPopover,
+.publishPopoverBody,
+.publishPopoverFooter,
+.publishPopoverHeader,
+.publishPopoverSection,
+.publishPopoverSubtitle,
+.publishPopoverTitle,
+.publishPrimaryButton,
+.publishSectionHeader,
+.publishStatusChip,
+.publishUrlCard,
+.publishUrlText,
+.publishVisibilityCard,
+.publishVisibilityIcon,
+.publishVisibilityText,
+.shareButton,
+.upgradeButton:hover {
+  transform: translateY(-1px);
+}
+
+.publishActionCard,
+.publishActionGrid,
+.publishActionIcon,
+.publishActionText,
+.publishButton,
+.publishMiniAction,
+.publishPopover,
+.publishPopoverBody,
+.publishPopoverFooter,
+.publishPopoverHeader,
+.publishPopoverSection,
+.publishPopoverSubtitle,
+.publishPopoverTitle,
+.publishPrimaryButton,
+.publishSectionHeader,
+.publishStatusChip,
+.publishUrlCard,
+.publishUrlText,
+.publishVisibilityCard,
+.publishVisibilityIcon,
+.publishVisibilityText,
+.shareButton,
+.upgradeButton:active {
+  transform: translateY(0);
+}
+
+.shareButton {
+  border-color: #d8dee8;
+  background: #ffffff;
+  color: #111827;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.shareButton:hover {
+  border-color: #b9c4d4;
+  background: #f8fafc;
+  box-shadow: 0 5px 14px rgba(15, 23, 42, 0.07);
+}
+
+.upgradeButton {
+  border-color: rgba(124, 58, 237, 0.5);
+  background: linear-gradient(180deg, #7c3aed 0%, #6d28d9 100%);
+  color: #ffffff;
+}
+
+.upgradeButton:hover {
+  filter: brightness(1.02);
+  box-shadow:
+    0 8px 20px rgba(124, 58, 237, 0.18),
+    0 2px 6px rgba(15, 23, 42, 0.08);
+}
+
+.publishActionCard,
+.publishActionGrid,
+.publishActionIcon,
+.publishActionText,
+.publishButton,
+.publishMiniAction,
+.publishPopover,
+.publishPopoverBody,
+.publishPopoverFooter,
+.publishPopoverHeader,
+.publishPopoverSection,
+.publishPopoverSubtitle,
+.publishPopoverTitle,
+.publishPrimaryButton,
+.publishSectionHeader,
+.publishStatusChip,
+.publishUrlCard,
+.publishUrlText,
+.publishVisibilityCard,
+.publishVisibilityIcon,
+.publishVisibilityText {
+  border-color: rgba(37, 99, 235, 0.55);
+  background: linear-gradient(180deg, #3156f4 0%, #2142d7 100%);
+  color: #ffffff;
+}
+
+.publishActionCard,
+.publishActionGrid,
+.publishActionIcon,
+.publishActionText,
+.publishButton,
+.publishMiniAction,
+.publishPopover,
+.publishPopoverBody,
+.publishPopoverFooter,
+.publishPopoverHeader,
+.publishPopoverSection,
+.publishPopoverSubtitle,
+.publishPopoverTitle,
+.publishPrimaryButton,
+.publishSectionHeader,
+.publishStatusChip,
+.publishUrlCard,
+.publishUrlText,
+.publishVisibilityCard,
+.publishVisibilityIcon,
+.publishVisibilityText:hover {
+  filter: brightness(1.02);
+  box-shadow:
+    0 8px 20px rgba(49, 86, 244, 0.18),
+    0 2px 6px rgba(15, 23, 42, 0.08);
+}
+
+.githubButton,
+.githubLogo {
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #050505;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition:
+    transform 150ms ease,
+    background 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.githubButton,
+.githubLogo:hover {
+  transform: translateY(-1px);
+  border-color: #d8dee8;
+  background: #f8fafc;
+  box-shadow: 0 5px 14px rgba(15, 23, 42, 0.07);
+}
+
+.githubButton,
+.githubLogo svg {
+  width: 21px;
+  height: 21px;
+}
+
+.publishPopover,
+.publishPopoverBody,
+.publishPopoverFooter,
+.publishPopoverHeader,
+.publishPopoverSection,
+.publishPopoverSubtitle,
+.publishPopoverTitle {
+  border-color: rgba(226, 232, 240, 0.96);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow:
+    0 24px 70px rgba(15, 23, 42, 0.16),
+    0 6px 18px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(18px);
+}

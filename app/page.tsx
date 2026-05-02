@@ -3950,7 +3950,7 @@ ${designTasteBlock}`;
       setPrompt("");
       setPreviewState(
         createPreviewState(
-          value,
+          generationPrompt,
           detectedProjectType,
           changedFiles.length,
           detectedModules,
@@ -3974,7 +3974,7 @@ ${designTasteBlock}`;
 
     if (mode === "visual-edits") {
       const planItem = createPlanItem(
-        value,
+        generationPrompt,
         detectedProjectType,
         detectedModules,
         detectedArchitecture

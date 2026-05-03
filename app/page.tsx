@@ -1220,6 +1220,75 @@ function buildChangeList(
   return changes;
 }
 
+
+function inferGeneratedSiteName(prompt: string, fallback: string) {
+  const explicitNameMatch = prompt.match(
+    /\b(?:called|named|for)\s+([A-Z][A-Za-z0-9-]{2,}(?:\s+[A-Z][A-Za-z0-9-]{2,}){0,2})/
+  );
+
+  if (explicitNameMatch?.[1]) {
+    return explicitNameMatch[1].trim();
+  }
+
+  const brandedWordMatch = prompt.match(
+    /\b[A-Z][A-Za-z0-9]*(?:Wired|Desk|Flow|Ops|Stack|Base|Pilot|Forge|ly|AI)\b/
+  );
+
+  if (brandedWordMatch?.[0]) {
+    return brandedWordMatch[0].trim();
+  }
+
+  const lower = prompt.toLowerCase();
+
+  if (lower.includes("ticket") || lower.includes("helpdesk") || lower.includes("support")) {
+    return "DeskPilot";
+  }
+
+  if (lower.includes("security") || lower.includes("incident") || lower.includes("risk")) {
+    return "RiskForge";
+  }
+
+  if (lower.includes("finance") || lower.includes("fintech") || lower.includes("payment")) {
+    return "LedgerPilot";
+  }
+
+  if (lower.includes("shopify") || lower.includes("commerce") || lower.includes("store")) {
+    return "StorePilot";
+  }
+
+  if (lower.includes("marketing") || lower.includes("campaign") || lower.includes("lead")) {
+    return "GrowthPilot";
+  }
+
+  return fallback.replace(/builder|workspace/gi, "").trim() || "LaunchPilot";
+}
+
+function createGeneratedSiteSubtitle(prompt: string, projectType: ProjectType) {
+  const trimmed = prompt
+    .replace(/\s+/g, " ")
+    .replace(/^(build|create|make|generate|design|develop)\s+/i, "")
+    .trim();
+
+  if (trimmed.length > 28 && trimmed.length < 190) {
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+  }
+
+  if (projectType === "marketing-site") {
+    return "A conversion-focused product website with proof sections, pricing, workflow detail, and a clear path to action.";
+  }
+
+  if (projectType === "shopify-app") {
+    return "A merchant-ready Shopify app experience with operational workflows, admin surfaces, and launch-ready structure.";
+  }
+
+  if (projectType === "web-app") {
+    return "A full-stack product experience with frontend screens, backend routes, data planning, and working product sections.";
+  }
+
+  return "A complete SaaS product website with dashboard previews, workflow sections, pricing, architecture proof, and a clear CTA.";
+}
+
+
 function createFileContents(
   path: string,
   prompt: string,
@@ -1230,23 +1299,296 @@ function createFileContents(
   const moduleList = modules.map((module) => module.id).join(", ");
 
   if (path.endsWith("app/page.tsx")) {
+    const inferredName = inferGeneratedSiteName(prompt, getProjectTypeLabel(projectType));
+    const generatedSubtitle = createGeneratedSiteSubtitle(prompt, projectType);
+    const moduleCards = modules
+      .slice(0, 6)
+      .map(
+        (module) => `              <article className="generated-card">
+                <div className="generated-card-kicker">${module.label}</div>
+                <h3>${module.label}</h3>
+                <p>${module.description}</p>
+              </article>`
+      )
+      .join("\\n");
+
+    const tableRows = architecture.tables
+      .slice(0, 5)
+      .map(
+        (table) => `                  <tr>
+                    <td>${table.name}</td>
+                    <td>${table.purpose}</td>
+                    <td>${table.fields.length} fields</td>
+                  </tr>`
+      )
+      .join("\\n");
+
+    const apiRows = architecture.endpoints
+      .slice(0, 5)
+      .map(
+        (endpoint) => `                  <tr>
+                    <td>${endpoint.method}</td>
+                    <td>${endpoint.path}</td>
+                    <td>${endpoint.purpose}</td>
+                  </tr>`
+      )
+      .join("\\n");
+
     return `// ${path}
 "use client";
 
-// Founder AI builder shell
-// Detected project type: ${getProjectTypeLabel(projectType)}
-// Detected modules: ${moduleList}
-// Database tables planned: ${architecture.tables.length}
-// API routes planned: ${architecture.endpoints.length}
-// Security rules planned: ${architecture.securityRules.length}
-// Latest instruction:
-// ${prompt}
+import { ArrowRight, CheckCircle2, ShieldCheck, Sparkles, Zap } from "lucide-react";
+
+const productName = ${JSON.stringify(inferredName)};
+const subtitle = ${JSON.stringify(generatedSubtitle)};
 
 export default function Page() {
   return (
-    <main>
-      <CommandPanel />
-      <PreviewWorkspace />
+    <main className="generated-site">
+      <header className="generated-nav">
+        <a href="#hero" className="generated-brand" aria-label={productName}>
+          <span className="generated-logo">
+            <Sparkles size={17} />
+          </span>
+          <span>{productName}</span>
+        </a>
+
+        <nav className="generated-links" aria-label="Primary navigation">
+          <a href="#product">Product</a>
+          <a href="#workflow">Workflow</a>
+          <a href="#architecture">Architecture</a>
+          <a href="#pricing">Pricing</a>
+        </nav>
+
+        <a href="#pricing" className="generated-button generated-button-primary">
+          Start free
+          <ArrowRight size={15} />
+        </a>
+      </header>
+
+      <section id="hero" className="generated-hero">
+        <div className="generated-hero-copy">
+          <div className="generated-pill">
+            <CheckCircle2 size={14} />
+            Generated from your product brief
+          </div>
+
+          <h1>{productName} for teams who need clarity.</h1>
+          <p>{subtitle}</p>
+
+          <div className="generated-actions">
+            <a href="#pricing" className="generated-button generated-button-primary">
+              Start workspace
+              <ArrowRight size={15} />
+            </a>
+            <a href="#product" className="generated-button generated-button-secondary">
+              View product
+            </a>
+          </div>
+
+          <div className="generated-proof-grid">
+            <div>
+              <strong>48%</strong>
+              <span>faster routing</span>
+            </div>
+            <div>
+              <strong>${architecture.securityRules.length}</strong>
+              <span>security checks</span>
+            </div>
+            <div>
+              <strong>${architecture.endpoints.length}</strong>
+              <span>API routes</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="product" className="generated-dashboard">
+          <div className="generated-dashboard-header">
+            <div>
+              <strong>Operations cockpit</strong>
+              <span>Live product preview</span>
+            </div>
+            <span>${modules.length} modules</span>
+          </div>
+
+          <div className="generated-metrics">
+            <div>
+              <span>Open items</span>
+              <strong>184</strong>
+            </div>
+            <div>
+              <span>Risk queue</span>
+              <strong>12</strong>
+            </div>
+            <div>
+              <span>Automations</span>
+              <strong>36</strong>
+            </div>
+          </div>
+
+          <div className="generated-table-card">
+            <div className="generated-row generated-row-head">
+              <span>ID</span>
+              <span>Issue</span>
+              <span>Status</span>
+            </div>
+            <div className="generated-row">
+              <span>INC-1042</span>
+              <span>Email outage affecting finance team</span>
+              <span>High</span>
+            </div>
+            <div className="generated-row">
+              <span>REQ-8841</span>
+              <span>New starter laptop and access setup</span>
+              <span>Normal</span>
+            </div>
+            <div className="generated-row">
+              <span>SEC-2110</span>
+              <span>Suspicious login review</span>
+              <span>Urgent</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="generated-section">
+        <div className="generated-section-heading">
+          <span>Product modules</span>
+          <h2>Generated around the workflows your prompt described.</h2>
+        </div>
+
+        <div className="generated-card-grid">
+${moduleCards || `              <article className="generated-card">
+                <div className="generated-card-kicker">Core product</div>
+                <h3>Workspace</h3>
+                <p>Generated product workspace with clear navigation, workflow states, and launch-ready sections.</p>
+              </article>`}
+        </div>
+      </section>
+
+      <section id="workflow" className="generated-workflow">
+        <div className="generated-workflow-copy">
+          <span>Workflow</span>
+          <h2>From idea to working product structure.</h2>
+          <p>The generated site includes product evidence, architecture planning, security checks, and conversion sections instead of generic filler.</p>
+        </div>
+
+        <div className="generated-workflow-list">
+          <div>
+            <Zap size={18} />
+            <strong>Generate preview</strong>
+            <span>Create a polished product-facing page.</span>
+          </div>
+          <div>
+            <ShieldCheck size={18} />
+            <strong>Review security</strong>
+            <span>Check auth, roles, policies, and launch risks.</span>
+          </div>
+          <div>
+            <Sparkles size={18} />
+            <strong>Publish safely</strong>
+            <span>Move from generated draft to production-ready flow.</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="architecture" className="generated-section">
+        <div className="generated-section-heading">
+          <span>Architecture</span>
+          <h2>Database and API structure included.</h2>
+        </div>
+
+        <div className="generated-architecture-grid">
+          <div className="generated-table-wrap">
+            <h3>Database tables</h3>
+            <table>
+              <tbody>
+${tableRows || `                  <tr>
+                    <td>projects</td>
+                    <td>Generated project records</td>
+                    <td>4 fields</td>
+                  </tr>`}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="generated-table-wrap">
+            <h3>API routes</h3>
+            <table>
+              <tbody>
+${apiRows || `                  <tr>
+                    <td>GET</td>
+                    <td>/api/projects</td>
+                    <td>List generated projects</td>
+                  </tr>`}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="pricing" className="generated-section">
+        <div className="generated-section-heading">
+          <span>Pricing</span>
+          <h2>Start small. Scale when the work does.</h2>
+        </div>
+
+        <div className="generated-pricing-grid">
+          {[
+            ["Starter", "€0", "For testing the workspace", "Start free"],
+            ["Growth", "€29", "For active teams and live workflows", "Choose Growth"],
+            ["Scale", "Custom", "For larger operations and controls", "Talk to sales"],
+          ].map(([plan, price, description, action], index) => (
+            <article key={plan} className={index === 1 ? "generated-price-card featured" : "generated-price-card"}>
+              <h3>{plan}</h3>
+              <strong>{price}</strong>
+              <p>{description}</p>
+              <ul>
+                <li>Generated website preview</li>
+                <li>Workflow sections</li>
+                <li>Security readiness checks</li>
+              </ul>
+              <a href="mailto:hello@example.com" className="generated-button generated-button-secondary">
+                {action}
+              </a>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="generated-final-cta">
+        <div>
+          <span>Launch readiness</span>
+          <h2>A generated website should look like someone cared.</h2>
+          <p>This page includes product structure, working navigation, pricing, architecture proof, and footer content.</p>
+        </div>
+
+        <a href="mailto:hello@example.com" className="generated-button generated-button-primary">
+          Contact team
+          <ArrowRight size={15} />
+        </a>
+      </section>
+
+      <footer className="generated-footer">
+        <div>
+          <strong>{productName}</strong>
+          <p>Generated product website with complete page structure and working navigation.</p>
+        </div>
+
+        <div>
+          <span>Product</span>
+          <a href="#product">Dashboard</a>
+          <a href="#workflow">Workflow</a>
+          <a href="#architecture">Architecture</a>
+        </div>
+
+        <div>
+          <span>Company</span>
+          <a href="#pricing">Pricing</a>
+          <a href="mailto:hello@example.com">Contact</a>
+          <a href="#hero">Back to top</a>
+        </div>
+      </footer>
     </main>
   );
 }`;
@@ -1254,13 +1596,452 @@ export default function Page() {
 
   if (path.endsWith("app/globals.css")) {
     return `/* ${path}
-   Current user styling preserved.
-   No overrides applied in this build.
+   Generated website styling.
+   Uses a Refero-inspired product website system.
 */
 
 :root {
-  --bg: #ffffff;
-  --line: #e5e7eb;
+  --generated-bg: #ffffff;
+  --generated-surface: #ffffff;
+  --generated-muted: #f3fbe9;
+  --generated-elevated: #f9f6f1;
+  --generated-text: #0a2414;
+  --generated-muted-text: #607166;
+  --generated-border: #d7dfd2;
+  --generated-accent: #1ad379;
+  --generated-radius-sm: 8px;
+  --generated-radius-md: 14px;
+  --generated-radius-lg: 24px;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+.generated-site {
+  min-height: 100vh;
+  background: var(--generated-bg);
+  color: var(--generated-text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.generated-nav {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  height: 72px;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(18px);
+  border-bottom: 1px solid var(--generated-border);
+}
+
+.generated-brand,
+.generated-links,
+.generated-actions,
+.generated-button {
+  display: inline-flex;
+  align-items: center;
+}
+
+.generated-brand {
+  gap: 10px;
+  color: inherit;
+  text-decoration: none;
+  font-weight: 650;
+}
+
+.generated-logo {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--generated-radius-sm);
+  background: var(--generated-muted);
+  border: 1px solid var(--generated-border);
+}
+
+.generated-links {
+  gap: 28px;
+}
+
+.generated-links a,
+.generated-footer a {
+  color: var(--generated-muted-text);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 550;
+}
+
+.generated-button {
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 18px;
+  border-radius: var(--generated-radius-sm);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 650;
+  border: 1px solid transparent;
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.generated-button:hover {
+  transform: translateY(-1px);
+}
+
+.generated-button-primary {
+  background: var(--generated-accent);
+  color: var(--generated-text);
+}
+
+.generated-button-secondary {
+  background: var(--generated-surface);
+  color: var(--generated-text);
+  border-color: var(--generated-border);
+}
+
+.generated-hero {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 88px 24px 64px;
+  display: grid;
+  grid-template-columns: 0.88fr 1.12fr;
+  gap: 48px;
+  align-items: center;
+}
+
+.generated-pill {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  border: 1px solid var(--generated-border);
+  background: var(--generated-muted);
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.generated-hero h1 {
+  margin: 22px 0 0;
+  max-width: 780px;
+  font-size: clamp(52px, 7vw, 88px);
+  line-height: 0.92;
+  letter-spacing: -0.075em;
+  font-weight: 650;
+}
+
+.generated-hero p {
+  margin: 28px 0 0;
+  max-width: 590px;
+  color: var(--generated-muted-text);
+  font-size: 17px;
+  line-height: 1.75;
+}
+
+.generated-actions {
+  margin-top: 32px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.generated-proof-grid {
+  margin-top: 32px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.generated-proof-grid div,
+.generated-dashboard,
+.generated-card,
+.generated-workflow,
+.generated-table-wrap,
+.generated-price-card,
+.generated-final-cta {
+  border: 1px solid var(--generated-border);
+  background: var(--generated-elevated);
+  border-radius: var(--generated-radius-lg);
+}
+
+.generated-proof-grid div {
+  padding: 16px;
+}
+
+.generated-proof-grid strong {
+  display: block;
+  font-size: 28px;
+  letter-spacing: -0.06em;
+}
+
+.generated-proof-grid span,
+.generated-dashboard span,
+.generated-card p,
+.generated-workflow p,
+.generated-table-wrap td,
+.generated-price-card p,
+.generated-final-cta p,
+.generated-footer p {
+  color: var(--generated-muted-text);
+}
+
+.generated-dashboard {
+  padding: 18px;
+  box-shadow: 0 24px 70px rgba(10, 36, 20, 0.1);
+}
+
+.generated-dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.generated-dashboard-header div,
+.generated-table-card {
+  display: grid;
+  gap: 4px;
+}
+
+.generated-metrics {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.generated-metrics div {
+  border: 1px solid var(--generated-border);
+  border-radius: var(--generated-radius-md);
+  background: var(--generated-surface);
+  padding: 16px;
+}
+
+.generated-metrics strong {
+  display: block;
+  margin-top: 14px;
+  font-size: 28px;
+  letter-spacing: -0.05em;
+}
+
+.generated-table-card {
+  margin-top: 14px;
+  border: 1px solid var(--generated-border);
+  border-radius: var(--generated-radius-md);
+  overflow: hidden;
+  background: var(--generated-surface);
+}
+
+.generated-row {
+  display: grid;
+  grid-template-columns: 92px 1fr 88px;
+  gap: 12px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--generated-border);
+  font-size: 14px;
+}
+
+.generated-row:last-child {
+  border-bottom: 0;
+}
+
+.generated-row-head {
+  color: var(--generated-muted-text);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.generated-section {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 64px 24px;
+}
+
+.generated-section-heading {
+  max-width: 740px;
+  margin-bottom: 28px;
+}
+
+.generated-section-heading span,
+.generated-workflow-copy span,
+.generated-final-cta span {
+  color: var(--generated-muted-text);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.generated-section-heading h2,
+.generated-workflow h2,
+.generated-final-cta h2 {
+  margin: 12px 0 0;
+  font-size: clamp(32px, 5vw, 52px);
+  line-height: 1;
+  letter-spacing: -0.07em;
+}
+
+.generated-card-grid,
+.generated-pricing-grid,
+.generated-architecture-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.generated-card-grid,
+.generated-pricing-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.generated-card,
+.generated-price-card {
+  padding: 24px;
+}
+
+.generated-card-kicker {
+  color: var(--generated-muted-text);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.generated-card h3,
+.generated-price-card h3 {
+  margin: 18px 0 0;
+  font-size: 20px;
+  letter-spacing: -0.04em;
+}
+
+.generated-card p,
+.generated-price-card p {
+  line-height: 1.65;
+}
+
+.generated-workflow {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 32px;
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: 32px;
+}
+
+.generated-workflow-list {
+  display: grid;
+  gap: 12px;
+}
+
+.generated-workflow-list div {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 8px 14px;
+  align-items: center;
+  border: 1px solid var(--generated-border);
+  border-radius: var(--generated-radius-md);
+  background: var(--generated-surface);
+  padding: 16px;
+}
+
+.generated-workflow-list svg {
+  grid-row: span 2;
+}
+
+.generated-architecture-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.generated-table-wrap {
+  padding: 24px;
+  overflow: hidden;
+}
+
+.generated-table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 18px;
+}
+
+.generated-table-wrap td {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--generated-border);
+  font-size: 13px;
+}
+
+.generated-price-card strong {
+  display: block;
+  margin-top: 18px;
+  font-size: 42px;
+  letter-spacing: -0.08em;
+}
+
+.generated-price-card ul {
+  margin: 22px 0;
+  padding-left: 18px;
+  color: var(--generated-muted-text);
+  line-height: 1.9;
+}
+
+.generated-price-card.featured {
+  border-color: var(--generated-accent);
+  box-shadow: 0 22px 60px rgba(26, 211, 121, 0.14);
+}
+
+.generated-final-cta {
+  max-width: 1180px;
+  margin: 0 auto 80px;
+  padding: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+}
+
+.generated-footer {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 40px 24px;
+  border-top: 1px solid var(--generated-border);
+  display: grid;
+  grid-template-columns: 1.3fr 0.7fr 0.7fr;
+  gap: 32px;
+}
+
+.generated-footer div {
+  display: grid;
+  gap: 10px;
+}
+
+.generated-footer span {
+  font-weight: 750;
+}
+
+@media (max-width: 900px) {
+  .generated-links {
+    display: none;
+  }
+
+  .generated-hero,
+  .generated-workflow,
+  .generated-architecture-grid,
+  .generated-card-grid,
+  .generated-pricing-grid,
+  .generated-footer {
+    grid-template-columns: 1fr;
+  }
+
+  .generated-final-cta {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }`;
   }
 

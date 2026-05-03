@@ -6,11 +6,15 @@ import {
   BarChart3,
   Bot,
   CheckCircle2,
+  ChevronRight,
   Clock3,
   FileText,
   GitBranch,
+  HelpCircle,
   LayoutDashboard,
   LockKeyhole,
+  Mail,
+  Menu,
   ShieldCheck,
   Sparkles,
   Ticket,
@@ -29,7 +33,6 @@ type ReferoGeneratedPreviewProps = {
 };
 
 type PreviewVisualSystem = {
-  name: string;
   theme: "light" | "dark";
   background: string;
   surface: string;
@@ -66,7 +69,6 @@ function inferVisualSystem(
     source.includes("helpdesk")
   ) {
     return {
-      name: "Plain Workbench",
       theme: "light",
       background: "#ffffff",
       surface: "#ffffff",
@@ -92,7 +94,6 @@ function inferVisualSystem(
     source.includes("command center")
   ) {
     return {
-      name: "Mercury Command",
       theme: "dark",
       background: "#08090a",
       surface: "#111315",
@@ -118,7 +119,6 @@ function inferVisualSystem(
     source.includes("developer")
   ) {
     return {
-      name: "Warp Terminal",
       theme: "dark",
       background: "#141413",
       surface: "#1b1b1a",
@@ -139,7 +139,6 @@ function inferVisualSystem(
   }
 
   return {
-    name: "Linear Polished SaaS",
     theme: "dark",
     background: "#08090d",
     surface: "#11131a",
@@ -159,15 +158,102 @@ function inferVisualSystem(
   };
 }
 
-function extractProductName(title: string) {
-  const clean = title
-    .replace(/builder/gi, "")
-    .replace(/workspace/gi, "")
-    .replace(/preview/gi, "")
+function titleCase(value: string) {
+  return value
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function removeNoise(value: string) {
+  return value
+    .replace(/\b(build|create|make|generate|design|develop|launch)\b/gi, "")
+    .replace(/\b(a|an|the|for|with|and|to|of|in|on|by)\b/gi, " ")
+    .replace(/\b(landing page|website|web app|saas|dashboard|platform|tool)\b/gi, "")
+    .replace(/[^\w\s-]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
 
-  return clean || "Founder AI";
+function inferProductName(title: string, subtitle: string, projectType: string) {
+  const combined = `${title} ${subtitle} ${projectType}`;
+
+  const explicitNameMatch = combined.match(
+    /\b(?:called|named|for)\s+([A-Z][A-Za-z0-9-]{2,}(?:\s+[A-Z][A-Za-z0-9-]{2,}){0,2})/
+  );
+
+  if (explicitNameMatch?.[1]) {
+    return explicitNameMatch[1].trim();
+  }
+
+  const brandedWords = combined.match(/\b[A-Z][A-Za-z0-9]*(?:Wired|Desk|Flow|Ops|Stack|Base|Pilot|Forge|ly|AI)\b/);
+
+  if (brandedWords?.[0]) {
+    return brandedWords[0].trim();
+  }
+
+  const cleaned = removeNoise(title);
+
+  if (
+    cleaned &&
+    !/builder|workspace|preview|marketing site|web app|mobile app/i.test(cleaned)
+  ) {
+    return titleCase(cleaned).slice(0, 28);
+  }
+
+  const lower = combined.toLowerCase();
+
+  if (lower.includes("ticket") || lower.includes("helpdesk") || lower.includes("support")) {
+    return "DeskPilot";
+  }
+
+  if (lower.includes("security") || lower.includes("incident") || lower.includes("risk")) {
+    return "RiskForge";
+  }
+
+  if (lower.includes("finance") || lower.includes("fintech") || lower.includes("payment")) {
+    return "LedgerPilot";
+  }
+
+  if (lower.includes("shopify") || lower.includes("commerce") || lower.includes("store")) {
+    return "StorePilot";
+  }
+
+  if (lower.includes("marketing") || lower.includes("campaign") || lower.includes("lead")) {
+    return "GrowthPilot";
+  }
+
+  return "LaunchPilot";
+}
+
+function inferAudience(subtitle: string, projectType: string) {
+  const text = `${subtitle} ${projectType}`.toLowerCase();
+
+  if (text.includes("support") || text.includes("ticket") || text.includes("helpdesk")) {
+    return "support teams";
+  }
+
+  if (text.includes("security") || text.includes("incident")) {
+    return "security teams";
+  }
+
+  if (text.includes("shopify") || text.includes("commerce")) {
+    return "commerce teams";
+  }
+
+  if (text.includes("marketing") || text.includes("lead")) {
+    return "growth teams";
+  }
+
+  return "modern teams";
+}
+
+function scrollToSection(id: string) {
+  document.getElementById(id)?.scrollIntoView({
+    behavior: "smooth",
+    block: "start",
+  });
 }
 
 export function ReferoGeneratedPreview({
@@ -178,11 +264,25 @@ export function ReferoGeneratedPreview({
   designReference,
 }: ReferoGeneratedPreviewProps) {
   const system = inferVisualSystem(designReference);
-  const productName = extractProductName(title);
+  const productName = inferProductName(title, subtitle, projectType);
+  const audience = inferAudience(subtitle, projectType);
   const isDark = system.theme === "dark";
 
   const navText = isDark ? "rgba(247,248,251,0.72)" : system.mutedText;
   const subtleBorder = `1px solid ${system.border}`;
+
+  const primaryButtonStyle = {
+    background: system.primary,
+    color: system.primaryText,
+    borderRadius: system.radiusSm,
+  };
+
+  const secondaryButtonStyle = {
+    background: system.surface,
+    color: system.text,
+    border: subtleBorder,
+    borderRadius: system.radiusSm,
+  };
 
   return (
     <div
@@ -192,7 +292,7 @@ export function ReferoGeneratedPreview({
         fontFamily:
           "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif",
       }}
-      className="min-h-[1180px] overflow-hidden"
+      className="min-h-[1600px] overflow-hidden"
     >
       <header
         style={{
@@ -205,7 +305,11 @@ export function ReferoGeneratedPreview({
         className="sticky top-0 z-20"
       >
         <div className="mx-auto flex h-16 max-w-[1180px] items-center justify-between px-6">
-          <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => scrollToSection("hero")}
+            className="flex items-center gap-3 text-left"
+          >
             <div
               style={{
                 background: system.surfaceMuted,
@@ -228,34 +332,53 @@ export function ReferoGeneratedPreview({
                 {projectType}
               </div>
             </div>
-          </div>
+          </button>
 
           <nav
             style={{ color: navText }}
             className="hidden items-center gap-7 text-sm font-medium md:flex"
           >
-            <span>Product</span>
-            <span>Workflow</span>
-            <span>Security</span>
-            <span>Pricing</span>
+            <button type="button" onClick={() => scrollToSection("product")}>
+              Product
+            </button>
+            <button type="button" onClick={() => scrollToSection("workflow")}>
+              Workflow
+            </button>
+            <button type="button" onClick={() => scrollToSection("pricing")}>
+              Pricing
+            </button>
+            <button type="button" onClick={() => scrollToSection("faq")}>
+              FAQ
+            </button>
           </nav>
 
           <button
-            style={{
-              background: system.primary,
-              color: system.primaryText,
-              borderRadius: system.radiusSm,
-            }}
-            className="inline-flex h-10 items-center gap-2 px-4 text-sm font-semibold"
+            type="button"
+            onClick={() => scrollToSection("pricing")}
+            style={primaryButtonStyle}
+            className="hidden h-10 items-center gap-2 px-4 text-sm font-semibold md:inline-flex"
           >
-            Start building
+            Start free
             <ArrowRight size={15} />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => scrollToSection("footer")}
+            style={secondaryButtonStyle}
+            className="inline-flex h-10 w-10 items-center justify-center md:hidden"
+            aria-label="Open footer navigation"
+          >
+            <Menu size={18} />
           </button>
         </div>
       </header>
 
       <main>
-        <section className="mx-auto grid max-w-[1180px] gap-12 px-6 py-20 lg:grid-cols-[0.88fr_1.12fr] lg:items-center">
+        <section
+          id="hero"
+          className="mx-auto grid max-w-[1180px] gap-12 px-6 py-20 lg:grid-cols-[0.88fr_1.12fr] lg:items-center"
+        >
           <div>
             <div
               style={{
@@ -267,7 +390,7 @@ export function ReferoGeneratedPreview({
               className="mb-5 inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold"
             >
               <CheckCircle2 size={14} />
-              {designReference?.name ?? system.name} taste applied
+              Generated product website
             </div>
 
             <h1
@@ -279,8 +402,7 @@ export function ReferoGeneratedPreview({
               }}
               className="max-w-3xl"
             >
-              {productName}
-              <span style={{ color: system.accent }}> that feels built.</span>
+              {productName} for {audience} who need clarity.
             </h1>
 
             <p
@@ -292,11 +414,9 @@ export function ReferoGeneratedPreview({
 
             <div className="mt-8 flex flex-wrap gap-3">
               <button
-                style={{
-                  background: system.primary,
-                  color: system.primaryText,
-                  borderRadius: system.radiusSm,
-                }}
+                type="button"
+                onClick={() => scrollToSection("pricing")}
+                style={primaryButtonStyle}
                 className="inline-flex h-11 items-center gap-2 px-5 text-sm font-semibold"
               >
                 Start workspace
@@ -304,49 +424,53 @@ export function ReferoGeneratedPreview({
               </button>
 
               <button
-                style={{
-                  background: system.surface,
-                  color: system.text,
-                  border: subtleBorder,
-                  borderRadius: system.radiusSm,
-                }}
+                type="button"
+                onClick={() => scrollToSection("product")}
+                style={secondaryButtonStyle}
                 className="inline-flex h-11 items-center gap-2 px-5 text-sm font-semibold"
               >
-                View workflow
+                View product
               </button>
             </div>
 
-            <div className="mt-8 flex flex-wrap gap-2">
+            <div className="mt-8 grid max-w-xl grid-cols-3 gap-3">
               {[
-                "Product dashboard",
-                "Workflow panels",
-                "SLA warnings",
-                "Automation engine",
-              ].map((label) => (
-                <span
+                ["48%", "faster routing"],
+                ["12", "SLA risks found"],
+                ["36", "automations live"],
+              ].map(([value, label]) => (
+                <div
                   key={label}
                   style={{
                     background: system.surfaceMuted,
-                    color: system.mutedText,
                     border: subtleBorder,
-                    borderRadius: 999,
+                    borderRadius: system.radiusMd,
                   }}
-                  className="px-3 py-1.5 text-xs font-semibold"
+                  className="p-4"
                 >
-                  {label}
-                </span>
+                  <div className="text-2xl font-semibold tracking-[-0.05em]">
+                    {value}
+                  </div>
+                  <div
+                    style={{ color: system.mutedText }}
+                    className="mt-1 text-xs font-medium"
+                  >
+                    {label}
+                  </div>
+                </div>
               ))}
             </div>
           </div>
 
           <div
+            id="product"
             style={{
               background: system.surfaceElevated,
               border: subtleBorder,
               borderRadius: system.radiusLg,
               boxShadow: system.shadow,
             }}
-            className="overflow-hidden p-4"
+            className="scroll-mt-24 overflow-hidden p-4"
           >
             <div className="mb-4 flex items-center justify-between">
               <div>
@@ -357,7 +481,7 @@ export function ReferoGeneratedPreview({
                   style={{ color: system.mutedText }}
                   className="text-xs font-medium"
                 >
-                  Generated from the current build state
+                  Live command surface generated from your product brief
                 </div>
               </div>
 
@@ -394,37 +518,41 @@ export function ReferoGeneratedPreview({
                   icon: Zap,
                   note: "8 active",
                 },
-              ].map((item) => (
-                <div
-                  key={item.label}
-                  style={{
-                    background: system.surface,
-                    border: subtleBorder,
-                    borderRadius: system.radiusMd,
-                  }}
-                  className="p-4"
-                >
-                  <div className="flex items-center justify-between">
-                    <item.icon size={17} />
-                    <span
-                      style={{ color: system.mutedText }}
-                      className="text-xs font-medium"
-                    >
-                      {item.note}
-                    </span>
-                  </div>
+              ].map((item) => {
+                const Icon = item.icon;
 
-                  <div className="mt-5 text-2xl font-semibold tracking-[-0.04em]">
-                    {item.value}
-                  </div>
+                return (
                   <div
-                    style={{ color: system.mutedText }}
-                    className="mt-1 text-xs font-medium"
+                    key={item.label}
+                    style={{
+                      background: system.surface,
+                      border: subtleBorder,
+                      borderRadius: system.radiusMd,
+                    }}
+                    className="p-4"
                   >
-                    {item.label}
+                    <div className="flex items-center justify-between">
+                      <Icon size={17} />
+                      <span
+                        style={{ color: system.mutedText }}
+                        className="text-xs font-medium"
+                      >
+                        {item.note}
+                      </span>
+                    </div>
+
+                    <div className="mt-5 text-2xl font-semibold tracking-[-0.04em]">
+                      {item.value}
+                    </div>
+                    <div
+                      style={{ color: system.mutedText }}
+                      className="mt-1 text-xs font-medium"
+                    >
+                      {item.label}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div
@@ -504,31 +632,38 @@ export function ReferoGeneratedPreview({
               copy:
                 "Automation suggestions and generated knowledge are presented as operational modules.",
             },
-          ].map((item) => (
-            <article
-              key={item.title}
-              style={{
-                background: system.surfaceElevated,
-                border: subtleBorder,
-                borderRadius: system.radiusMd,
-              }}
-              className="p-6"
-            >
-              <item.icon size={21} />
-              <h3 className="mt-5 text-lg font-semibold tracking-[-0.03em]">
-                {item.title}
-              </h3>
-              <p
-                style={{ color: system.mutedText }}
-                className="mt-3 text-sm leading-6"
+          ].map((item) => {
+            const Icon = item.icon;
+
+            return (
+              <article
+                key={item.title}
+                style={{
+                  background: system.surfaceElevated,
+                  border: subtleBorder,
+                  borderRadius: system.radiusMd,
+                }}
+                className="p-6"
               >
-                {item.copy}
-              </p>
-            </article>
-          ))}
+                <Icon size={21} />
+                <h3 className="mt-5 text-lg font-semibold tracking-[-0.03em]">
+                  {item.title}
+                </h3>
+                <p
+                  style={{ color: system.mutedText }}
+                  className="mt-3 text-sm leading-6"
+                >
+                  {item.copy}
+                </p>
+              </article>
+            );
+          })}
         </section>
 
-        <section className="mx-auto grid max-w-[1180px] gap-4 px-6 pb-24 lg:grid-cols-[0.9fr_1.1fr]">
+        <section
+          id="workflow"
+          className="mx-auto grid max-w-[1180px] scroll-mt-24 gap-4 px-6 pb-24 lg:grid-cols-[0.9fr_1.1fr]"
+        >
           <div
             style={{
               background: system.surfaceElevated,
@@ -550,9 +685,9 @@ export function ReferoGeneratedPreview({
               style={{ color: system.mutedText }}
               className="mt-4 text-sm leading-6"
             >
-              Founder AI should generate visible product evidence, planned
-              architecture, file changes, and publish readiness in one coherent
-              workspace.
+              The website includes product evidence, planned architecture, file
+              changes, launch checks, and conversion sections in one coherent
+              experience.
             </p>
           </div>
 
@@ -616,48 +751,237 @@ export function ReferoGeneratedPreview({
           </div>
         </section>
 
-        <section className="mx-auto max-w-[1180px] px-6 pb-24">
+        <section
+          id="pricing"
+          className="mx-auto max-w-[1180px] scroll-mt-24 px-6 pb-24"
+        >
+          <div className="mb-8 max-w-2xl">
+            <div
+              style={{ color: system.mutedText }}
+              className="text-xs font-semibold uppercase tracking-[0.16em]"
+            >
+              Pricing
+            </div>
+            <h2 className="mt-3 text-4xl font-semibold tracking-[-0.07em]">
+              Start small. Scale when the work does.
+            </h2>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            {[
+              ["Starter", "€0", "For testing the workspace", "Start free"],
+              ["Growth", "€29", "For active teams and live workflows", "Choose Growth"],
+              ["Scale", "Custom", "For larger operations and controls", "Talk to sales"],
+            ].map(([plan, price, description, action], index) => (
+              <article
+                key={plan}
+                style={{
+                  background:
+                    index === 1 ? system.surfaceElevated : system.surface,
+                  border:
+                    index === 1
+                      ? `1px solid ${system.accent}`
+                      : subtleBorder,
+                  borderRadius: system.radiusLg,
+                  boxShadow: index === 1 ? system.shadow : "none",
+                }}
+                className="p-6"
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">{plan}</h3>
+                  {index === 1 ? (
+                    <span
+                      style={{
+                        background: system.accent,
+                        color: system.accentText,
+                        borderRadius: 999,
+                      }}
+                      className="px-3 py-1 text-xs font-semibold"
+                    >
+                      Popular
+                    </span>
+                  ) : null}
+                </div>
+
+                <div className="mt-6 text-4xl font-semibold tracking-[-0.07em]">
+                  {price}
+                </div>
+
+                <p
+                  style={{ color: system.mutedText }}
+                  className="mt-3 text-sm leading-6"
+                >
+                  {description}
+                </p>
+
+                <ul className="mt-6 grid gap-3 text-sm">
+                  {[
+                    "Generated website preview",
+                    "Workflow sections",
+                    "Security readiness checks",
+                  ].map((feature) => (
+                    <li key={feature} className="flex items-center gap-2">
+                      <CheckCircle2 size={15} />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <button
+                  type="button"
+                  onClick={() => scrollToSection("footer")}
+                  style={index === 1 ? primaryButtonStyle : secondaryButtonStyle}
+                  className="mt-6 inline-flex h-10 w-full items-center justify-center gap-2 px-4 text-sm font-semibold"
+                >
+                  {action}
+                  <ChevronRight size={15} />
+                </button>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section
+          id="faq"
+          className="mx-auto max-w-[1180px] scroll-mt-24 px-6 pb-24"
+        >
           <div
             style={{
               background: system.surfaceElevated,
               border: subtleBorder,
               borderRadius: system.radiusLg,
             }}
-            className="grid gap-8 p-8 md:grid-cols-[1fr_auto] md:items-center"
+            className="grid gap-8 p-8 lg:grid-cols-[0.8fr_1.2fr]"
           >
             <div>
               <div
                 style={{ color: system.mutedText }}
                 className="text-xs font-semibold uppercase tracking-[0.16em]"
               >
-                Launch readiness
+                FAQ
               </div>
               <h2 className="mt-3 text-3xl font-semibold tracking-[-0.06em]">
-                A generated site should look like someone cared.
+                Built to feel complete, not decorative.
               </h2>
-              <p
-                style={{ color: system.mutedText }}
-                className="mt-3 max-w-2xl text-sm leading-6"
-              >
-                This preview is now driven by imported design references instead
-                of the old hardcoded template.
-              </p>
             </div>
 
-            <button
-              style={{
-                background: system.primary,
-                color: system.primaryText,
-                borderRadius: system.radiusSm,
-              }}
-              className="inline-flex h-11 items-center justify-center gap-2 px-5 text-sm font-semibold"
-            >
-              Continue build
-              <ArrowRight size={15} />
-            </button>
+            <div className="grid gap-3">
+              {[
+                [
+                  "Do the buttons work?",
+                  "Yes. Navigation and CTAs scroll to real sections inside this generated preview.",
+                ],
+                [
+                  "Is this using the design reference visibly?",
+                  "Yes. The visual system is inferred from imported design reference files, while keeping metadata hidden from users.",
+                ],
+                [
+                  "Can this become a production website?",
+                  "The preview now has the right structure. The next step is making generated code files match this same quality.",
+                ],
+              ].map(([question, answer]) => (
+                <article
+                  key={question}
+                  style={{
+                    background: system.surface,
+                    border: subtleBorder,
+                    borderRadius: system.radiusMd,
+                  }}
+                  className="p-5"
+                >
+                  <div className="flex items-center gap-2 font-semibold">
+                    <HelpCircle size={16} />
+                    {question}
+                  </div>
+                  <p
+                    style={{ color: system.mutedText }}
+                    className="mt-2 text-sm leading-6"
+                  >
+                    {answer}
+                  </p>
+                </article>
+              ))}
+            </div>
           </div>
         </section>
       </main>
+
+      <footer
+        id="footer"
+        style={{
+          background: system.surface,
+          borderTop: subtleBorder,
+        }}
+        className="scroll-mt-24"
+      >
+        <div className="mx-auto grid max-w-[1180px] gap-8 px-6 py-10 md:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr]">
+          <div>
+            <div className="flex items-center gap-3">
+              <div
+                style={{
+                  background: system.surfaceMuted,
+                  border: subtleBorder,
+                  borderRadius: system.radiusSm,
+                }}
+                className="flex h-9 w-9 items-center justify-center"
+              >
+                <Sparkles size={17} />
+              </div>
+              <strong>{productName}</strong>
+            </div>
+
+            <p
+              style={{ color: system.mutedText }}
+              className="mt-4 max-w-sm text-sm leading-6"
+            >
+              A complete generated website preview with product sections,
+              working navigation, pricing, FAQ, and footer.
+            </p>
+          </div>
+
+          {[
+            ["Product", "Dashboard", "Workflow", "Automation"],
+            ["Company", "About", "Security", "Contact"],
+            ["Get started", "Start free", "Book demo", "Email team"],
+          ].map(([heading, ...items]) => (
+            <div key={heading}>
+              <h4 className="text-sm font-semibold">{heading}</h4>
+              <div
+                style={{ color: system.mutedText }}
+                className="mt-4 grid gap-2 text-sm"
+              >
+                {items.map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => scrollToSection("hero")}
+                    className="text-left"
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div
+          style={{ borderTop: subtleBorder, color: system.mutedText }}
+          className="mx-auto flex max-w-[1180px] flex-wrap items-center justify-between gap-3 px-6 py-5 text-xs"
+        >
+          <span>© {new Date().getFullYear()} {productName}. All rights reserved.</span>
+          <button
+            type="button"
+            onClick={() => {
+              window.location.href = "mailto:hello@example.com";
+            }}
+            className="inline-flex items-center gap-2"
+          >
+            <Mail size={14} />
+            Contact
+          </button>
+        </div>
+      </footer>
     </div>
   );
 }

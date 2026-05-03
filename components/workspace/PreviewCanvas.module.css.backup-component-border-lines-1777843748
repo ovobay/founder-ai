@@ -7,11 +7,10 @@
   overflow: hidden;
   background: #ffffff;
   color: #111827;
-  border: 0;
+  border: 1px solid #d5dae5;
   border-radius: 30px;
   box-shadow: none;
   box-sizing: border-box;
-  position: relative;
 }
 
 .previewViewport {
@@ -22,13 +21,11 @@
   overflow: auto;
   background: #ffffff;
   border: 0;
-  border-radius: 30px;
+  border-radius: 28px;
   box-shadow: none;
   padding: 0;
   margin: 0;
   box-sizing: border-box;
-  position: relative;
-  z-index: 1;
   scrollbar-width: thin;
   scrollbar-color: rgba(148, 163, 184, 0.72) transparent;
 }
@@ -49,16 +46,6 @@
   background-clip: content-box;
 }
 
-.previewFrameLines {
-  position: absolute;
-  inset: 0;
-  z-index: 9999;
-  pointer-events: none;
-  border-radius: 30px;
-  overflow: hidden;
-  background: transparent;
-}
-
 .loadingState {
   width: 100%;
   height: 100%;
@@ -70,11 +57,9 @@
   text-align: center;
   background: #ffffff;
   border: 0;
-  border-radius: 30px;
+  border-radius: 28px;
   padding: 24px;
   box-sizing: border-box;
-  position: relative;
-  z-index: 1;
 }
 
 .loadingIcon {
@@ -102,10 +87,12 @@
 }
 
 @media (max-width: 760px) {
-  .previewCanvas,
-  .previewViewport,
-  .previewFrameLines,
-  .loadingState {
+  .previewCanvas {
     border-radius: 22px;
+  }
+
+  .previewViewport,
+  .loadingState {
+    border-radius: 20px;
   }
 }

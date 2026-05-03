@@ -7491,101 +7491,276 @@ pre[class*="language-"] {
   overflow: auto !important;
 }
 
+
 /* ==========================================================================
-   PERMANENT WORKSPACE + PREVIEW FRAME SYSTEM
-   One source of truth. No fake lines. No shadow border. No padding ring.
+   Clean Preview Frame System
+   PreviewCanvas owns the only preview border.
+   Toolbar controls are not targeted.
    ========================================================================== */
 
-:root {
-  --workspace-surface-bg: #fcfbf8;
-  --preview-frame-bg: #ffffff;
-  --preview-frame-border-color: #d5dae5;
-  --preview-frame-border-width: 1px;
-  --preview-frame-radius: 30px;
-
-  /* Move the preview frame upward toward the toolbar */
-  --preview-frame-top-offset: -11px;
-
-  /* Keep the raised frame tall enough so the bottom does not disappear */
-  --preview-frame-extra-height: 34px;
-}
-
-html,
-body,
-#__next {
-  background: var(--workspace-surface-bg) !important;
-}
-
-/* Warm workspace canvas */
-.preview-content,
-.preview-frame-wrap,
-.preview-frame-wrap--canvas,
-.preview-frame,
-.preview-frame--canvas,
-.workspace-shell,
-.workspace-layout,
-.workspace-main,
-.workspace-content,
-.workspace-body,
-.workspace-panel,
-.workspace-column,
-.workspace-feed,
-.activity-panel,
-.activity-feed,
-.feed-panel,
-.command-panel,
-.composer-panel {
-  background: var(--workspace-surface-bg) !important;
-}
-
-/* Heading/header surfaces, including the Founder AI Workspace area */
-.workspace-sidebar-header,
-.workspace-header,
-.activity-header,
-.command-header,
-.feed-header,
-.sidebar-header,
-.left-panel-header,
-.left-column-header,
-.workspace-shell > header,
-.workspace-layout > header,
-.workspace-panel > header,
-.activity-panel > :first-child,
-.feed-panel > :first-child {
-  background: var(--workspace-surface-bg) !important;
+.preview-toolbar {
   border-bottom: 0 !important;
   box-shadow: none !important;
+  background-image: none !important;
 }
 
-/* Toolbar line stays gone. Button styling remains in the toolbar module. */
-html body .toolbar {
-  background: var(--workspace-surface-bg) !important;
-  border-bottom: 0 !important;
-  box-shadow: none !important;
-}
-
-/* Preview wrapper is only a stage. It must not draw or clip the frame. */
-html body .preview-content:has([data-preview-frame="true"]),
-html body .preview-frame-wrap--canvas,
-html body .preview-frame--canvas {
-  background: var(--workspace-surface-bg) !important;
+.preview-toolbar::before,
+.preview-toolbar::after {
+  content: none !important;
+  display: none !important;
   border: 0 !important;
   box-shadow: none !important;
+}
+
+.preview-toolbar + .preview-content,
+.preview-content:has(.preview-frame-wrap--canvas) {
+  border-top: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  overflow: hidden !important;
+}
+
+/* Move the preview frame left so it becomes the divider beside the composer. */
+.preview-frame-wrap--canvas {
+  margin-left: -24px !important;
+  margin-top: 0 !important;
+  width: calc(100% + 24px) !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+}
+
+.preview-frame--canvas {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+}
+
+/* The actual preview border. This is the only frame line we want. */
+[data-preview-frame="true"] {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  background: #ffffff !important;
+
+  border: 1.5px solid rgba(210, 214, 226, 0.98) !important;
+  border-radius: 26px 26px 0 0 !important;
+
+  box-shadow: none !important;
+  outline: 0 !important;
+  position: relative !important;
+  z-index: 5 !important;
+}
+
+[data-preview-viewport="true"] {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  overflow: auto !important;
+  background: #ffffff !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* ==========================================================================
+   TRUE PREVIEW FRAME GEOMETRY FIX
+   The preview frame is positioned as an absolute framed surface.
+   Parent wrappers must not clip it.
+   ========================================================================== */
+
+.preview-content:has([data-preview-frame="true"]) {
+  position: relative !important;
   overflow: visible !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
 }
 
-/* Keep wrapper geometry clean */
+.preview-frame-wrap--canvas {
+  position: relative !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.preview-frame--canvas {
+  position: relative !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* This is the actual visible preview frame.
+   Edit inset values to move it. */
+[data-preview-frame="true"] {
+  position: absolute !important;
+
+  /* top | right | bottom | left */
+  inset: 10px 0 12px -24px !important;
+
+  width: auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+
+  background: #ffffff !important;
+  border: 2px solid rgba(198, 205, 220, 0.98) !important;
+  border-radius: 28px !important;
+  box-shadow: none !important;
+  outline: 0 !important;
+
+  overflow: hidden !important;
+  z-index: 3 !important;
+  box-sizing: border-box !important;
+}
+
+/* The website viewport stays inside the frame and scrolls. */
+[data-preview-viewport="true"] {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  flex: 1 1 auto !important;
+
+  overflow: auto !important;
+  background: #ffffff !important;
+
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  border-radius: 28px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* Keep toolbar separator gone. */
+.preview-toolbar,
+.preview-toolbar::before,
+.preview-toolbar::after,
+.preview-toolbar + .preview-content {
+  border-top: 0 !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+  background-image: none !important;
+}
+
+/* ==========================================================================
+   PROPER PREVIEW BORDER REMEDY
+   Normal layout. No absolute positioning. No fake pseudo-line.
+   PreviewCanvas owns the real border on all four sides.
+   ========================================================================== */
+
+/* Remove toolbar divider, but do NOT touch toolbar buttons/tools */
+.preview-toolbar,
+.preview-toolbar::before,
+.preview-toolbar::after,
+.preview-toolbar + .preview-content {
+  border-top: 0 !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+  background-image: none !important;
+}
+
+/* The preview column should not draw any frame itself */
+html body .preview-content:has(.preview-frame-wrap--canvas) {
+  position: relative !important;
+  display: flex !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  background: transparent !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+
+  overflow: hidden !important;
+}
+
+/* This wrapper controls spacing around the preview border */
 html body .preview-frame-wrap--canvas {
-  padding: 0 !important;
+  position: relative !important;
+  display: flex !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+
+  /*
+    Edit these four values if you need to move the preview frame.
+    top, right, bottom, left
+  */
+  padding: 10px 0 14px 0 !important;
+
   margin: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+
+  overflow: hidden !important;
 }
 
-html body .preview-frame--canvas {
-  padding: 0 !important;
+/* Inner frame fills the available wrapper */
+html body .preview-frame-wrap--canvas > .preview-frame--canvas {
+  position: relative !important;
+  display: flex !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+
+  inset: auto !important;
+  transform: none !important;
+
   margin: 0 !important;
+  padding: 0 !important;
+
+  background: transparent !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+
+  overflow: hidden !important;
 }
 
-/* Kill old pseudo borders only on wrappers, not inside generated pages */
+/* Kill fake pseudo borders on the wrappers only */
 html body .preview-frame-wrap--canvas::before,
 html body .preview-frame-wrap--canvas::after,
 html body .preview-frame--canvas::before,
@@ -7594,18 +7769,328 @@ html body .preview-frame--canvas::after {
   display: none !important;
   border: 0 !important;
   box-shadow: none !important;
+}
+
+/* THIS is the real preview border */
+html body .preview-frame-wrap--canvas > .preview-frame--canvas > [data-preview-frame="true"] {
+  position: relative !important;
+  inset: auto !important;
+  transform: none !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  background: #ffffff !important;
+
+  border-top: 2px solid rgba(198, 205, 220, 0.98) !important;
+  border-right: 2px solid rgba(198, 205, 220, 0.98) !important;
+  border-bottom: 2px solid rgba(198, 205, 220, 0.98) !important;
+  border-left: 2px solid rgba(198, 205, 220, 0.98) !important;
+
+  border-radius: 28px !important;
+
+  outline: 0 !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  z-index: 5 !important;
+}
+
+/* No extra inner frame */
+html body .preview-frame-wrap--canvas > .preview-frame--canvas > [data-preview-frame="true"] > [data-preview-viewport="true"] {
+  position: relative !important;
+  flex: 1 1 auto !important;
+
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  background: #ffffff !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+
+  border-radius: 26px !important;
+  overflow: auto !important;
+  box-sizing: border-box !important;
+}
+
+/* ==========================================================================
+   FINAL PREVIEW / TOOLBAR / BACKGROUND SURFACE FIX
+   ========================================================================== */
+
+:root {
+  --workspace-surface-bg: #fcfbf8;
+  --preview-frame-bg: #ffffff;
+  --preview-frame-border-color: #bcc4d3;
+  --preview-frame-border-width: 2px;
+  --preview-frame-radius: 30px;
+  --preview-frame-toolbar-overlap: -2px;
+  --preview-frame-bottom-gap: 0px;
+}
+
+html,
+body {
+  background: var(--workspace-surface-bg) !important;
+}
+
+.preview-content,
+.preview-frame-wrap,
+.preview-frame-wrap--canvas,
+.preview-frame,
+.preview-frame--canvas {
+  background: var(--workspace-surface-bg) !important;
+}
+
+.preview-toolbar {
+  position: relative !important;
+  z-index: 20 !important;
+  background: var(--workspace-surface-bg) !important;
+  border-top: 0 !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+}
+
+.preview-toolbar::before,
+.preview-toolbar::after,
+.preview-toolbar + .preview-content::before,
+.preview-toolbar + .preview-content::after {
+  content: none !important;
+  display: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
   background: transparent !important;
 }
 
-/* THE actual preview frame. This is the only visible preview border. */
-html body .preview-frame-wrap--canvas .preview-frame--canvas [data-preview-frame="true"] {
+.preview-toolbar + .preview-content,
+.preview-content {
+  border-top: 0 !important;
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  box-shadow: none !important;
+}
+
+.preview-frame-wrap,
+.preview-frame-wrap--canvas,
+.preview-frame,
+.preview-frame--canvas {
   position: relative !important;
-  inset: auto !important;
-  top: var(--preview-frame-top-offset) !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+}
+
+.preview-frame-wrap--canvas {
+  display: flex !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  padding: 0 0 var(--preview-frame-bottom-gap) 0 !important;
+  margin-top: var(--preview-frame-toolbar-overlap) !important;
+  overflow: visible !important;
+  background: var(--workspace-surface-bg) !important;
+}
+
+.preview-frame--canvas {
+  display: flex !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  overflow: visible !important;
+}
+
+.preview-frame-wrap--canvas::before,
+.preview-frame-wrap--canvas::after,
+.preview-frame--canvas::before,
+.preview-frame--canvas::after,
+.preview-frame::before,
+.preview-frame::after {
+  content: none !important;
+  display: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.preview-frame--canvas > [data-preview-frame="true"] {
+  position: relative !important;
+  z-index: 5 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: var(--preview-frame-bg) !important;
+  border: var(--preview-frame-border-width) solid var(--preview-frame-border-color) !important;
+  border-radius: var(--preview-frame-radius) !important;
+  box-shadow: none !important;
+  outline: 0 !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+.preview-frame--canvas > [data-preview-frame="true"] > [data-preview-viewport="true"] {
+  flex: 1 1 auto !important;
+  min-height: 100% !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: var(--preview-frame-bg) !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  border-radius: calc(var(--preview-frame-radius) - 2px) !important;
+  overflow: auto !important;
+  box-sizing: border-box !important;
+}
+
+.preview-frame-wrap--canvas,
+.preview-frame--canvas,
+.preview-frame--canvas > [data-preview-frame="true"] {
+  left: 0 !important;
+  right: 0 !important;
   transform: none !important;
+}
+
+.preview-frame article,
+.preview-frame section,
+.preview-frame .preview-site,
+.preview-frame .preview-website,
+.preview-frame .generated-preview,
+.preview-frame [class*="previewCanvas"],
+.preview-frame [class*="previewViewport"] {
+  box-shadow: none !important;
+}
+
+.preview-content::-webkit-scrollbar,
+.preview-frame-wrap::-webkit-scrollbar,
+.preview-frame-wrap--canvas::-webkit-scrollbar,
+.preview-frame--canvas::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.preview-content::-webkit-scrollbar-thumb,
+.preview-frame-wrap::-webkit-scrollbar-thumb,
+.preview-frame-wrap--canvas::-webkit-scrollbar-thumb,
+.preview-frame--canvas::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.55);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+
+/* ==========================================================================
+   Workspace surface + preview frame source of truth
+   ========================================================================== */
+
+:root {
+  --workspace-surface-bg: #fcfbf8;
+  --preview-frame-bg: #ffffff;
+  --preview-frame-border-color: #bcc4d3;
+  --preview-frame-border-width: 2px;
+  --preview-frame-radius: 30px;
+
+  /*
+    Adjust these only:
+    - x-pull moves preview border left/right
+    - top-pull moves preview border toward toolbar
+    - bottom-gap keeps bottom border visible above composer level
+  */
+  --preview-frame-x-pull: -12px;
+  --preview-frame-top-pull: -2px;
+  --preview-frame-bottom-gap: 10px;
+}
+
+html,
+body {
+  background: var(--workspace-surface-bg) !important;
+}
+
+/* Preview area background should match Lovable-like warm canvas */
+.preview-content:has(.preview-frame-wrap--canvas) {
+  background: var(--workspace-surface-bg) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+}
+
+/* Remove parent preview chrome only. Do not touch toolbar buttons. */
+.preview-frame-wrap--canvas {
+  display: flex !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  width: calc(100% - var(--preview-frame-x-pull)) !important;
+
+  margin-left: var(--preview-frame-x-pull) !important;
+  margin-top: var(--preview-frame-top-pull) !important;
+
+  padding: 0 0 var(--preview-frame-bottom-gap) 0 !important;
+
+  background: var(--workspace-surface-bg) !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+}
+
+.preview-frame-wrap--canvas > .preview-frame--canvas {
+  display: flex !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  width: 100% !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  background: transparent !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+}
+
+.preview-frame-wrap--canvas::before,
+.preview-frame-wrap--canvas::after,
+.preview-frame--canvas::before,
+.preview-frame--canvas::after {
+  content: none !important;
+  display: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* This is the real preview border. */
+.preview-frame-wrap--canvas > .preview-frame--canvas > [data-preview-frame="true"] {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
 
   width: 100% !important;
-  height: calc(100% + var(--preview-frame-extra-height)) !important;
+  height: 100% !important;
   min-height: 0 !important;
 
   margin: 0 !important;
@@ -7622,7 +8107,466 @@ html body .preview-frame-wrap--canvas .preview-frame--canvas [data-preview-frame
   box-sizing: border-box !important;
 }
 
-/* Absolutely no fake frame on the preview itself */
+/* Inner preview scroll area: no extra border. */
+.preview-frame-wrap--canvas > .preview-frame--canvas > [data-preview-frame="true"] > [data-preview-viewport="true"] {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  background: var(--preview-frame-bg) !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+
+  border-radius: calc(var(--preview-frame-radius) - 2px) !important;
+  overflow: auto !important;
+  box-sizing: border-box !important;
+}
+
+
+/* ==========================================================================
+   Workspace background unification
+   Keep generated websites white, but make the app canvas/composer/preview shell
+   sit on the same warm Lovable-style surface.
+   ========================================================================== */
+
+:root {
+  --workspace-surface-bg: #fcfbf8;
+}
+
+/* App-level canvas */
+html,
+body,
+#__next {
+  background: var(--workspace-surface-bg) !important;
+}
+
+/* Main builder/workspace surfaces */
+.app-shell,
+.builder-shell,
+.command-center-shell,
+.workspace-shell,
+.workspace-layout,
+.workspace-main,
+.workspace-content,
+.workspace-body,
+.workspace-panel,
+.workspace-column,
+.workspace-feed,
+.activity-panel,
+.activity-feed,
+.feed-panel,
+.composer-panel,
+.preview-content,
+.preview-frame-wrap,
+.preview-frame,
+.preview-frame-wrap--canvas,
+.preview-frame--canvas {
+  background: var(--workspace-surface-bg) !important;
+}
+
+/* The left side should not draw a vertical wall against preview */
+.app-shell,
+.builder-shell,
+.command-center-shell,
+.workspace-shell,
+.workspace-layout,
+.workspace-main,
+.workspace-content,
+.workspace-body,
+.workspace-panel,
+.workspace-column,
+.workspace-feed,
+.activity-panel,
+.activity-feed,
+.feed-panel,
+.composer-panel {
+  border-right: 0 !important;
+}
+
+/* The preview wrapper is just the stage. The PreviewCanvas owns the frame. */
+.preview-content:has(.preview-frame-wrap--canvas),
+.preview-frame-wrap--canvas,
+.preview-frame--canvas {
+  background: var(--workspace-surface-bg) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Keep actual generated preview website white */
+[data-preview-frame="true"],
+[data-preview-viewport="true"] {
+  background: #ffffff !important;
+}
+
+/* Keep toolbar same warm surface, without separator */
+.toolbar,
+.preview-toolbar {
+  background: var(--workspace-surface-bg) !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+}
+
+
+/* ==========================================================================
+   FINAL WORKSPACE SURFACE + COMPOSER CLEANUP
+   Makes the left workspace header use the same canvas color (#fcfbf8)
+   and removes the grey right-side bleed around the composer.
+   ========================================================================== */
+
+:root {
+  --workspace-surface-bg: #fcfbf8;
+  --workspace-border: #cfd6e4;
+}
+
+/* Full app shell background */
+html,
+body,
+#__next {
+  background: var(--workspace-surface-bg) !important;
+}
+
+/* Main workspace surfaces */
+.workspace-shell,
+.workspace-layout,
+.workspace-main,
+.workspace-content,
+.workspace-body,
+.workspace-panel,
+.workspace-column,
+.workspace-feed,
+.activity-panel,
+.activity-feed,
+.feed-panel,
+.command-panel,
+.composer-panel,
+.preview-content,
+.preview-frame-wrap,
+.preview-frame,
+.preview-frame-wrap--canvas,
+.preview-frame--canvas {
+  background: var(--workspace-surface-bg) !important;
+}
+
+/* Left/top workspace heading area — this is the bit behind
+   "Founder AI Workspace" that is still white */
+.workspace-sidebar-header,
+.workspace-header,
+.activity-header,
+.command-header,
+.feed-header,
+.sidebar-header,
+.left-panel-header,
+.left-column-header,
+.workspace-shell > header,
+.workspace-layout > header,
+.workspace-panel > header {
+  background: var(--workspace-surface-bg) !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+}
+
+/* If the left workspace top row is built as a first child block rather than a semantic header */
+.workspace-shell > :first-child,
+.workspace-layout > :first-child,
+.activity-panel > :first-child,
+.feed-panel > :first-child {
+  background: var(--workspace-surface-bg) !important;
+}
+
+/* Keep toolbar clean */
+.toolbar,
+.preview-toolbar {
+  background: var(--workspace-surface-bg) !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Preview wrapper should not draw extra chrome */
+.preview-content:has(.preview-frame-wrap--canvas),
+.preview-frame-wrap--canvas,
+.preview-frame--canvas {
+  background: var(--workspace-surface-bg) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* The actual preview card/frame */
+.preview-frame--canvas [class*="previewCanvas"] {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* The actual preview border */
+.preview-frame--canvas [class*="previewViewport"] {
+  background: #ffffff !important;
+  border: 2px solid var(--workspace-border) !important;
+  border-radius: 42px !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+}
+
+/* Make sure the preview frame spacing feels correct */
+.preview-frame-wrap--canvas {
+  padding: 18px 16px 0 16px !important;
+}
+
+.preview-frame--canvas {
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: visible !important;
+}
+
+/* Composer shell background */
+.command-composer,
+.composer-shell,
+.composer-card,
+.input-composer,
+.prompt-composer,
+.prompt-card,
+.command-center-composer {
+  background: #ffffff !important;
+  border: 1px solid rgba(207, 214, 228, 0.9) !important;
+  border-radius: 34px !important;
+}
+
+/* Remove ugly grey bleed / outer spill on composer */
+.command-composer,
+.composer-shell,
+.composer-card,
+.input-composer,
+.prompt-composer,
+.prompt-card,
+.command-center-composer,
+.command-composer::before,
+.command-composer::after,
+.composer-shell::before,
+.composer-shell::after,
+.composer-card::before,
+.composer-card::after,
+.input-composer::before,
+.input-composer::after,
+.prompt-composer::before,
+.prompt-composer::after,
+.prompt-card::before,
+.prompt-card::after,
+.command-center-composer::before,
+.command-center-composer::after {
+  box-shadow: none !important;
+}
+
+/* If the grey strip is actually coming from the wrapper instead of the composer itself */
+.command-panel,
+.composer-panel,
+.feed-panel,
+.activity-panel {
+  background: var(--workspace-surface-bg) !important;
+}
+
+/* Make sure the generated preview content itself stays white */
+[data-preview-frame="true"],
+[data-preview-viewport="true"] {
+  background: #ffffff !important;
+}
+
+/* FORCE PREVIEW FRAME UP START */
+
+/*
+  This is the active geometry fix.
+  Edit margin-top here if the preview border needs to move higher/lower.
+*/
+
+html,
+body,
+#__next {
+  background: #fcfbf8 !important;
+}
+
+/* Main canvas behind toolbar/composer/preview */
+.preview-content,
+.preview-frame-wrap,
+.preview-frame,
+.preview-frame-wrap--canvas,
+.preview-frame--canvas {
+  background: #fcfbf8 !important;
+}
+
+/* Toolbar separator stays dead */
+.toolbar,
+.preview-toolbar {
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+  background: #fcfbf8 !important;
+}
+
+/* Let the preview frame move upward without being clipped */
+.preview-content:has(.preview-frame-wrap--canvas) {
+  overflow: visible !important;
+  background: #fcfbf8 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding-top: 0 !important;
+}
+
+/* THIS moves the preview border upward */
+.preview-frame-wrap--canvas {
+  display: flex !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+
+  width: 100% !important;
+  height: calc(100% + 32px) !important;
+
+  margin-top: -32px !important;
+  margin-left: -12px !important;
+
+  padding: 0 0 10px 0 !important;
+
+  background: #fcfbf8 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+}
+
+/* Inner wrapper should not draw or clip the border */
+.preview-frame-wrap--canvas > .preview-frame--canvas {
+  display: flex !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+
+  width: 100% !important;
+  height: 100% !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+}
+
+/* The actual visible preview border */
+.preview-frame-wrap--canvas > .preview-frame--canvas > [data-preview-frame="true"] {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+
+  background: #ffffff !important;
+
+  border: 2px solid #bcc4d3 !important;
+  border-radius: 30px !important;
+
+  box-shadow: none !important;
+  outline: 0 !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+/* Inner website viewport should not draw another border */
+.preview-frame-wrap--canvas > .preview-frame--canvas > [data-preview-frame="true"] > [data-preview-viewport="true"] {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+
+  width: 100% !important;
+  height: 100% !important;
+
+  background: #ffffff !important;
+
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: 0 !important;
+
+  border-radius: 28px !important;
+  overflow: auto !important;
+  box-sizing: border-box !important;
+}
+
+/* ==========================================================================
+   PREVIEW FRAME REAL-LINE SYSTEM
+   Draws the preview frame using four real elements, not CSS border/shadow.
+   This avoids old border reset rules killing top/bottom/left sides.
+   ========================================================================== */
+
+:root {
+  --workspace-surface-bg: #fcfbf8;
+  --preview-frame-bg: #ffffff;
+
+  --preview-frame-line-color: #d5dae5;
+  --preview-frame-line-width: 1px;
+  --preview-frame-radius: 30px;
+
+  /* Move the whole preview frame upward toward the toolbar */
+  --preview-frame-y: -11px;
+  --preview-frame-extra-height: 34px;
+}
+
+html,
+body,
+#__next {
+  background: var(--workspace-surface-bg) !important;
+}
+
+/* Warm workspace canvas */
+.preview-content,
+.preview-frame-wrap,
+.preview-frame-wrap--canvas,
+.preview-frame,
+.preview-frame--canvas {
+  background: var(--workspace-surface-bg) !important;
+}
+
+/* Kill toolbar separator without touching toolbar buttons */
+html body .toolbar {
+  background: var(--workspace-surface-bg) !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Parents must not clip the raised preview frame */
+html body .preview-content:has([data-preview-frame="true"]),
+html body .preview-frame-wrap--canvas,
+html body .preview-frame--canvas {
+  overflow: visible !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* The preview frame keeps geometry only */
+html body .preview-frame-wrap--canvas .preview-frame--canvas [data-preview-frame="true"] {
+  position: relative !important;
+  inset: auto !important;
+  top: var(--preview-frame-y) !important;
+  transform: none !important;
+
+  width: 100% !important;
+  height: calc(100% + var(--preview-frame-extra-height)) !important;
+  min-height: 0 !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  background: var(--preview-frame-bg) !important;
+
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: 0 !important;
+
+  border-radius: var(--preview-frame-radius) !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+/* Kill old pseudo-frame ghosts */
 html body .preview-frame-wrap--canvas .preview-frame--canvas [data-preview-frame="true"]::before,
 html body .preview-frame-wrap--canvas .preview-frame--canvas [data-preview-frame="true"]::after {
   content: none !important;
@@ -7631,7 +8575,7 @@ html body .preview-frame-wrap--canvas .preview-frame--canvas [data-preview-frame
   box-shadow: none !important;
 }
 
-/* The generated website sits inside the frame and must not draw another frame */
+/* The generated website sits inside the frame */
 html body .preview-frame-wrap--canvas .preview-frame--canvas [data-preview-viewport="true"] {
   width: 100% !important;
   height: 100% !important;
@@ -7647,117 +8591,51 @@ html body .preview-frame-wrap--canvas .preview-frame--canvas [data-preview-viewp
   outline: 0 !important;
 
   overflow: auto !important;
-  border-radius: calc(var(--preview-frame-radius) - 2px) !important;
+  border-radius: var(--preview-frame-radius) !important;
   box-sizing: border-box !important;
 }
 
-/* Composer area background and bleed cleanup */
-.command-composer,
-.composer-shell,
-.composer-card,
-.input-composer,
-.prompt-composer,
-.prompt-card,
-.command-center-composer {
-  background: #ffffff !important;
-  box-shadow: none !important;
-}
-
-.command-composer::before,
-.command-composer::after,
-.composer-shell::before,
-.composer-shell::after,
-.composer-card::before,
-.composer-card::after,
-.input-composer::before,
-.input-composer::after,
-.prompt-composer::before,
-.prompt-composer::after,
-.prompt-card::before,
-.prompt-card::after,
-.command-center-composer::before,
-.command-center-composer::after {
-  background: var(--workspace-surface-bg) !important;
-  box-shadow: none !important;
-  border: 0 !important;
-}\n\n/* ==========================================================================
-   PERMANENT COMPONENT-DRAWN PREVIEW FRAME
-   The visible frame is four real elements, not CSS border/shadow/padding-ring.
-   Edit only the variables below.
-   ========================================================================== */
-
-:root {
-  --preview-frame-line-color: #d5dae5;
-  --preview-frame-line-width: 1px;
-  --preview-frame-radius: 30px;
-}
-
-/* Make sure the preview shell itself does not try to draw another border */
-html body [data-preview-frame="true"] {
-  border: 0 !important;
-  box-shadow: none !important;
-  outline: 0 !important;
-  border-radius: var(--preview-frame-radius) !important;
-  overflow: hidden !important;
-  background: #ffffff !important;
-  position: relative !important;
-}
-
-/* Inner website stays clean */
-html body [data-preview-viewport="true"] {
-  border: 0 !important;
-  box-shadow: none !important;
-  outline: 0 !important;
-  background: #ffffff !important;
-  border-radius: var(--preview-frame-radius) !important;
-}
-
-/* The actual visible preview frame */
-html body [data-preview-frame-lines="true"] {
+/* Real visual frame lines */
+html body [data-preview-border-layer="true"] {
   position: absolute !important;
   inset: 0 !important;
-  z-index: 999999 !important;
+  z-index: 9999 !important;
   pointer-events: none !important;
   border-radius: var(--preview-frame-radius) !important;
   overflow: hidden !important;
   background: transparent !important;
-  display: block !important;
 }
 
-html body [data-preview-frame-line] {
+html body [data-preview-border] {
   position: absolute !important;
   display: block !important;
   pointer-events: none !important;
-  z-index: 1000000 !important;
   background: var(--preview-frame-line-color) !important;
+  z-index: 10000 !important;
 }
 
-/* Top line */
-html body [data-preview-frame-line="top"] {
+html body [data-preview-border="top"] {
   top: 0 !important;
   left: 0 !important;
   right: 0 !important;
   height: var(--preview-frame-line-width) !important;
 }
 
-/* Right line */
-html body [data-preview-frame-line="right"] {
+html body [data-preview-border="right"] {
   top: 0 !important;
   right: 0 !important;
   bottom: 0 !important;
   width: var(--preview-frame-line-width) !important;
 }
 
-/* Bottom line */
-html body [data-preview-frame-line="bottom"] {
+html body [data-preview-border="bottom"] {
   left: 0 !important;
   right: 0 !important;
   bottom: 0 !important;
   height: var(--preview-frame-line-width) !important;
 }
 
-/* Left line */
-html body [data-preview-frame-line="left"] {
+html body [data-preview-border="left"] {
   top: 0 !important;
   left: 0 !important;
   bottom: 0 !important;

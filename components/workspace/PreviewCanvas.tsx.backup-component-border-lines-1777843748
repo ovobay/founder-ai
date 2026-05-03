@@ -46,17 +46,6 @@ export function PreviewCanvas({
           {children}
         </div>
       )}
-
-      <div
-        className={styles.previewFrameLines}
-        data-preview-frame-lines="true"
-        aria-hidden="true"
-      >
-        <span data-preview-frame-line="top" />
-        <span data-preview-frame-line="right" />
-        <span data-preview-frame-line="bottom" />
-        <span data-preview-frame-line="left" />
-      </div>
     </section>
   );
 }

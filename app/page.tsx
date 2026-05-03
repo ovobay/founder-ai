@@ -44,6 +44,9 @@ import {
 } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
+  inferImportedDesignReference,
+} from "@/lib/design/imported-design-references";
+import {
   createDesignTastePromptBlock,
   getDesignTasteProfile,
   inferDesignTasteProfileId,
@@ -58,6 +61,7 @@ import { FilesWorkspace as PremiumFilesWorkspace } from "@/components/workspace/
 import { CodeWorkspacePanel as PremiumCodeWorkspacePanel } from "@/components/workspace/CodeWorkspacePanel";
 import { ArchitectureWorkspacePanel as PremiumArchitectureWorkspacePanel } from "@/components/workspace/ArchitectureWorkspacePanel";
 import { PreviewCanvas } from "@/components/workspace/PreviewCanvas";
+import { ReferoGeneratedPreview } from "@/components/workspace/ReferoGeneratedPreview";
 import {
   WorkspaceToolCard,
   WorkspaceToolEmpty,
@@ -3155,6 +3159,14 @@ export default function Page() {
     );
   }, [changedFiles, selectedFileId]);
 
+  const selectedImportedDesignReference = useMemo(() => {
+    return inferImportedDesignReference({
+      prompt,
+      projectType: previewState.projectType,
+      industry: previewState.classification?.industry,
+    });
+  }, [prompt, previewState.projectType, previewState.classification?.industry]);
+
   useEffect(() => {
     let active = true;
 
@@ -3950,7 +3962,7 @@ ${designTasteBlock}`;
       setPrompt("");
       setPreviewState(
         createPreviewState(
-          generationPrompt,
+          value,
           detectedProjectType,
           changedFiles.length,
           detectedModules,
@@ -3974,7 +3986,7 @@ ${designTasteBlock}`;
 
     if (mode === "visual-edits") {
       const planItem = createPlanItem(
-        generationPrompt,
+        value,
         detectedProjectType,
         detectedModules,
         detectedArchitecture
@@ -6978,17 +6990,18 @@ function PreviewContent({
           ) : null}
 
           {!isLoadingWorkspace && !filesOpen && workspaceView === "preview" ? (
-            <PreviewCanvas
-              title={previewState.title}
-              generatedUrl={getGeneratedPreviewUrl(previewState)}
-              isLoading={isLoadingWorkspace}
-              onRefresh={() => setWorkspaceView("preview")}
-              onOpenCode={() => setWorkspaceView("code")}
-              onOpenFiles={() => setFilesOpen(true)}
-              onOpenPublish={() => setWorkspaceView("publish-readiness")}
-              onOpenSecurity={() => setWorkspaceView("security")}
-            >
-              <PreviewWebsite previewState={previewState} />
+            <PreviewCanvas title={previewState.title}>
+              <ReferoGeneratedPreview
+                title={previewState.title}
+                subtitle={previewState.subtitle}
+                projectType={previewState.projectType}
+                fileCount={previewState.fileCount}
+                designReference={inferImportedDesignReference({
+                  prompt: `${previewState.title} ${previewState.subtitle} ${previewState.projectType}`,
+                  projectType: previewState.projectType,
+                  industry: previewState.classification?.industry,
+                })}
+              />
             </PreviewCanvas>
           ) : null}
 

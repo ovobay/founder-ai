@@ -4,7 +4,7 @@
 
 @custom-variant dark (&:is(.dark *));
 :root {
-  --bg: #fcfbf8;
+  --bg: #ffffff;
   --panel: #ffffff;
   --panel-2: #ffffff;
   --panel-3: #f7f8fa;
@@ -193,7 +193,7 @@ textarea:focus-visible {
   position: relative;
   min-height: 0;
   overflow: hidden;
-  background: #fcfbf8;
+  background: #ffffff;
 }
 
 .activity-scroll {
@@ -202,7 +202,7 @@ textarea:focus-visible {
   overflow-y: auto;
   padding: 18px 14px;
   padding-bottom: 126px;
-  background: #fcfbf8;
+  background: #ffffff;
   scroll-behavior: smooth;
 }
 
@@ -279,7 +279,7 @@ textarea:focus-visible {
 
 .feed-message-user {
   margin-left: auto;
-  background: #fcfbf8;
+  background: #f3f4f6;
   color: #111827;
 }
 
@@ -611,7 +611,7 @@ textarea:focus-visible {
   height: 31px;
   border-radius: 999px;
   border: 1px solid var(--line-dark);
-  background: #fcfbf8;
+  background: #ffffff;
   color: #111827;
   box-shadow: 0 4px 10px rgba(20, 24, 40, 0.05);
   display: grid;
@@ -628,7 +628,7 @@ box-shadow:
 .composer-plus-button:hover,
 .composer-mic-button:hover,
 .visual-button:hover {
-  background: #fcfbf8;
+  background: #f9fafb;
   transform: translateY(-1px);
 }
 
@@ -870,14 +870,14 @@ box-shadow:
   min-height: 0;
   overflow: auto;
   padding: 10px;
-  background: #fcfbf8;
+  background: #ffffff;
 }
 
 .preview-frame-wrap {
   min-height: calc(100vh - 70px);
   border: 1px solid #e5e7eb;
   border-radius: 22px;
-  background: #fcfbf8;
+  background: #ffffff;
   box-shadow: var(--shadow-small);
   padding: 8px;
 }
@@ -888,7 +888,7 @@ box-shadow:
   border: 0;
   display: block;
   border-radius: 16px;
-  background: #fcfbf8;
+  background: #ffffff;
   overflow: hidden;
 }
 
@@ -7824,552 +7824,4 @@ html body .preview-frame-wrap--canvas > .preview-frame--canvas > [data-preview-f
   border-radius: 26px !important;
   overflow: auto !important;
   box-sizing: border-box !important;
-}
-
-/* ==========================================================================
-   FINAL PREVIEW / TOOLBAR / BACKGROUND SURFACE FIX
-   ========================================================================== */
-
-:root {
-  --workspace-surface-bg: #fcfbf8;
-  --preview-frame-bg: #ffffff;
-  --preview-frame-border-color: #bcc4d3;
-  --preview-frame-border-width: 2px;
-  --preview-frame-radius: 30px;
-  --preview-frame-toolbar-overlap: -2px;
-  --preview-frame-bottom-gap: 0px;
-}
-
-html,
-body {
-  background: var(--workspace-surface-bg) !important;
-}
-
-.preview-content,
-.preview-frame-wrap,
-.preview-frame-wrap--canvas,
-.preview-frame,
-.preview-frame--canvas {
-  background: var(--workspace-surface-bg) !important;
-}
-
-.preview-toolbar {
-  position: relative !important;
-  z-index: 20 !important;
-  background: var(--workspace-surface-bg) !important;
-  border-top: 0 !important;
-  border-bottom: 0 !important;
-  box-shadow: none !important;
-}
-
-.preview-toolbar::before,
-.preview-toolbar::after,
-.preview-toolbar + .preview-content::before,
-.preview-toolbar + .preview-content::after {
-  content: none !important;
-  display: none !important;
-  border: 0 !important;
-  box-shadow: none !important;
-  background: transparent !important;
-}
-
-.preview-toolbar + .preview-content,
-.preview-content {
-  border-top: 0 !important;
-  margin-top: 0 !important;
-  padding-top: 0 !important;
-  box-shadow: none !important;
-}
-
-.preview-frame-wrap,
-.preview-frame-wrap--canvas,
-.preview-frame,
-.preview-frame--canvas {
-  position: relative !important;
-  border: 0 !important;
-  outline: 0 !important;
-  box-shadow: none !important;
-}
-
-.preview-frame-wrap--canvas {
-  display: flex !important;
-  flex: 1 1 auto !important;
-  min-height: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  padding: 0 0 var(--preview-frame-bottom-gap) 0 !important;
-  margin-top: var(--preview-frame-toolbar-overlap) !important;
-  overflow: visible !important;
-  background: var(--workspace-surface-bg) !important;
-}
-
-.preview-frame--canvas {
-  display: flex !important;
-  flex: 1 1 auto !important;
-  min-height: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  background: transparent !important;
-  overflow: visible !important;
-}
-
-.preview-frame-wrap--canvas::before,
-.preview-frame-wrap--canvas::after,
-.preview-frame--canvas::before,
-.preview-frame--canvas::after,
-.preview-frame::before,
-.preview-frame::after {
-  content: none !important;
-  display: none !important;
-  border: 0 !important;
-  box-shadow: none !important;
-  background: transparent !important;
-}
-
-.preview-frame--canvas > [data-preview-frame="true"] {
-  position: relative !important;
-  z-index: 5 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  flex: 1 1 auto !important;
-  width: 100% !important;
-  height: 100% !important;
-  min-height: 0 !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  background: var(--preview-frame-bg) !important;
-  border: var(--preview-frame-border-width) solid var(--preview-frame-border-color) !important;
-  border-radius: var(--preview-frame-radius) !important;
-  box-shadow: none !important;
-  outline: 0 !important;
-  overflow: hidden !important;
-  box-sizing: border-box !important;
-}
-
-.preview-frame--canvas > [data-preview-frame="true"] > [data-preview-viewport="true"] {
-  flex: 1 1 auto !important;
-  min-height: 100% !important;
-  width: 100% !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  background: var(--preview-frame-bg) !important;
-  border: 0 !important;
-  outline: 0 !important;
-  box-shadow: none !important;
-  border-radius: calc(var(--preview-frame-radius) - 2px) !important;
-  overflow: auto !important;
-  box-sizing: border-box !important;
-}
-
-.preview-frame-wrap--canvas,
-.preview-frame--canvas,
-.preview-frame--canvas > [data-preview-frame="true"] {
-  left: 0 !important;
-  right: 0 !important;
-  transform: none !important;
-}
-
-.preview-frame article,
-.preview-frame section,
-.preview-frame .preview-site,
-.preview-frame .preview-website,
-.preview-frame .generated-preview,
-.preview-frame [class*="previewCanvas"],
-.preview-frame [class*="previewViewport"] {
-  box-shadow: none !important;
-}
-
-.preview-content::-webkit-scrollbar,
-.preview-frame-wrap::-webkit-scrollbar,
-.preview-frame-wrap--canvas::-webkit-scrollbar,
-.preview-frame--canvas::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-.preview-content::-webkit-scrollbar-thumb,
-.preview-frame-wrap::-webkit-scrollbar-thumb,
-.preview-frame-wrap--canvas::-webkit-scrollbar-thumb,
-.preview-frame--canvas::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.55);
-  border-radius: 999px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
-}
-
-
-/* ==========================================================================
-   Workspace surface + preview frame source of truth
-   ========================================================================== */
-
-:root {
-  --workspace-surface-bg: #fcfbf8;
-  --preview-frame-bg: #ffffff;
-  --preview-frame-border-color: #bcc4d3;
-  --preview-frame-border-width: 2px;
-  --preview-frame-radius: 30px;
-
-  /*
-    Adjust these only:
-    - x-pull moves preview border left/right
-    - top-pull moves preview border toward toolbar
-    - bottom-gap keeps bottom border visible above composer level
-  */
-  --preview-frame-x-pull: -12px;
-  --preview-frame-top-pull: -2px;
-  --preview-frame-bottom-gap: 10px;
-}
-
-html,
-body {
-  background: var(--workspace-surface-bg) !important;
-}
-
-/* Preview area background should match Lovable-like warm canvas */
-.preview-content:has(.preview-frame-wrap--canvas) {
-  background: var(--workspace-surface-bg) !important;
-  border: 0 !important;
-  box-shadow: none !important;
-  overflow: hidden !important;
-  padding: 0 !important;
-}
-
-/* Remove parent preview chrome only. Do not touch toolbar buttons. */
-.preview-frame-wrap--canvas {
-  display: flex !important;
-  flex: 1 1 auto !important;
-  min-height: 0 !important;
-  height: 100% !important;
-  width: calc(100% - var(--preview-frame-x-pull)) !important;
-
-  margin-left: var(--preview-frame-x-pull) !important;
-  margin-top: var(--preview-frame-top-pull) !important;
-
-  padding: 0 0 var(--preview-frame-bottom-gap) 0 !important;
-
-  background: var(--workspace-surface-bg) !important;
-  border: 0 !important;
-  outline: 0 !important;
-  box-shadow: none !important;
-  overflow: hidden !important;
-}
-
-.preview-frame-wrap--canvas > .preview-frame--canvas {
-  display: flex !important;
-  flex: 1 1 auto !important;
-  min-height: 0 !important;
-  height: 100% !important;
-  width: 100% !important;
-
-  margin: 0 !important;
-  padding: 0 !important;
-
-  background: transparent !important;
-  border: 0 !important;
-  outline: 0 !important;
-  box-shadow: none !important;
-  overflow: hidden !important;
-}
-
-.preview-frame-wrap--canvas::before,
-.preview-frame-wrap--canvas::after,
-.preview-frame--canvas::before,
-.preview-frame--canvas::after {
-  content: none !important;
-  display: none !important;
-  border: 0 !important;
-  box-shadow: none !important;
-}
-
-/* This is the real preview border. */
-.preview-frame-wrap--canvas > .preview-frame--canvas > [data-preview-frame="true"] {
-  display: flex !important;
-  flex-direction: column !important;
-  flex: 1 1 auto !important;
-
-  width: 100% !important;
-  height: 100% !important;
-  min-height: 0 !important;
-
-  margin: 0 !important;
-  padding: 0 !important;
-
-  background: var(--preview-frame-bg) !important;
-
-  border: var(--preview-frame-border-width) solid var(--preview-frame-border-color) !important;
-  border-radius: var(--preview-frame-radius) !important;
-
-  box-shadow: none !important;
-  outline: 0 !important;
-  overflow: hidden !important;
-  box-sizing: border-box !important;
-}
-
-/* Inner preview scroll area: no extra border. */
-.preview-frame-wrap--canvas > .preview-frame--canvas > [data-preview-frame="true"] > [data-preview-viewport="true"] {
-  flex: 1 1 auto !important;
-  min-height: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-
-  margin: 0 !important;
-  padding: 0 !important;
-
-  background: var(--preview-frame-bg) !important;
-  border: 0 !important;
-  outline: 0 !important;
-  box-shadow: none !important;
-
-  border-radius: calc(var(--preview-frame-radius) - 2px) !important;
-  overflow: auto !important;
-  box-sizing: border-box !important;
-}
-
-
-/* ==========================================================================
-   Workspace background unification
-   Keep generated websites white, but make the app canvas/composer/preview shell
-   sit on the same warm Lovable-style surface.
-   ========================================================================== */
-
-:root {
-  --workspace-surface-bg: #fcfbf8;
-}
-
-/* App-level canvas */
-html,
-body,
-#__next {
-  background: var(--workspace-surface-bg) !important;
-}
-
-/* Main builder/workspace surfaces */
-.app-shell,
-.builder-shell,
-.command-center-shell,
-.workspace-shell,
-.workspace-layout,
-.workspace-main,
-.workspace-content,
-.workspace-body,
-.workspace-panel,
-.workspace-column,
-.workspace-feed,
-.activity-panel,
-.activity-feed,
-.feed-panel,
-.composer-panel,
-.preview-content,
-.preview-frame-wrap,
-.preview-frame,
-.preview-frame-wrap--canvas,
-.preview-frame--canvas {
-  background: var(--workspace-surface-bg) !important;
-}
-
-/* The left side should not draw a vertical wall against preview */
-.app-shell,
-.builder-shell,
-.command-center-shell,
-.workspace-shell,
-.workspace-layout,
-.workspace-main,
-.workspace-content,
-.workspace-body,
-.workspace-panel,
-.workspace-column,
-.workspace-feed,
-.activity-panel,
-.activity-feed,
-.feed-panel,
-.composer-panel {
-  border-right: 0 !important;
-}
-
-/* The preview wrapper is just the stage. The PreviewCanvas owns the frame. */
-.preview-content:has(.preview-frame-wrap--canvas),
-.preview-frame-wrap--canvas,
-.preview-frame--canvas {
-  background: var(--workspace-surface-bg) !important;
-  border: 0 !important;
-  box-shadow: none !important;
-}
-
-/* Keep actual generated preview website white */
-[data-preview-frame="true"],
-[data-preview-viewport="true"] {
-  background: #ffffff !important;
-}
-
-/* Keep toolbar same warm surface, without separator */
-.toolbar,
-.preview-toolbar {
-  background: var(--workspace-surface-bg) !important;
-  border-bottom: 0 !important;
-  box-shadow: none !important;
-}
-
-
-/* ==========================================================================
-   FINAL WORKSPACE SURFACE + COMPOSER CLEANUP
-   Makes the left workspace header use the same canvas color (#fcfbf8)
-   and removes the grey right-side bleed around the composer.
-   ========================================================================== */
-
-:root {
-  --workspace-surface-bg: #fcfbf8;
-  --workspace-border: #cfd6e4;
-}
-
-/* Full app shell background */
-html,
-body,
-#__next {
-  background: var(--workspace-surface-bg) !important;
-}
-
-/* Main workspace surfaces */
-.workspace-shell,
-.workspace-layout,
-.workspace-main,
-.workspace-content,
-.workspace-body,
-.workspace-panel,
-.workspace-column,
-.workspace-feed,
-.activity-panel,
-.activity-feed,
-.feed-panel,
-.command-panel,
-.composer-panel,
-.preview-content,
-.preview-frame-wrap,
-.preview-frame,
-.preview-frame-wrap--canvas,
-.preview-frame--canvas {
-  background: var(--workspace-surface-bg) !important;
-}
-
-/* Left/top workspace heading area — this is the bit behind
-   "Founder AI Workspace" that is still white */
-.workspace-sidebar-header,
-.workspace-header,
-.activity-header,
-.command-header,
-.feed-header,
-.sidebar-header,
-.left-panel-header,
-.left-column-header,
-.workspace-shell > header,
-.workspace-layout > header,
-.workspace-panel > header {
-  background: var(--workspace-surface-bg) !important;
-  border-bottom: 0 !important;
-  box-shadow: none !important;
-}
-
-/* If the left workspace top row is built as a first child block rather than a semantic header */
-.workspace-shell > :first-child,
-.workspace-layout > :first-child,
-.activity-panel > :first-child,
-.feed-panel > :first-child {
-  background: var(--workspace-surface-bg) !important;
-}
-
-/* Keep toolbar clean */
-.toolbar,
-.preview-toolbar {
-  background: var(--workspace-surface-bg) !important;
-  border-bottom: 0 !important;
-  box-shadow: none !important;
-}
-
-/* Preview wrapper should not draw extra chrome */
-.preview-content:has(.preview-frame-wrap--canvas),
-.preview-frame-wrap--canvas,
-.preview-frame--canvas {
-  background: var(--workspace-surface-bg) !important;
-  border: 0 !important;
-  box-shadow: none !important;
-}
-
-/* The actual preview card/frame */
-.preview-frame--canvas [class*="previewCanvas"] {
-  background: transparent !important;
-  border: 0 !important;
-  box-shadow: none !important;
-}
-
-/* The actual preview border */
-.preview-frame--canvas [class*="previewViewport"] {
-  background: #ffffff !important;
-  border: 2px solid var(--workspace-border) !important;
-  border-radius: 42px !important;
-  box-shadow: none !important;
-  overflow: hidden !important;
-}
-
-/* Make sure the preview frame spacing feels correct */
-.preview-frame-wrap--canvas {
-  padding: 18px 16px 0 16px !important;
-}
-
-.preview-frame--canvas {
-  padding: 0 !important;
-  margin: 0 !important;
-  overflow: visible !important;
-}
-
-/* Composer shell background */
-.command-composer,
-.composer-shell,
-.composer-card,
-.input-composer,
-.prompt-composer,
-.prompt-card,
-.command-center-composer {
-  background: #ffffff !important;
-  border: 1px solid rgba(207, 214, 228, 0.9) !important;
-  border-radius: 34px !important;
-}
-
-/* Remove ugly grey bleed / outer spill on composer */
-.command-composer,
-.composer-shell,
-.composer-card,
-.input-composer,
-.prompt-composer,
-.prompt-card,
-.command-center-composer,
-.command-composer::before,
-.command-composer::after,
-.composer-shell::before,
-.composer-shell::after,
-.composer-card::before,
-.composer-card::after,
-.input-composer::before,
-.input-composer::after,
-.prompt-composer::before,
-.prompt-composer::after,
-.prompt-card::before,
-.prompt-card::after,
-.command-center-composer::before,
-.command-center-composer::after {
-  box-shadow: none !important;
-}
-
-/* If the grey strip is actually coming from the wrapper instead of the composer itself */
-.command-panel,
-.composer-panel,
-.feed-panel,
-.activity-panel {
-  background: var(--workspace-surface-bg) !important;
-}
-
-/* Make sure the generated preview content itself stays white */
-[data-preview-frame="true"],
-[data-preview-viewport="true"] {
-  background: #ffffff !important;
 }

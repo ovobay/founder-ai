@@ -7675,3 +7675,153 @@ pre[class*="language-"] {
   box-shadow: none !important;
   background-image: none !important;
 }
+
+/* ==========================================================================
+   PROPER PREVIEW BORDER REMEDY
+   Normal layout. No absolute positioning. No fake pseudo-line.
+   PreviewCanvas owns the real border on all four sides.
+   ========================================================================== */
+
+/* Remove toolbar divider, but do NOT touch toolbar buttons/tools */
+.preview-toolbar,
+.preview-toolbar::before,
+.preview-toolbar::after,
+.preview-toolbar + .preview-content {
+  border-top: 0 !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+  background-image: none !important;
+}
+
+/* The preview column should not draw any frame itself */
+html body .preview-content:has(.preview-frame-wrap--canvas) {
+  position: relative !important;
+  display: flex !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  background: transparent !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+
+  overflow: hidden !important;
+}
+
+/* This wrapper controls spacing around the preview border */
+html body .preview-frame-wrap--canvas {
+  position: relative !important;
+  display: flex !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+
+  /*
+    Edit these four values if you need to move the preview frame.
+    top, right, bottom, left
+  */
+  padding: 10px 0 14px 0 !important;
+
+  margin: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+
+  overflow: hidden !important;
+}
+
+/* Inner frame fills the available wrapper */
+html body .preview-frame-wrap--canvas > .preview-frame--canvas {
+  position: relative !important;
+  display: flex !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+
+  inset: auto !important;
+  transform: none !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  background: transparent !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+
+  overflow: hidden !important;
+}
+
+/* Kill fake pseudo borders on the wrappers only */
+html body .preview-frame-wrap--canvas::before,
+html body .preview-frame-wrap--canvas::after,
+html body .preview-frame--canvas::before,
+html body .preview-frame--canvas::after {
+  content: none !important;
+  display: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* THIS is the real preview border */
+html body .preview-frame-wrap--canvas > .preview-frame--canvas > [data-preview-frame="true"] {
+  position: relative !important;
+  inset: auto !important;
+  transform: none !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  background: #ffffff !important;
+
+  border-top: 2px solid rgba(198, 205, 220, 0.98) !important;
+  border-right: 2px solid rgba(198, 205, 220, 0.98) !important;
+  border-bottom: 2px solid rgba(198, 205, 220, 0.98) !important;
+  border-left: 2px solid rgba(198, 205, 220, 0.98) !important;
+
+  border-radius: 28px !important;
+
+  outline: 0 !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  z-index: 5 !important;
+}
+
+/* No extra inner frame */
+html body .preview-frame-wrap--canvas > .preview-frame--canvas > [data-preview-frame="true"] > [data-preview-viewport="true"] {
+  position: relative !important;
+  flex: 1 1 auto !important;
+
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  background: #ffffff !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+
+  border-radius: 26px !important;
+  overflow: auto !important;
+  box-sizing: border-box !important;
+}

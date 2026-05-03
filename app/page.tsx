@@ -7753,8 +7753,20 @@ function PreviewContent({
           </div>
         </div>
       ) : (
-        <div className="preview-frame-wrap">
-          <div className="preview-frame">
+        <div
+          className={
+            !filesOpen && workspaceView === "preview"
+              ? "preview-frame-wrap preview-frame-wrap--canvas"
+              : "preview-frame-wrap"
+          }
+        >
+          <div
+            className={
+              !filesOpen && workspaceView === "preview"
+                ? "preview-frame preview-frame--canvas"
+                : "preview-frame"
+            }
+          >
           {isLoadingWorkspace ? <LoadingWorkspace /> : null}
 
           {!isLoadingWorkspace && filesOpen ? (

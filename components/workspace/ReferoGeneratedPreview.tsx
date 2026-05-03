@@ -269,7 +269,8 @@ export function ReferoGeneratedPreview({
   const isDark = system.theme === "dark";
 
   const navText = isDark ? "rgba(247,248,251,0.72)" : system.mutedText;
-  const subtleBorder = `1px solid ${system.border}`;
+  const subtleBorder = "1px solid transparent";
+  const softDivider = `1px solid ${system.theme === "dark" ? "rgba(255,255,255,0.06)" : "rgba(15,23,42,0.06)"}`;
 
   const primaryButtonStyle = {
     background: system.primary,
@@ -292,14 +293,13 @@ export function ReferoGeneratedPreview({
         fontFamily:
           "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif",
       }}
-      className="min-h-[1600px] overflow-hidden"
+      className="refero-generated-site min-h-full overflow-auto"
     >
       <header
         style={{
           background: isDark
             ? "rgba(8, 9, 13, 0.82)"
             : "rgba(255, 255, 255, 0.86)",
-          borderBottom: subtleBorder,
           backdropFilter: "blur(18px)",
         }}
         className="sticky top-0 z-20"
@@ -564,7 +564,7 @@ export function ReferoGeneratedPreview({
               className="mt-3 overflow-hidden"
             >
               <div
-                style={{ borderBottom: subtleBorder, color: system.mutedText }}
+                style={{ borderBottom: softDivider, color: system.mutedText }}
                 className="grid grid-cols-[92px_1fr_88px] gap-3 px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]"
               >
                 <span>ID</span>
@@ -580,7 +580,7 @@ export function ReferoGeneratedPreview({
               ].map(([id, label, priority]) => (
                 <div
                   key={id}
-                  style={{ borderBottom: subtleBorder }}
+                  style={{ borderBottom: softDivider }}
                   className="grid grid-cols-[92px_1fr_88px] items-center gap-3 px-4 py-3 text-sm last:border-b-0"
                 >
                   <span
@@ -966,9 +966,8 @@ export function ReferoGeneratedPreview({
         </div>
 
         <div
-          style={{ borderTop: subtleBorder, color: system.mutedText }}
-          className="mx-auto flex max-w-[1180px] flex-wrap items-center justify-between gap-3 px-6 py-5 text-xs"
-        >
+          style={{ borderTop: softDivider, color: system.mutedText }}
+          className="mx-auto grid max-w-[1180px] gap-12 px-8 py-20 lg:grid-cols-[0.88fr_1.12fr] lg:items-center"        >
           <span>© {new Date().getFullYear()} {productName}. All rights reserved.</span>
           <button
             type="button"
